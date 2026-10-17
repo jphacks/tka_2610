@@ -27,14 +27,19 @@
 //                         新しい家具のグループの下（床なら床）に描く
 // どちらも渡さない画面では、今までどおり（ポインタの当たり判定もしない）。選んだ物の印は HomeEditScene が床に板を敷いて出す
 // （GLB のマテリアルは全部の物・全部の画面で共有しているので、色を付けて目印にしてはいけない）。
+//
+// memoryBadges を付けると、おもいで（写真・動画・声の記録。slots の artwork.memory_counts）のある作品の上に、小さな丸い印を
+// drei の Html で出す（声があれば音符、無ければ動画か写真の印と数）。印を押すと、作品を押したのと同じ onSelect。おへや（HomeScene）で使う。
 
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import type { ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, RoomId, SlotView, Vec3 } from '../../../api'
+import type { ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, MemoryCounts, RoomId, SlotView, Vec3 } from '../../../api'
+import { GalleryIcon, NoteIcon, VideoIcon } from '../../../icons'
 import { FittedModel } from '../models'
 import { FLOOR_ART_FIT, HUB, displayScale, roomOrigin, surfaceOf } from './placement'
+import './HomeObjects.css'
 
 /** 作品を置く数の既定値。スマホなど（指で操作する端末）は 6、それ以外は全部 */
 const DEFAULT_MAX_ARTWORKS =
@@ -179,6 +184,7 @@ export function HomeObjects({
   maxArtworks = DEFAULT_MAX_ARTWORKS,
   onObjectPointerDown,
   previewTransform,
+  memoryBadges = false,
 }: {
   layout: Layout
   catalog: HomeCatalog
@@ -196,6 +202,8 @@ export function HomeObjects({
   onObjectPointerDown?: (objectId: string, event: ThreeEvent<PointerEvent>) => void
   /** 模様替えモード：ドラッグ中の物の仮の位置と向き（配置 JSON の値の代わりに使う） */
   previewTransform?: PreviewTransform | null
+  /** おもいでのある作品の上に印を出す（おへや） */
+  memoryBadges?: boolean
 }) {
   const notify = useBatchedCallback(onReady)
   const assets = useMemo(() => new Map(catalog.assets.map((a) => [a.id, a])), [catalog])
@@ -307,6 +315,14 @@ export function HomeObjects({
           onMount={notify}
         />
       </Suspense>
+      {memoryBadges && (
+        <MemoryBadge
+          counts={slot.artwork.memory_counts}
+          // 作品のてっぺんの少し上（実寸が分からない作品は枠の高さ）
+          height={(slot.artwork.model_size && scale ? slot.artwork.model_size[1] * scale : fit[1]) + 0.12}
+          onClick={onSelect ? () => onSelect(slot.artwork.id) : undefined}
+        />
+      )}
     </group>
   )
 
@@ -366,5 +382,20 @@ export function HomeObjects({
       {/* 親の家具が見つからない作品は、Rust が計算した世界座標と拡縮率で置く */}
       {orphans.map((p) => artwork(p, p.slot.position, THREE.MathUtils.degToRad(p.slot.yaw), p.slot.fit, p.slot.scale ?? undefined))}
     </>
+  )
+}
+
+/** おもいでのある作品の上の、小さな丸い印（声があれば音符、無ければ動画か写真の印と数）。おもいでが無ければ出さない */
+function MemoryBadge({ counts, height, onClick }: { counts: MemoryCounts | undefined; height: number; onClick?: () => void }) {
+  const total = counts ? counts.photo + counts.video + counts.audio : 0
+  if (!counts || total === 0) return null
+  const Icon = counts.audio > 0 ? NoteIcon : counts.video > 0 ? VideoIcon : GalleryIcon
+  return (
+    <Html position={[0, height, 0]} center zIndexRange={[10, 0]}>
+      <button type="button" className={`memory-badge${counts.audio > 0 ? ' voice' : ''}`} aria-label={`おもいで ${total}`} onClick={onClick}>
+        <Icon size={13} />
+        <span className="num">{total}</span>
+      </button>
+    </Html>
   )
 }
