@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 3,
+  "kitVersion": "1.1.0-home",
+  "rooms": {
+    "hub": {
+      "enabled": true,
+      "width": 8,
+      "depth": 8,
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    "left": {
+      "enabled": true,
+      "width": 6,
+      "depth": 6,
+      "wall": "oak",
+      "floor": "oak"
+    },
+    "right": {
+      "enabled": true,
+      "width": 6,
+      "depth": 6,
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    "front": {
+      "enabled": true,
+      "width": 6,
+      "depth": 6,
+      "wall": "brick",
+      "floor": "limestone"
+    }
+  },
+  "objects": [
+    {
+      "kind": "furniture",
+      "id": "home-001",
+      "assetId": "home_rug",
+      "roomId": "hub",
+      "position": [0.05, 0, -0.6],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-002",
+      "assetId": "home_sofa",
+      "roomId": "hub",
+      "position": [0, 0, -2.45],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-003",
+      "assetId": "home_coffee_table",
+      "roomId": "hub",
+      "position": [0.05, 0, -0.65],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-004",
+      "assetId": "home_display_shelf",
+      "roomId": "hub",
+      "position": [-2.82, 0, 1.45],
+      "rotationY": 1.5707963267948966
+    },
+    {
+      "kind": "furniture",
+      "id": "home-005",
+      "assetId": "home_console",
+      "roomId": "hub",
+      "position": [2.7, 0, 1.55],
+      "rotationY": -1.5707963267948966
+    },
+    {
+      "kind": "furniture",
+      "id": "home-006",
+      "assetId": "home_floor_lamp",
+      "roomId": "hub",
+      "position": [2.86, 0, -2.88],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-007",
+      "assetId": "plant",
+      "roomId": "hub",
+      "position": [-3.08, 0, -2.99],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-008",
+      "assetId": "home_craft_desk",
+      "roomId": "hub",
+      "position": [0, 0, 3.4],
+      "rotationY": 3.141592653589793
+    },
+    {
+      "kind": "furniture",
+      "id": "home-009",
+      "assetId": "plinth_low",
+      "roomId": "hub",
+      "position": [-2.5, 0, 3.25],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-010",
+      "assetId": "plinth_ivory",
+      "roomId": "hub",
+      "position": [2.9, 0, 3.4],
+      "rotationY": 0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-011",
+      "assetId": "plinth_ivory",
+      "roomId": "hub",
+      "position": [-3.4, 0, -0.9],
+      "rotationY": 0
+    }
+  ]
+}

@@ -1,0 +1,345 @@
+{
+  "kitVersion": "1.1.0-home",
+  "_note": "MemoryMuseum_Home キットの asset-catalog.json / home-themes.json / materials.json から抜粋。テクスチャのパスは /home-assets/textures/ からの相対",
+  "assets": [
+    {
+      "id": "home_sofa",
+      "name": "Sage / two-seat sofa",
+      "nameJa": "2人掛けソファ",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [2.36, 0.985, 0.9],
+      "bounds": [[-1.1618, 0.0, -0.4479], [1.1795, 0.9786, 0.4475]],
+      "topAnchor": null,
+      "layer": null
+    },
+    {
+      "id": "home_coffee_table",
+      "name": "Oak / coffee table",
+      "nameJa": "ローテーブル",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.37, 0.525, 0.78],
+      "bounds": [[-0.685, 0.0, -0.39], [0.685, 0.525, 0.39]],
+      "topAnchor": [0, 0.525, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 0.525, 0], "size": [1.13, 0.56] }],
+      "layer": null
+    },
+    {
+      "id": "home_console",
+      "name": "Sage / low sideboard",
+      "nameJa": "サイドボード",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.77, 0.891, 0.51],
+      "bounds": [[-0.885, 0.0, -0.255], [0.885, 0.891, 0.255]],
+      "topAnchor": [0, 0.891, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 0.891, 0], "size": [1.74, 0.48] }],
+      "layer": null
+    },
+    {
+      "id": "home_display_shelf",
+      "name": "Oak / open display shelf",
+      "nameJa": "飾り棚",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.4, 0.843, 0.45],
+      "bounds": [[-0.7, 0.0, -0.225], [0.7, 0.843, 0.225]],
+      "topAnchor": [0, 0.843, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 0.843, 0], "size": [1.38, 0.43] }],
+      "layer": null
+    },
+    {
+      "id": "home_craft_desk",
+      "name": "Oak / craft desk",
+      "nameJa": "工作机",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.54, 0.795, 0.74],
+      "bounds": [[-0.77, 0.0, -0.37], [0.77, 0.795, 0.37]],
+      "topAnchor": [0, 0.795, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 0.795, 0], "size": [1.26, 0.56] }],
+      "layer": null
+    },
+    {
+      "id": "home_bookshelf",
+      "name": "Oak / book shelf",
+      "nameJa": "本棚",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.16, 1.82, 0.41],
+      "bounds": [[-0.58, 0.0, -0.205], [0.58, 1.82, 0.205]],
+      "topAnchor": null,
+      "surfaces": [
+        { "id": "shelf2", "anchor": [0.035, 0.954, 0.005], "size": [0.41, 0.37], "clearance": 0.39 },
+        { "id": "shelf3", "anchor": [0.25, 1.382, 0.005], "size": [0.53, 0.37], "clearance": 0.4 },
+        { "id": "shelf1", "anchor": [0.2775, 0.535, 0.005], "size": [0.47, 0.37], "clearance": 0.38 },
+        { "id": "top", "anchor": [0, 1.82, 0], "size": [1.14, 0.39] }
+      ],
+      "layer": null
+    },
+    {
+      "id": "home_stool",
+      "name": "Sage / footstool",
+      "nameJa": "スツール",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [0.52, 0.52, 0.52],
+      "bounds": [[-0.26, 0.0, -0.26], [0.26, 0.52, 0.26]],
+      "topAnchor": null,
+      "surfaces": [{ "id": "top", "anchor": [0, 0.52, 0], "size": [0.3, 0.3] }],
+      "layer": null
+    },
+    {
+      "id": "home_rug",
+      "name": "Cream / woven rug",
+      "nameJa": "ラグ",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [3, 0.023, 2.26],
+      "bounds": [[-1.5, 0.0, -1.13], [1.5, 0.023, 1.13]],
+      "topAnchor": null,
+      "layer": "floor_decor"
+    },
+    {
+      "id": "home_floor_lamp",
+      "name": "Cream / floor lamp",
+      "nameJa": "フロアライト",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [0.72, 1.62, 0.72],
+      "bounds": [[-0.36, 0.0, -0.36], [0.36, 1.62, 0.36]],
+      "topAnchor": null,
+      "layer": null
+    },
+    {
+      "id": "plant",
+      "name": "Botanical / terracotta",
+      "nameJa": "観葉植物",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.0, 1.65, 1.0],
+      "bounds": [[-0.2833, 0.0, -0.2658], [0.3109, 1.5705, 0.2815]],
+      "topAnchor": null,
+      "layer": null
+    },
+    {
+      "id": "plinth_ivory",
+      "name": "Ivory / square",
+      "nameJa": "白い台座",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [0.87, 1.104, 0.87],
+      "bounds": [[-0.435, 0.0, -0.435], [0.435, 1.104, 0.435]],
+      "topAnchor": [0, 1.104, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 1.104, 0], "size": [0.85, 0.85] }],
+      "layer": null
+    },
+    {
+      "id": "plinth_low",
+      "name": "Travertine / low",
+      "nameJa": "低い台",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.8, 0.39, 1.15],
+      "bounds": [[-0.9, 0.0, -0.575], [0.9, 0.39, 0.575]],
+      "topAnchor": [0, 0.39, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 0.39, 0], "size": [1.74, 1.09] }],
+      "layer": null
+    },
+    {
+      "id": "plinth_slim",
+      "name": "Travertine / tall",
+      "nameJa": "細い台座",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [0.59, 1.235, 0.59],
+      "bounds": [[-0.295, 0.0, -0.295], [0.295, 1.235, 0.295]],
+      "topAnchor": [0, 1.235, 0],
+      "surfaces": [{ "id": "top", "anchor": [0, 1.235, 0], "size": [0.58, 0.58] }],
+      "layer": null
+    },
+    {
+      "id": "bench_oak",
+      "name": "Oak / upholstered bench",
+      "nameJa": "ベンチ",
+      "category": "furniture",
+      "placement": "floor",
+      "dimensionsMeters": [1.85, 0.571, 0.6],
+      "bounds": [[-0.925, 0.0, -0.3], [0.925, 0.571, 0.3]],
+      "topAnchor": null,
+      "surfaces": [{ "id": "top", "anchor": [0, 0.571, 0], "size": [1.11, 0.36] }],
+      "layer": null
+    }
+  ],
+  "themes": [
+    {
+      "id": "natural",
+      "name": "ナチュラル",
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    {
+      "id": "timber",
+      "name": "木のおうち",
+      "wall": "oak",
+      "floor": "oak"
+    },
+    {
+      "id": "brick",
+      "name": "レンガ",
+      "wall": "brick",
+      "floor": "limestone"
+    },
+    {
+      "id": "nordic_oak",
+      "name": "北欧ホワイトオーク",
+      "wall": "nordic_chalk",
+      "floor": "white_oak"
+    },
+    {
+      "id": "sage_ash",
+      "name": "セージグリーンとアッシュ",
+      "wall": "sage_limewash",
+      "floor": "pale_ash"
+    },
+    {
+      "id": "white_marble",
+      "name": "白大理石",
+      "wall": "nordic_chalk",
+      "floor": "carrara_marble"
+    },
+    {
+      "id": "dark_marble",
+      "name": "黒大理石",
+      "wall": "mushroom_limewash",
+      "floor": "nero_marble"
+    },
+    {
+      "id": "brick_oak",
+      "name": "レンガとオーク",
+      "wall": "soft_brick",
+      "floor": "white_oak"
+    },
+    {
+      "id": "walnut_cream",
+      "name": "ウォールナットとクリーム",
+      "wall": "warm_cream",
+      "floor": "warm_walnut"
+    }
+  ],
+  "materials": {
+    "plaster": {
+      "id": "plaster",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "plaster_base.jpg",
+      "normal": "plaster_normal.png",
+      "orm": "plaster_orm.png"
+    },
+    "oak": {
+      "id": "oak",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "oak_base.jpg",
+      "normal": "oak_normal.png",
+      "orm": "oak_orm.png"
+    },
+    "oak_wall": {
+      "id": "oak_wall",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "oak_wall_base.jpg",
+      "normal": "oak_wall_normal.png",
+      "orm": "oak_wall_orm.png"
+    },
+    "oak_floor": {
+      "id": "oak_floor",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "oak_floor_base.jpg",
+      "normal": "oak_floor_normal.png",
+      "orm": "oak_floor_orm.png"
+    },
+    "brick": {
+      "id": "brick",
+      "tileMeters": [1.0, 0.6],
+      "baseColor": "brick_base.jpg",
+      "normal": "brick_normal.png",
+      "orm": "brick_orm.png"
+    },
+    "limestone": {
+      "id": "limestone",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "limestone_base.jpg",
+      "normal": "limestone_normal.png",
+      "orm": "limestone_orm.png"
+    },
+    "nordic_chalk": {
+      "id": "nordic_chalk",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "finish-pack/nordic_chalk/basecolor.jpg",
+      "normal": "finish-pack/nordic_chalk/normal.png",
+      "orm": "finish-pack/nordic_chalk/orm.png"
+    },
+    "sage_limewash": {
+      "id": "sage_limewash",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "finish-pack/sage_limewash/basecolor.jpg",
+      "normal": "finish-pack/sage_limewash/normal.png",
+      "orm": "finish-pack/sage_limewash/orm.png"
+    },
+    "mushroom_limewash": {
+      "id": "mushroom_limewash",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "finish-pack/mushroom_limewash/basecolor.jpg",
+      "normal": "finish-pack/mushroom_limewash/normal.png",
+      "orm": "finish-pack/mushroom_limewash/orm.png"
+    },
+    "warm_cream": {
+      "id": "warm_cream",
+      "tileMeters": [1.0, 1.0],
+      "baseColor": "finish-pack/warm_cream/basecolor.jpg",
+      "normal": "finish-pack/warm_cream/normal.png",
+      "orm": "finish-pack/warm_cream/orm.png"
+    },
+    "white_oak": {
+      "id": "white_oak",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "finish-pack/white_oak/basecolor.jpg",
+      "normal": "finish-pack/white_oak/normal.png",
+      "orm": "finish-pack/white_oak/orm.png"
+    },
+    "pale_ash": {
+      "id": "pale_ash",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "finish-pack/pale_ash/basecolor.jpg",
+      "normal": "finish-pack/pale_ash/normal.png",
+      "orm": "finish-pack/pale_ash/orm.png"
+    },
+    "warm_walnut": {
+      "id": "warm_walnut",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "finish-pack/warm_walnut/basecolor.jpg",
+      "normal": "finish-pack/warm_walnut/normal.png",
+      "orm": "finish-pack/warm_walnut/orm.png"
+    },
+    "carrara_marble": {
+      "id": "carrara_marble",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "finish-pack/carrara_marble/basecolor.jpg",
+      "normal": "finish-pack/carrara_marble/normal.png",
+      "orm": "finish-pack/carrara_marble/orm.png"
+    },
+    "nero_marble": {
+      "id": "nero_marble",
+      "tileMeters": [2.0, 2.0],
+      "baseColor": "finish-pack/nero_marble/basecolor.jpg",
+      "normal": "finish-pack/nero_marble/normal.png",
+      "orm": "finish-pack/nero_marble/orm.png"
+    },
+    "soft_brick": {
+      "id": "soft_brick",
+      "tileMeters": [1.0, 0.6],
+      "baseColor": "finish-pack/soft_brick/basecolor.jpg",
+      "normal": "finish-pack/soft_brick/normal.png",
+      "orm": "finish-pack/soft_brick/orm.png"
+    }
+  }
+}
