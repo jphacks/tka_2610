@@ -1,6 +1,6 @@
 // three.js のキャンバスと照明。ホーム・おうちの中・マップ・3D プレビューの 4 つの 3D 画面の土台になる
 // （鑑賞モードの照明は walk/lighting.tsx）。3D 全体の明るさや背景色を変えるときはここを触る。
-// 照明は 8 × 8 m の家に合わせた大きさで、影は付けない（斜め上から見る画面なので、やわらかく均一に照らす）。
+// 照明は 10 × 10 m のリビングに合わせた大きさで、影は付けない（斜め上から見る画面なので、やわらかく均一に照らす）。
 
 import type { ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
@@ -46,9 +46,9 @@ function HomeLights() {
       <directionalLight position={[-5, 6, -3]} intensity={0.45} color="#ffe6cc" />
       {/* 外部 HDR を読まずに、その場で柔らかい環境光を作る（家の大きさに合わせた天井と左右の明かり） */}
       <Environment resolution={64} frames={1}>
-        <Lightformer form="rect" intensity={2.2} position={[0, 4.5, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} color="#fff6e8" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 1, -6]} scale={[12, 2.5, 1]} color="#ffe5c7" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 1, 6]} rotation-y={Math.PI} scale={[12, 2.5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={2.2} position={[0, 4.5, 0]} rotation-x={Math.PI / 2} scale={[15, 15, 1]} color="#fff6e8" />
+        <Lightformer form="rect" intensity={0.9} position={[0, 1, -7.5]} scale={[15, 2.5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={0.9} position={[0, 1, 7.5]} rotation-y={Math.PI} scale={[15, 2.5, 1]} color="#ffe5c7" />
       </Environment>
     </>
   )

@@ -114,7 +114,7 @@ export function clampToRect(rect: Rect, w: number, d: number, rotationY: number,
 }
 
 /**
- * 部屋 roomId の中で家具を置ける範囲（部屋の中心が原点。壁から 12 cm 内側。hub は ±3.88、6 × 6 の部屋は ±2.88）。Rust: room_rect
+ * 部屋 roomId の中で家具を置ける範囲（部屋の中心が原点。壁から 12 cm 内側。hub は ±4.88、8 × 8 の部屋は ±3.88）。Rust: room_rect
  * 大きさは配置 JSON の rooms[roomId]（Rust は ROOM_DEFS の size を使う。配置の大きさはそれと同じでないと 400 なので同じ値）。
  * 配置に無い部屋はリビングの大きさ
  */

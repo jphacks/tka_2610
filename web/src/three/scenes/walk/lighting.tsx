@@ -62,8 +62,8 @@ function fitSunShadow(light: THREE.DirectionalLight, direction: THREE.Vector3, b
   camera.updateProjectionMatrix()
 }
 
-/** ステージを読み込むまでの影の範囲（リビング 8 × 8 m、高さ 3.2 m くらい）。MuseumDaylight に initialBounds が無いとき */
-const DEFAULT_INITIAL_BOUNDS = new THREE.Box3(new THREE.Vector3(-4.5, 0, -4.5), new THREE.Vector3(4.5, 3.4, 4.5))
+/** ステージを読み込むまでの影の範囲（リビング 10 × 10 m、高さ 3.2 m くらい）。MuseumDaylight に initialBounds が無いとき */
+const DEFAULT_INITIAL_BOUNDS = new THREE.Box3(new THREE.Vector3(-5.5, 0, -5.5), new THREE.Vector3(5.5, 3.4, 5.5))
 
 /** 太陽の影の細かさ（影の画像の 1 辺の px）。スマホなどの軽い表示では MuseumDaylight に半分の値を渡す */
 const SHADOW_MAP_SIZE = 2048
