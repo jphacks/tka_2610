@@ -15,7 +15,7 @@ export default function MapView() {
 
   return (
     <Screen tabbar>
-      <NavBar large eyebrow="おうち" title={ages.data?.name ?? 'はるのミュージアム'} />
+      <NavBar large title={ages.data?.name ?? 'はるのミュージアム'} />
 
       <div className="page">
         {ages.isError && <p className="note">おへやを読み込めませんでした</p>}

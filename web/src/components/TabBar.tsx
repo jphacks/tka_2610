@@ -3,14 +3,33 @@
 // ホーム以外のタブでは、右上にクレヨン風の虹を出す。
 import type { CSSProperties } from 'react'
 import { useLocation } from 'react-router-dom'
-import { GalleryIcon, HomeIcon, MuseumIcon, PlusIcon, UserIcon } from '../icons'
+import { GalleryIcon, HomeIcon　, PlusIcon, UserIcon } from '../icons'
 import { useNav } from '../nav'
 import './TabBar.css'
-
+// 下のタブ用の虹のアイコン（ほかのアイコンと同じく、線の色は文字の色に合わせる）
+function RainbowIcon({ size = 24, strokeWidth = 1.8 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 17A9 9 0 0 1 21 17" />
+      <path d="M6.5 17A5.5 5.5 0 0 1 17.5 17" />
+      <path d="M10 17A2 2 0 0 1 14 17" />
+    </svg>
+  )
+}
 const TABS = [
   { to: '/', label: 'ホーム', icon: HomeIcon, match: (p: string) => p === '/' },
   { to: '/collection', label: '作品', icon: GalleryIcon, match: (p: string) => p.startsWith('/collection') },
-  { to: '/map', label: 'ミュージアム', icon: MuseumIcon, match: (p: string) => p.startsWith('/map') },
+  { to: '/map', label: 'memoria', icon: RainbowIcon, match: (p: string) => p.startsWith('/map') },
   { to: '/settings', label: 'マイページ', icon: UserIcon, match: (p: string) => p.startsWith('/settings') },
 ]
 
