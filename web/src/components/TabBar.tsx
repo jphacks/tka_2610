@@ -24,10 +24,11 @@ export function TabBar() {
     <>
       {active > 0 && (
         <div className="tab-rainbow" aria-hidden="true">
-          <svg viewBox="0 -28 190 150">
+          {/* 右側だけ横に伸ばした虹：左半分は円の弧、てっぺんから右の脚までは横に 36 広げた楕円の弧。線の太さとかすれは変えない */}
+          <svg viewBox="0 -28 236 150">
             <defs>
               {/* クレヨンのかすれ：線をゆらして、細かい粒で塗り残しを作る */}
-              <filter id="crayon-rainbow" filterUnits="userSpaceOnUse" x="-10" y="-40" width="215" height="175">
+              <filter id="crayon-rainbow" filterUnits="userSpaceOnUse" x="-10" y="-40" width="261" height="175">
                 <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="wobble" />
                 <feDisplacementMap in="SourceGraphic" in2="wobble" scale="4" xChannelSelector="R" yChannelSelector="G" result="shape" />
                 <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="8" result="grain" />
@@ -36,11 +37,11 @@ export function TabBar() {
               </filter>
             </defs>
             <g fill="none" strokeWidth="10" strokeLinecap="round" filter="url(#crayon-rainbow)">
-              <path d="M10 70A90 90 0 1 1 177.9 115" stroke="#f0a39a" />
-              <path d="M22 70A78 78 0 1 1 167.5 109" stroke="#f6c98f" />
-              <path d="M34 70A66 66 0 1 1 157.2 103" stroke="#f3dc8e" />
-              <path d="M46 70A54 54 0 1 1 146.8 97" stroke="#b7d6a5" />
-              <path d="M58 70A42 42 0 1 1 136.4 91" stroke="#a9cbe6" />
+              <path d="M10 70A90 90 0 0 1 100 -20A126 90 0 0 1 209.1 115" stroke="#f0a39a" />
+              <path d="M22 70A78 78 0 0 1 100 -8A114 78 0 0 1 198.7 109" stroke="#f6c98f" />
+              <path d="M34 70A66 66 0 0 1 100 4A102 66 0 0 1 188.3 103" stroke="#f3dc8e" />
+              <path d="M46 70A54 54 0 0 1 100 16A90 54 0 0 1 177.9 97" stroke="#b7d6a5" />
+              <path d="M58 70A42 42 0 0 1 100 28A78 42 0 0 1 167.5 91" stroke="#a9cbe6" />
             </g>
           </svg>
         </div>
