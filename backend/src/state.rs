@@ -5,8 +5,6 @@ use sqlx::PgPool;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
-    /// Unity など別プロセスに渡す絶対URLの基点 (例: http://127.0.0.1:8080)
-    pub public_base_url: String,
     /// Rust が生成した画像・モデルの保存先
     pub media_dir: PathBuf,
     /// 博物館GLBの配信URL (無ければ None)

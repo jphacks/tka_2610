@@ -23,7 +23,7 @@ function slotGoal(slot: SlotView): CameraGoal {
 
 /** 部屋全体を見渡す位置（1 階の展示台の中心から、通路側へ下がる） */
 function roomGoal(slots: SlotView[], roomId: string): CameraGoal | null {
-  const inRoom = slots.filter((s) => s.room_id === roomId && s.in_main_model && s.floor === '1F')
+  const inRoom = slots.filter((s) => s.room_id === roomId && s.floor === '1F')
   if (inRoom.length === 0) return null
   const c = new THREE.Vector3()
   inRoom.forEach((s) => c.add(new THREE.Vector3(...s.position)))
