@@ -30,3 +30,31 @@
     corner-shape: squircle;
   }
 }
+
+/* 背景のぽよん柄（水色・黄色・くすんだ緑・オレンジの塊） */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 440 900'><path fill='%23bcd4e6' fill-opacity='0.8' d='M0 0H250C262 38 232 68 192 82C152 96 142 130 100 142C60 154 24 134 0 152Z'/><path fill='%23f6dfa4' fill-opacity='0.85' d='M300 0H440V122C405 137 370 120 358 90C348 64 322 48 300 0Z'/><path fill='%23a3bd9d' fill-opacity='0.6' d='M0 900V790C35 770 80 790 95 825C108 855 140 870 160 900Z'/><path fill='%23f0b794' fill-opacity='0.55' d='M440 900V820C410 815 385 835 378 862C372 885 355 893 340 900Z'/><circle cx='388' cy='168' r='7' fill='%23bcd4e6' fill-opacity='0.9'/><circle cx='34' cy='204' r='5' fill='%23f0b794' fill-opacity='0.8'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+/* 押すとぷにっと縮んで、ぽよんと戻る */
+:where(.app button, .app a) {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:where(.app button, .app a):active {
+  transform: scale(0.93);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.app button, .app a) {
+    transition: none;
+  }
+}

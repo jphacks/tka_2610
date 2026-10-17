@@ -26,21 +26,33 @@
   padding: 4px;
   border-radius: 999px;
   isolation: isolate;
-  background: rgba(255, 255, 255, 0.8);
+  background:
+    radial-gradient(circle at 6% 115%, rgba(246, 223, 164, 0.75) 0 24px, transparent 25px),
+    radial-gradient(circle at 96% 118%, rgba(163, 189, 157, 0.6) 0 28px, transparent 29px),
+    rgba(255, 252, 246, 0.9);
 }
 
 /* 選択中のタブの背景。--active（タブの番号）で横に動く */
 .tab-lens {
   position: absolute;
   z-index: -1;
-  top: 4px;
-  bottom: 4px;
+  top: 2px;
+  bottom: 2px;
   left: 4px;
   width: calc((100% - 8px) / 4);
-  border-radius: 999px;
-  background: var(--accent-soft);
+  border-radius: 56% 44% 52% 48% / 62% 58% 42% 38%;
+  background: #bcd4e6;
+  box-shadow: 0 4px 12px rgba(63, 109, 146, 0.25);
   transform: translateX(calc(var(--active) * 100%));
   transition: transform 0.5s var(--spring);
+}
+
+.tab svg {
+  transition: transform 0.4s var(--spring);
+}
+
+.tab.active svg {
+  transform: translateY(-2px) scale(1.1);
 }
 
 .tab {
@@ -79,4 +91,20 @@
 
 .tab-add:active {
   transform: scale(0.9);
+}
+
+/* ホーム以外のタブの、右上の虹（右の脚が長い） */
+.tab-rainbow {
+  position: absolute;
+  top: 38px;
+  right: 10px;
+  width: 100px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.tab-rainbow svg {
+  display: block;
+  width: 100%;
+  opacity: 0.9;
 }

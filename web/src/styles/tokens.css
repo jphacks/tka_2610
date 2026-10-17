@@ -5,18 +5,22 @@
    ========================================================= */
 
 :root {
-  --paper: #f3f9fc;
-  --paper-2: #e3f1f8;
-  --surface: #ffffff;
-  --ink: #1d3140;
-  --ink-2: rgba(29, 49, 64, 0.64);
-  --ink-3: rgba(29, 49, 64, 0.4);
-  --line: rgba(29, 49, 64, 0.1);
-  --line-strong: rgba(29, 49, 64, 0.2);
-  --fill: rgba(29, 49, 64, 0.05);
-  --accent: #5ab0dc;
-  --accent-soft: rgba(66, 155, 203, 0.14);
-  --green: #5ab0dc;
+  --paper: #f7f0e4;
+  --paper-2: #f0e7d8;
+  --surface: #fffcf6;
+  --ink: #2f4a63;
+  --ink-2: rgba(47, 74, 99, 0.64);
+  --ink-3: rgba(47, 74, 99, 0.4);
+  --line: rgba(47, 74, 99, 0.1);
+  --line-strong: rgba(47, 74, 99, 0.2);
+  --fill: rgba(47, 74, 99, 0.06);
+  --accent: #3f6d92;
+  --accent-soft: rgba(63, 109, 146, 0.14);
+  --sky: #d3e3ee;
+  --sun: #f6dfa4;
+  --peach: #f0b794;
+  --sage: #a3bd9d;
+  --green: #5f8f74;
   --red: #c4402f;
 
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
