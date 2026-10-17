@@ -4,7 +4,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { jsonInit, keys, request } from './client'
-import { forgetPreloadedMuseum } from './museum'
 import type { Layout, Museum, SavedLayout } from './types'
 
 const layoutUrl = (roomId?: string | null) =>
@@ -34,7 +33,6 @@ export function useSaveLayout(roomId?: string | null) {
   return useMutation({
     mutationFn: (layout: Layout) => request<SavedLayout>(layoutUrl(roomId), jsonInit('PUT', { layout })),
     onSuccess: (saved) => {
-      forgetPreloadedMuseum()
       client.setQueryData([...keys.layout, roomId ?? 'default'], saved)
       // 3D はすぐに新しい配置で描き、作品の置き場所（slots）などはこのあと取り直した値で揃える
       client.setQueryData<Museum>(keys.museumOf(roomId), (old) => (old ? { ...old, layout: saved.layout } : old))

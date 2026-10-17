@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { keys, request } from './client'
-import { forgetPreloadedMuseum } from './museum'
 import type { AgeRoom, Ages, AgeStack } from './types'
 
 /** 年齢の一覧（年齢ごとの作品の数とおへや） */
@@ -25,7 +24,6 @@ export function useAddRoom() {
   return useMutation({
     mutationFn: (age: number) => request<AgeRoom>(`/api/ages/${age}/rooms`, { method: 'POST' }),
     onSuccess: () => {
-      forgetPreloadedMuseum()
       return Promise.all([
         client.invalidateQueries({ queryKey: keys.ages }),
         client.invalidateQueries({ queryKey: keys.museum }),
@@ -40,7 +38,6 @@ export function useDeleteRoom() {
   return useMutation({
     mutationFn: (id: string) => request<void>(`/api/rooms/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      forgetPreloadedMuseum()
       return Promise.all([
         client.invalidateQueries({ queryKey: keys.ages }),
         client.invalidateQueries({ queryKey: keys.museum }),

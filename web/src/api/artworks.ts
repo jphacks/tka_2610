@@ -3,7 +3,6 @@
 
 import { QueryClient, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { jsonInit, keys, request } from './client'
-import { forgetPreloadedMuseum } from './museum'
 import type { Artwork, ArtworkDetail, ArtworkList, ListParams } from './types'
 
 // ---------- 取得 ----------
@@ -60,7 +59,6 @@ export function prefetchArtwork(client: QueryClient, id: string) {
 function useInvalidate() {
   const client = useQueryClient()
   return (extra: QueryKey[] = []) => {
-    forgetPreloadedMuseum()
     return Promise.all([
       client.invalidateQueries({ queryKey: ['artworks'] }),
       client.invalidateQueries({ queryKey: keys.museum }),
