@@ -1,0 +1,86 @@
+/* ⑥ 作品の詳細（ArtworkDetail）。額縁に入った作品と、作品情報の表・お気に入りのハート。
+   キャプションの共通部分は styles/caption.css */
+
+.detail-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 380px;
+  padding: calc(66px + var(--safe-top)) 36px 40px;
+  background: radial-gradient(ellipse 80% 70% at 50% 35%, #f3ede4 0%, #e3d9cb 100%);
+}
+
+/* 額縁（作品の GLB の額縁と同じ濃いウォルナット） */
+.framed {
+  max-width: 100%;
+  max-height: 100%;
+  padding: 12px;
+  background: #fbf8f2;
+  border: 9px solid #3b2f27;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 16px 30px rgba(40, 26, 14, 0.28),
+    0 2px 6px rgba(40, 26, 14, 0.16);
+}
+
+.framed img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 210px;
+}
+
+/* 作品情報の表（制作日・展示） */
+.spec {
+  margin: 22px 0 0;
+  border-top: 0.5px solid var(--line-strong);
+}
+
+.spec div {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 0.5px solid var(--line);
+  font-size: 13.5px;
+}
+
+.spec dt {
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+}
+
+.spec dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* お気に入りのハート */
+.heart {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin: 2px -8px 0 0;
+  border-radius: 50%;
+  color: var(--ink-3);
+  transition: transform 0.45s var(--spring), color 0.2s;
+}
+
+.heart.on {
+  color: var(--accent);
+  animation: heart-pop 0.5s var(--spring);
+}
+
+.heart:active {
+  transform: scale(0.82);
+}
+
+@keyframes heart-pop {
+  40% {
+    transform: scale(1.25);
+  }
+}

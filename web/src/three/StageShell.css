@@ -1,0 +1,12 @@
+/* 3D を表示する枠（StageShell）。大きさや角丸は画面ごとのクラスで付ける */
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: #ebe1d3;
+}
+
+.stage canvas {
+  display: block;
+  touch-action: none;
+}

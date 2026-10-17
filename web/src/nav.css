@@ -1,0 +1,147 @@
+/* 画面遷移のアニメーション（View Transitions）。
+   nav.ts が <html> に付ける data-nav（push / pop / modal / dismiss / tab / fade）ごとに動きを決める。
+   仕組みは docs/frontend.md の「画面遷移」を参照 */
+
+::view-transition-group(*) {
+  animation-duration: 0.5s;
+  animation-timing-function: var(--spring);
+}
+
+html[data-nav='push']::view-transition-old(app),
+html[data-nav='push']::view-transition-new(app),
+html[data-nav='pop']::view-transition-old(app),
+html[data-nav='pop']::view-transition-new(app),
+html[data-nav='modal']::view-transition-old(app),
+html[data-nav='modal']::view-transition-new(app),
+html[data-nav='dismiss']::view-transition-old(app),
+html[data-nav='dismiss']::view-transition-new(app) {
+  mix-blend-mode: normal;
+  animation-duration: 0.5s;
+  animation-timing-function: var(--spring);
+  animation-fill-mode: both;
+}
+
+/* モーダルではナビゲーションバーやタブバーも画面と一緒に動かす */
+html[data-nav='modal'] .navbar,
+html[data-nav='dismiss'] .navbar,
+html[data-nav='modal'] .tabbar-wrap,
+html[data-nav='dismiss'] .tabbar-wrap {
+  view-transition-name: none;
+}
+
+/* 画面同士は端末の枠 (アプリの領域) の中だけで動かす */
+::view-transition-image-pair(app) {
+  overflow: hidden;
+}
+
+::view-transition-group(app) {
+  overflow: hidden;
+}
+
+html[data-nav='push']::view-transition-new(app) {
+  animation-name: push-in;
+  z-index: 2;
+}
+
+html[data-nav='push']::view-transition-old(app) {
+  animation-name: push-out;
+  z-index: 1;
+}
+
+@keyframes push-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes push-out {
+  to {
+    transform: translateX(-28%);
+    filter: brightness(0.92);
+  }
+}
+
+html[data-nav='pop']::view-transition-old(app) {
+  animation-name: pop-out;
+  z-index: 2;
+}
+
+html[data-nav='pop']::view-transition-new(app) {
+  animation-name: pop-in;
+  z-index: 1;
+}
+
+@keyframes pop-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    transform: translateX(-28%);
+    filter: brightness(0.92);
+  }
+}
+
+html[data-nav='modal']::view-transition-new(app) {
+  animation-name: modal-in;
+  z-index: 2;
+}
+
+html[data-nav='modal']::view-transition-old(app) {
+  animation-name: modal-behind;
+  z-index: 1;
+}
+
+@keyframes modal-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes modal-behind {
+  to {
+    transform: scale(0.94);
+    filter: brightness(0.88);
+  }
+}
+
+html[data-nav='dismiss']::view-transition-old(app) {
+  animation-name: modal-out;
+  z-index: 2;
+}
+
+html[data-nav='dismiss']::view-transition-new(app) {
+  animation-name: modal-front;
+  z-index: 1;
+}
+
+@keyframes modal-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes modal-front {
+  from {
+    transform: scale(0.94);
+    filter: brightness(0.88);
+  }
+}
+
+html[data-nav='tab']::view-transition-group(*),
+html[data-nav='tab']::view-transition-old(*),
+html[data-nav='tab']::view-transition-new(*),
+html[data-nav='fade']::view-transition-old(app),
+html[data-nav='fade']::view-transition-new(app) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease;
+}
+
+::view-transition-old(navbar),
+::view-transition-new(navbar),
+::view-transition-old(tabbar),
+::view-transition-new(tabbar) {
+  animation-duration: 0.25s;
+}

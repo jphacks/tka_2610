@@ -1,0 +1,32 @@
+/* アプリの外枠（App.tsx の .app）。スマホでは画面いっぱい、PC ではスマホ端末のように見せる */
+
+.app {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100dvh;
+  margin: 0 auto;
+  background: var(--paper);
+  overflow: hidden;
+  isolation: isolate;
+  view-transition-name: app;
+}
+
+/* PC ではスマホ端末のように見せる */
+@media (min-width: 600px) and (min-height: 700px) {
+  .app {
+    height: min(calc(100dvh - 48px), 932px);
+    margin-top: max(24px, calc((100dvh - 932px) / 2));
+    border-radius: 40px;
+    box-shadow:
+      0 0 0 1px rgba(31, 26, 23, 0.08),
+      0 24px 60px rgba(40, 28, 18, 0.16);
+  }
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .app {
+    corner-shape: squircle;
+  }
+}

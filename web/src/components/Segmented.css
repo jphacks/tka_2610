@@ -1,0 +1,43 @@
+/* 切り替えボタン（Segmented）。--count（選択肢の数）と --index（選択中の番号）で白い背景を動かす */
+
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), 1fr);
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--paper-2);
+  isolation: isolate;
+}
+
+.segmented-thumb {
+  position: absolute;
+  z-index: -1;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--count));
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform 0.45s var(--spring);
+}
+
+.segmented button {
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.segmented button.active {
+  color: var(--ink);
+  font-weight: 700;
+}

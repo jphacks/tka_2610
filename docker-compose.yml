@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: museum
+      POSTGRES_PASSWORD: museum
+      POSTGRES_DB: museum
+    ports:
+      - "5432:5432"
+    volumes:
+      - museum_pgdata:/var/lib/postgresql/data
+
+volumes:
+  museum_pgdata:

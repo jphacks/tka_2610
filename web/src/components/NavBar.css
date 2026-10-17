@@ -1,0 +1,67 @@
+/* 画面上部のナビゲーションバーと大きなタイトル（NavBar） */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  height: calc(54px + var(--safe-top));
+  padding: var(--safe-top) 12px 0;
+  border-bottom: 0.5px solid transparent;
+  transition: background 0.25s, border-color 0.25s;
+  view-transition-name: navbar;
+}
+
+/* スクロールしたら、すりガラスの背景と下線を出す */
+.navbar.scrolled {
+  background: rgba(246, 243, 238, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom-color: var(--line);
+}
+
+.navbar-side {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.navbar-side.right {
+  justify-content: flex-end;
+}
+
+/* バー中央の小さなタイトル。大きなタイトルが隠れたら出す */
+.navbar-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s var(--ease-out), transform 0.35s var(--spring);
+}
+
+.navbar-title.show {
+  opacity: 1;
+  transform: none;
+}
+
+.large-title {
+  padding: 0 20px 14px;
+}
+
+.large-title h1 {
+  margin: 2px 0 0;
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}

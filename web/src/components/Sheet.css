@@ -1,0 +1,54 @@
+/* 下から出るシート（Sheet）。後ろの幕は styles/layout.css の .scrim */
+
+.sheet {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(8px + var(--safe-bottom));
+  z-index: 50;
+  padding: 0 20px 20px;
+  border-radius: 30px;
+  background: var(--paper);
+  box-shadow: 0 -8px 30px rgba(30, 20, 12, 0.16);
+  transform: translateY(calc(100% + 20px));
+  transition: transform 0.5s var(--spring);
+}
+
+.sheet.in {
+  transform: none;
+}
+
+/* 指で引っぱっている間は、指に合わせて動かす */
+.sheet.dragging {
+  transition: none;
+}
+
+.sheet-grabber-area {
+  padding: 8px 0 6px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.sheet-grabber {
+  display: block;
+  width: 36px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 3px;
+  background: var(--ink-3);
+}
+
+.sheet h3 {
+  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.sheet .sheet-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}

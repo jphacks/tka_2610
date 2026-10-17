@@ -1,0 +1,98 @@
+/* 読み込み中の表示（Spinner・Busy・StageFallback） */
+
+/* iOS の activity indicator */
+.spinner {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+}
+
+.spinner i {
+  position: absolute;
+  left: 11.5px;
+  top: 2px;
+  width: 3px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: 1.5px 11px;
+  transform: rotate(calc(var(--i) * 45deg));
+  opacity: 0.2;
+  animation: spinner-fade 0.8s linear infinite;
+  animation-delay: calc(var(--i) * 0.1s - 0.8s);
+}
+
+@keyframes spinner-fade {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.18;
+  }
+}
+
+/* 3D が出るまでの仮表示（StageFallback） */
+.stage-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  background: #ebe1d3;
+}
+
+.stage-fallback-inner {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+/* 画面全体を覆う処理中のカード（Busy） */
+.busy {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background: rgba(246, 243, 238, 0.5);
+  animation: fade-in 0.25s both;
+}
+
+.busy-card {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  min-width: 200px;
+  padding: 24px 24px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(30, 20, 12, 0.16);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  animation: busy-pop-in 0.45s var(--spring) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* nav.css の pop-in（戻る遷移）と名前が重ならないよう、busy- を付ける */
+@keyframes busy-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .busy-card {
+    corner-shape: squircle;
+  }
+}

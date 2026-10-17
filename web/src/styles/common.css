@@ -1,0 +1,127 @@
+/* ---------- いくつかの画面で使う小さな部品（作品の画像の枠・展示中の印・読み込み中・アバター・補足の文字） ---------- */
+
+/* 見出しの上の小さな文字（日付、目録番号など） */
+.eyebrow {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  letter-spacing: 0.14em;
+}
+
+/* 作品の画像の四角い枠。Img の既定のクラス。読み込みが終わったら画像をふわっと出す */
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+
+.thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  pointer-events: none;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-out);
+}
+
+.thumb img.loaded {
+  opacity: 1;
+}
+
+/* 展示中の作品には小さな緑の点をつける */
+.on-view {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* 読み込み中の仮表示（光が流れる） */
+.skeleton {
+  background: linear-gradient(90deg, #e9e3da 0%, #f1ece5 50%, #e9e3da 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* 名前の頭文字を丸く出す（ホームの右上・設定のプロフィール） */
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: inset 0 0 0 0.5px var(--line-strong);
+  transition: transform 0.35s var(--spring);
+}
+
+.avatar:active {
+  transform: scale(0.9);
+}
+
+.avatar.large {
+  width: 58px;
+  height: 58px;
+  font-size: 24px;
+}
+
+/* 入力欄や確認の下に出す小さな説明 */
+.hint {
+  margin: 8px 2px 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* 作品がまだないときの表示 */
+.empty {
+  padding: 36px 8px;
+  border-top: 0.5px solid var(--line);
+  border-bottom: 0.5px solid var(--line);
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.empty p {
+  margin: 0 0 16px;
+}
+
+/* 「すべて　12点」のような件数 */
+.count-caption {
+  margin: 14px 2px 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+}
+
+/* 画面の下の小さな補足 */
+.note {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.7;
+}

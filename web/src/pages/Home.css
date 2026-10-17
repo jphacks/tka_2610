@@ -1,0 +1,60 @@
+/* ② ホーム（Home）。上の 3D の博物館（ヒーロー）と、その上の文字とボタン */
+
+.home-hero {
+  margin: 0 20px;
+  height: 340px;
+  border-radius: 18px;
+  color: #fff;
+}
+
+/* 3D の下側を少し暗くして文字を読みやすくする */
+.hero-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(22, 15, 10, 0.62), rgba(22, 15, 10, 0));
+  pointer-events: none;
+}
+
+.hero-text {
+  position: absolute;
+  left: 20px;
+  right: 80px;
+  bottom: 20px;
+  pointer-events: none;
+}
+
+.hero-text p {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.6;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.25);
+}
+
+.hero-text small {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+/* 右下の「博物館に入る」ボタン（GlassButton を少し大きくする） */
+.hero-go {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  width: 48px;
+  height: 48px;
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .home-hero {
+    corner-shape: squircle;
+    border-radius: 30px;
+  }
+}

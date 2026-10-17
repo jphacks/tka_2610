@@ -1,0 +1,33 @@
+/* ---------- 3D や画像の上に重ねる上部の操作列（作品の詳細・3D プレビュー・博物館の中で共通） ---------- */
+
+.stage-top {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.stage-top > * {
+  pointer-events: auto;
+}
+
+/* 中央のタイトル。.glass と一緒に使う */
+.stage-title {
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* 右側に複数のボタンを並べる */
+.stage-actions {
+  display: flex;
+  gap: 8px;
+}

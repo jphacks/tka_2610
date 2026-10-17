@@ -1,0 +1,46 @@
+/* ---------- 画面の中の並べ方（左右の余白・見出し・3 列の並び）と、シートやメニューの後ろの幕 ---------- */
+
+/* 画面の本文。左右に 20px の余白を取る */
+.page {
+  padding: 0 20px 28px;
+}
+
+/* セクションの見出し（「最近の作品」など）。右にリンクを置ける */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 32px 0 14px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* 作品のサムネイルを 3 列に並べる */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 12px;
+}
+
+/* シート（Sheet）やメニュー（ActionMenu）の後ろに敷く幕 */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: rgba(20, 14, 10, 0);
+  transition: background 0.35s var(--ease-out);
+}
+
+.scrim.in {
+  background: rgba(20, 14, 10, 0.3);
+}
+
+.scrim.clear {
+  background: transparent;
+}

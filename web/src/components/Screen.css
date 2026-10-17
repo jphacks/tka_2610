@@ -1,0 +1,19 @@
+/* 各画面の外枠（Screen）。縦にスクロールし、スクロールバーは出さない */
+
+.screen {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* 下部タブに隠れないよう、下に余白を取る */
+.screen.with-tabbar {
+  padding-bottom: calc(var(--tabbar-space) + var(--safe-bottom));
+}

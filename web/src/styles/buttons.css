@@ -1,0 +1,106 @@
+/* ---------- ボタン ----------
+   .btn に種類を足して使う：主な操作は .btn-filled、次の操作は .btn-outline。
+   紙の上のアイコンだけのボタンは .icon-btn（3D や画像の上なら GlassButton）。 */
+
+/* 紙の上のアイコンボタン (ガラスにしない) */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: background 0.15s, transform 0.35s var(--spring);
+}
+
+.icon-btn:active {
+  background: var(--fill);
+  transform: scale(0.9);
+}
+
+/* 押したときに少し縮む（カードなど） */
+.pressable {
+  transition: transform 0.4s var(--spring), opacity 0.2s;
+}
+
+.pressable:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: transform 0.4s var(--spring), opacity 0.2s, background 0.2s;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.btn-filled {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-filled:active {
+  background: #3a312b;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.btn-outline:active {
+  background: var(--fill);
+}
+
+.btn-gray {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.btn-plain {
+  width: auto;
+  min-height: 0;
+  padding: 6px 2px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-destructive {
+  background: var(--paper-2);
+  color: var(--red);
+}
+
+.btn-small {
+  width: auto;
+  min-height: 38px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+/* ボタンを縦に並べる */
+.btn-stack {
+  display: grid;
+  gap: 10px;
+}
