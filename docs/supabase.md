@@ -13,9 +13,9 @@
 | 表の作成 | サーバー起動時に、`backend/migrations/` の SQL を sqlx が自動で適用する |
 | 画像・サムネイル・作品の GLB | サーバーを動かしている PC の `backend/data/media/` に保存。**データベースには入らない** |
 | 博物館の GLB | `backend/static/models/sample.glb` を起動時に `backend/data/media/museum/` へコピーして配信 |
-| Unity | Rust のサーバー（`/api/exhibits` と `/media/...`）にだけつなぐ。Supabase には直接つながない |
+| Web | Rust のサーバー（`/api/...` と `/media/...`）にだけつなぐ。Supabase には直接つながない |
 
-Supabase に移しても、Web と Unity の設定は変わりません。変わるのはサーバー（`backend/`）の接続先です。
+Supabase に移しても、Web の設定は変わりません。変わるのはサーバー（`backend/`）の接続先です。
 
 ## やること
 
@@ -69,11 +69,10 @@ Supabase に移しても、Web と Unity の設定は変わりません。変わ
 複数人がそれぞれ自分の PC でサーバーを動かして同じ Supabase につなぐと、作品の情報は全員に見えるが、ほかの人が登録した作品の画像と 3D は表示されない（404 になる）。
 次のどちらかを選ぶ。
 
-- [x] **A. サーバーは 1 台だけ動かす。** ほかの人の Web と Unity はそのサーバーにつなぐ（README の「別の PC のサーバーにつなぐとき」）。コードの変更は不要。
+- [x] **A. サーバーは 1 台だけ動かす。** ほかの人の Web はそのサーバーにつなぐ（README の「別の PC のサーバーにつなぐとき」）。コードの変更は不要。
 - [ ] **B. 画像と GLB を Supabase Storage に置く。** コードの変更が必要。主に触る場所は次のとおり。
   - `backend/src/artworks.rs` の `write_files` と `remove_files`：ローカル保存を Storage へのアップロード・削除に変える
   - `backend/src/state.rs` の `media_url`：Storage の公開 URL を返すようにする
-  - `backend/src/museum_api.rs` の Unity 用の展示一覧：`model_url` を Storage の URL にする
   - `backend/src/main.rs` の `/media` の配信：Storage に移したものは不要になる
   - 博物館の GLB（`sample.glb`）も Storage に置くか、今のままサーバーから配信するかを決める
 
@@ -81,7 +80,7 @@ Supabase に移しても、Web と Unity の設定は変わりません。変わ
 
 - [x] `cargo run` で `[DB] PostgreSQL connected` と `[DB] Migration completed` が出る
 - [x] Supabase の Table Editor に `artworks` と `museum_settings` があり、RLS が有効になっている
-- [ ] Web で作品を登録して「展示する」を押すと、Unity の展示台に並ぶ
+- [ ] Web で作品を登録して「展示する」を押すと、博物館の展示台に並ぶ
 - [ ] （共有する場合）別の PC からも同じ作品と画像が見える
 
 ## 注意

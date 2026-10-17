@@ -120,8 +120,8 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 
 - **画面から `three/scenes/` の中を直接 import しないでください。** 必ず `import { ... } from '../three'` を使います。直接読むと three.js が最初の読み込みに混ざり、最初の表示が遅くなります。
 - ビルドしたときに、`dist/assets/` の `scenes-〇〇.js` が約 1 MB（gzip で約 290 KB）、`index-〇〇.js` が約 335 KB のままなら、正しく分かれています。
-- 展示台の位置と作品の向きは、API（`/api/museum` の `slots`）の値をそのまま使います。Unity と同じ座標です。
-- 作品を展示台に収める大きさの計算（`FittedModel`）は、Unity の `MuseumDisplaySlot.PlacePrefab` と同じ規則にしてあります。
+- 展示台の位置と作品の向きは、API（`/api/museum` の `slots`）の値をそのまま使います。博物館の GLB と同じ座標です。
+- 作品を展示台に収める大きさの計算は `FittedModel`（`scenes/models.tsx`）にあります。
 
 ## スタイル
 

@@ -9,10 +9,10 @@
 |---|---|---|
 | `backend/` | Rust（axum + sqlx + PostgreSQL） | 写真の処理、GLB の生成、展示台の割り当てなど、処理はすべてここ |
 | `web/` | React + Vite + three.js | 表示だけ。処理を足すときは `backend/` に書く |
-| `unity/` | Unity 6000.3.22f1 | `/api/exhibits` を 3 秒ごとに確認して展示を反映する。サーバーには書き込まない |
 | `docs/` | 作業メモ | 構成の説明や、未対応の作業リストなど |
 
-展示台の位置と部屋の割り当ては `backend/src/museum.rs` にあり、Unity の `unity/Assets/MemoryMuseum/Data/MuseumManifest.json` と同じ座標を使っています。片方を変えるときは、もう片方も合わせてください。
+展示台の位置と部屋の割り当ては `backend/src/museum.rs` にあり、博物館の GLB（既定は `backend/static/models/sample.glb`）と同じ座標を使っています。GLB を差し替えるときは、展示台の位置も合わせてください。
+3D の表示は Web（three.js）だけで行います。Unity 版は削除しました。最初のマイグレーションが作る `exhibits` 表は Unity 用の名残で、今は使っていません（適用済みのマイグレーションは書き換えられないので、表は残っています）。
 
 ## 起動と確認
 
