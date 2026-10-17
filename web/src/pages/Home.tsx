@@ -4,6 +4,7 @@
 // 3D の上に浮かぶ UI は 2 段だけ：上に館名とアバター（⑩ 設定へ）、タブバーのすぐ上に飾っている数と「歩く」（⑪ 鑑賞モード）・
 // 「模様替え」（⑫）の丸いボタン。作品の追加はタブバーの「＋」から。
 // スマホの枠（.app）は、ほかのタブと同じく残す（PC で枠を外すのは ⑪ と ⑫ だけ）。
+// ② ホーム（/）。タブ。
 import { Suspense, useEffect, useState } from 'react'
 import { useMuseum } from '../api'
 import { GlassButton, Screen, TLink } from '../components'
@@ -12,10 +13,16 @@ import { useNav } from '../nav'
 import { HomeScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, warmUp3D } from '../three'
 import './Home.css'
 
+// 1. 招待状のコンポーネントをインポート
+import { InviteSheet } from '../components'
+
 export default function Home() {
   const museum = useMuseum()
   const nav = useNav()
   const [ready, setReady] = useState(false)
+
+  // 2. 招待状シートを開くかどうかの状態を追加
+  const [showInvite, setShowInvite] = useState(false)
 
   useEffect(() => {
     if (museum.data) warmUp3D(shellUrlsOf(museum.data), furnitureUrlsOf(museum.data))
@@ -23,11 +30,20 @@ export default function Home() {
 
   const data = museum.data
   const initial = (data?.owner_name ?? 'は').slice(0, 1)
-  // しまってある（飾っていない）作品の数
   const stored = data ? data.total_artworks - data.displayed_count : 0
 
   return (
     <Screen tabbar className="home-screen">
+      {/* テスト用：画面の右上に出す「招待状を開く」ボタン */}
+      <div style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000 }}>
+        <button 
+          onClick={() => setShowInvite(true)}
+          style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+        >
+          💌 招待状を見る
+        </button>
+      </div>
+
       <StageShell
         className="home-stage"
         ready={ready || (!!data && !hasHouseModel(data))}
@@ -69,6 +85,12 @@ export default function Home() {
         )}
         {data && !hasHouseModel(data) && <div className="stage-fallback">家の 3D モデル (GLB) が見つかりません</div>}
       </StageShell>
+
+      {/* 3. 招待状のシート（InviteSheet）を配置 */}
+      <InviteSheet 
+        Open={showInvite} 
+        onClose={() => setShowInvite(false)} 
+      />
     </Screen>
   )
 }
