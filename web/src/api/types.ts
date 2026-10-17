@@ -270,7 +270,11 @@ export interface CatalogAsset {
   /** GLB の URL（/home-assets/modules/〇〇.glb） */
   file_url: string
   category: string
-  /** 幅・高さ・奥行き（m）。原点は底面の中心、正面は +Z */
+  /** 'floor'（床に置く）か 'wall'（壁に掛ける。原点は背面の底の中心で、背面を壁に付ける。position の y が底面の高さ） */
+  placement: 'floor' | 'wall'
+  /** 壁の家具を足したときに掛ける高さ（底面の y, m）。床の家具は null */
+  mount_height: number | null
+  /** 幅・高さ・奥行き（m）。原点は底面の中心（壁の家具は背面の底の中心）、正面は +Z */
   dimensions_meters: Vec3
   /** 天板の中心（家のキットの値）。作品を載せる面は surfaces */
   top_anchor: Vec3 | null
