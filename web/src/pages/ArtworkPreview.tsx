@@ -22,13 +22,13 @@ export default function ArtworkPreview() {
 
   const exhibit = () => {
     if (!artwork) return
-    if (artwork.displayed) return nav.push(`/museum?focus=${artwork.id}`)
+    if (artwork.displayed) return nav.push(`/museum?room=${artwork.room_id}&focus=${artwork.id}`)
     display.mutate(
       { id: artwork.id, display: true },
       {
         onSuccess: (a) => {
           toast(`${a.room_name ?? 'おうち'}に飾りました`)
-          nav.push(`/museum?focus=${a.id}`)
+          nav.push(`/museum?room=${a.room_id}&focus=${a.id}`)
         },
         // 飾る場所がいっぱいのとき（409）なども、Rust が返す日本語のメッセージをそのまま出す
         onError: (e) => toast(e.message),

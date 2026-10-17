@@ -1,96 +1,143 @@
 // ② ホーム（/）。タブ。
-// 画面いっぱいの 3D の家（HomeScene）。はじめはリビングの中を壁の上から見下ろす近景で、引けば家全体まで見える
-// （カメラの側と部屋どうしの間の壁はカットする）。ドラッグで見回せて、放っておくとゆっくり回る。作品をタップすると ⑥ 作品の詳細へ。
-// 3D の上に浮かぶ UI は 2 段だけ：上に館名とアバター（⑩ 設定へ）、タブバーのすぐ上に飾っている数と「歩く」（⑪ 鑑賞モード）・
-// 「模様替え」（⑫）の丸いボタン。作品の追加はタブバーの「＋」から。
-// スマホの枠（.app）は、ほかのタブと同じく残す（PC で枠を外すのは ⑪ と ⑫ だけ）。
-// ② ホーム（/）。タブ。
+// 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
+// 階のラベル（おへやが 1 つなら下の「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
+// 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
+// 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
 import { Suspense, useEffect, useState } from 'react'
-import { useMuseum } from '../api'
-import { GlassButton, Screen, TLink } from '../components'
-import { SofaIcon, WalkIcon } from '../icons'
+import { useSearchParams } from 'react-router-dom'
+import { useAddRoom, useAgeStack, useAges } from '../api'
+import { InviteSheet, NavBar, Screen, TLink, useToast } from '../components'
+import { HomeIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
-import { HomeScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, warmUp3D } from '../three'
+import { StackScene, StageShell, warmUp3D } from '../three'
 import './Home.css'
 
-// 1. 招待状のコンポーネントをインポート
-import { InviteSheet } from '../components'
-
 export default function Home() {
-  const museum = useMuseum()
+  const ages = useAges()
   const nav = useNav()
+  const toast = useToast()
+  const addRoom = useAddRoom()
+  const [params] = useSearchParams()
   const [ready, setReady] = useState(false)
-
-  // 2. 招待状シートを開くかどうかの状態を追加
+  // テスト用の招待状のシート
   const [showInvite, setShowInvite] = useState(false)
 
-  useEffect(() => {
-    if (museum.data) warmUp3D(shellUrlsOf(museum.data), furnitureUrlsOf(museum.data))
-  }, [museum.data])
+  const data = ages.data
+  // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
+  const fromUrl = Number(params.get('age'))
+  const list = data?.ages ?? []
+  const selected =
+    list.find((a) => a.age === fromUrl) ??
+    list.find((a) => a.age === data?.current_age && a.artwork_count > 0) ??
+    [...list].reverse().find((a) => a.artwork_count > 0) ??
+    list[list.length - 1] ??
+    null
+  const stack = useAgeStack(selected?.age ?? null)
+  const rooms = selected?.rooms ?? []
+  const initial = (data?.name ?? 'は').slice(0, 1)
 
-  const data = museum.data
-  const initial = (data?.owner_name ?? 'は').slice(0, 1)
-  const stored = data ? data.total_artworks - data.displayed_count : 0
+  // 建物の GLB を先に読んでおく（どの階も同じ建物）
+  useEffect(() => {
+    if (stack.data) warmUp3D(stack.data.house.rooms.flatMap((r) => (r.model_url ? [r.model_url] : [])))
+  }, [stack.data])
+  // 年齢を変えたら、新しい建物を描き終わるまで「準備しています…」を出す
+  useEffect(() => setReady(false), [selected?.age])
+
+  const choose = (age: number) => nav.replace(`/?age=${age}`, 'fade')
+  const enter = (roomId: string) => nav.push(`/rooms/${roomId}`)
+  const add = () => {
+    if (!selected) return
+    addRoom.mutate(selected.age, {
+      onSuccess: (room) => toast(`${room.name}を足しました`),
+      onError: (e) => toast(e.message),
+    })
+  }
 
   return (
     <Screen tabbar className="home-screen">
+      <NavBar
+        large
+        eyebrow="おうち"
+        title={data?.name ?? 'はるのミュージアム'}
+        right={
+          <TLink to="/settings" kind="tab" className="avatar" aria-label="マイページ">
+            {initial}
+          </TLink>
+        }
+      />
+
+      {data && !data.child_birthday && (
+        <TLink to="/settings" kind="tab" className="home-notice">
+          お誕生日を設定すると、作った年齢ごとにおへやを分けられます
+        </TLink>
+      )}
+
+      <div className="age-chips" role="tablist" aria-label="年齢">
+        {list.map((a) => (
+          <button
+            key={a.age}
+            type="button"
+            role="tab"
+            aria-selected={a.age === selected?.age}
+            className={`age-chip${a.age === selected?.age ? ' selected' : ''}`}
+            onClick={() => choose(a.age)}
+          >
+            {a.age === selected?.age && <HomeIcon size={17} />}
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      {selected && (
+        <div className="home-heading">
+          <span className="home-heading-name">{selected.label}のおへや</span>
+          <span className="home-heading-count num">{selected.displayed_count}</span>
+          {selected.artwork_count > selected.displayed_count && (
+            <span className="home-heading-stored">しまってある {selected.artwork_count - selected.displayed_count}</span>
+          )}
+        </div>
+      )}
+
+      <StageShell
+        className="home-stage"
+        ready={ready || rooms.length === 0 || stack.isError}
+        overlay={
+          rooms.length === 0 &&
+          selected && <div className="home-empty">{selected.label}のおへやは、まだありません</div>
+        }
+      >
+        {stack.data && stack.data.age === selected?.age && stack.data.rooms.length > 0 && (
+          <Suspense fallback={null}>
+            <StackScene key={stack.data.age} stack={stack.data} onRoom={enter} onReady={() => setReady(true)} />
+          </Suspense>
+        )}
+      </StageShell>
+
+      <div className="home-actions">
+        {rooms.length === 1 && (
+          <button type="button" className="btn btn-filled home-enter" onClick={() => enter(rooms[0].id)}>
+            はいる
+          </button>
+        )}
+        {rooms.length > 1 && <p className="home-hint">おへやの名前を押すと、中に入れます</p>}
+        {selected && (
+          <button type="button" className="btn btn-outline home-add" disabled={addRoom.isPending} onClick={add}>
+            <PlusIcon size={17} strokeWidth={2.2} />
+            {rooms.length === 0 ? 'おへやをつくる' : 'おへやを足す'}
+          </button>
+        )}
+      </div>
+
       {/* テスト用：画面の右上に出す「招待状を開く」ボタン */}
       <div style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000 }}>
-        <button 
+        <button
           onClick={() => setShowInvite(true)}
           style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
         >
           💌 招待状を見る
         </button>
       </div>
-
-      <StageShell
-        className="home-stage"
-        ready={ready || (!!data && !hasHouseModel(data))}
-        overlay={
-          <>
-            <div className="stage-top home-top">
-              {data && <span className="stage-title glass home-title">{data.name}</span>}
-              <TLink to="/settings" kind="tab" className="avatar home-avatar" aria-label="マイページ">
-                {initial}
-              </TLink>
-            </div>
-            <div className="home-dock">
-              {data && (
-                <p className="home-status glass">
-                  <span className="num">{data.displayed_count}</span>点を飾っています
-                  {stored > 0 && (
-                    <>
-                      ・しまってある <span className="num">{stored}</span>
-                    </>
-                  )}
-                </p>
-              )}
-              <div className="home-actions">
-                <GlassButton label="歩く" className="home-action" onClick={() => nav.push('/museum/walk')}>
-                  <WalkIcon size={21} />
-                </GlassButton>
-                <GlassButton label="模様替え" className="home-action" onClick={() => nav.push('/home/edit')}>
-                  <SofaIcon size={21} />
-                </GlassButton>
-              </div>
-            </div>
-          </>
-        }
-      >
-        {data && (
-          <Suspense fallback={null}>
-            <HomeScene museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReady(true)} />
-          </Suspense>
-        )}
-        {data && !hasHouseModel(data) && <div className="stage-fallback">家の 3D モデル (GLB) が見つかりません</div>}
-      </StageShell>
-
-      {/* 3. 招待状のシート（InviteSheet）を配置 */}
-      <InviteSheet 
-        Open={showInvite} 
-        onClose={() => setShowInvite(false)} 
-      />
+      <InviteSheet Open={showInvite} onClose={() => setShowInvite(false)} />
     </Screen>
   )
 }

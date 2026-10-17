@@ -20,6 +20,7 @@ import HomeEdit from './pages/HomeEdit'
 import MapView from './pages/MapView'
 import MuseumView from './pages/MuseumView'
 import MuseumWalk from './pages/MuseumWalk'
+import Room from './pages/Room'
 import Settings from './pages/Settings'
 import './App.css'
 
@@ -46,11 +47,13 @@ export default function App() {
               <Route path="/artworks/:id/edit" element={<EditArtwork />} />
               {/* ④ 3D プレビュー（モーダル） */}
               <Route path="/artworks/:id/preview" element={<ArtworkPreview />} />
-              {/* ⑤ 博物館の中（push）。?focus=作品ID / ?room=部屋ID でカメラを寄せる */}
+              {/* おへや（push）。年齢ごとの部屋の 3D。ホームの積み上げの建物から開く */}
+              <Route path="/rooms/:roomId" element={<Room />} />
+              {/* ⑤ おうちの中（push）。?room=おへやの id、?focus=作品ID でカメラを寄せる */}
               <Route path="/museum" element={<MuseumView />} />
-              {/* ⑪ 鑑賞モード（push）。家の中を一人称で歩く。PC は WASD とマウス、スマホはタッチ（仮想スティックとなぞる操作） */}
+              {/* ⑪ 鑑賞モード（push。?room=おへやの id）。おへやの中を一人称で歩く。PC は WASD とマウス、スマホはタッチ（仮想スティックとなぞる操作） */}
               <Route path="/museum/walk" element={<MuseumWalk />} />
-              {/* ⑫ 模様替え（push）。家具や作品をドラッグで動かす・回す・消す・足す。HomeEdit */}
+              {/* ⑫ 模様替え（push。?room=おへやの id）。家具や作品をドラッグで動かす・回す・消す・足す。HomeEdit */}
               <Route path="/home/edit" element={<HomeEdit />} />
               {/* どれにも当てはまらない URL はホームを出す */}
               <Route path="*" element={<Home />} />

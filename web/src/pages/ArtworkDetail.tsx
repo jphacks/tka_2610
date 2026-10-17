@@ -157,7 +157,7 @@ export default function ArtworkDetail() {
               3Dで見る
             </button>
             {artwork.displayed ? (
-              <button className="btn btn-outline" onClick={() => nav.push(`/museum?focus=${artwork.id}`)}>
+              <button className="btn btn-outline" onClick={() => nav.push(`/museum?room=${artwork.room_id}&focus=${artwork.id}`)}>
                 おうちで見る
               </button>
             ) : (

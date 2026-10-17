@@ -5,7 +5,10 @@ use std::{
     sync::LazyLock,
 };
 
-use axum::{extract::State, Json};
+use axum::{
+    extract::{Query, State},
+    Json,
+};
 use chrono::{Datelike, Local, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -18,7 +21,7 @@ use crate::{
 };
 
 #[derive(sqlx::FromRow)]
-struct DisplayedRow {
+pub(crate) struct DisplayedRow {
     id: Uuid,
     title: String,
     thumb_file: String,
@@ -30,14 +33,15 @@ struct DisplayedRow {
     model_depth: Option<f64>,
 }
 
-/// 飾っている作品 (飾った順)
-async fn displayed_rows(state: &AppState) -> AppResult<Vec<DisplayedRow>> {
+/// おへやに飾っている作品 (飾った順)
+pub(crate) async fn displayed_rows(pool: &sqlx::PgPool, room: Uuid) -> AppResult<Vec<DisplayedRow>> {
     Ok(sqlx::query_as::<_, DisplayedRow>(
         "SELECT id, title, thumb_file, model_file, model_kind, tint, \
             model_width, model_height, model_depth \
-         FROM artworks WHERE slot_id IS NOT NULL ORDER BY displayed_at ASC",
+         FROM artworks WHERE slot_id IS NOT NULL AND house_room_id = $1 ORDER BY displayed_at ASC",
     )
-    .fetch_all(&state.pool)
+    .bind(room)
+    .fetch_all(pool)
     .await?)
 }
 
@@ -45,18 +49,37 @@ async fn displayed_rows(state: &AppState) -> AppResult<Vec<DisplayedRow>> {
 // 設定 (⑩)
 // =============================
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow)]
 pub struct Settings {
     pub museum_name: String,
     pub owner_name: String,
+    /// 子どもの誕生日 ("2021-06-01")。作品の作成日から、作ったときの年齢 (おへや) を決める。未設定なら null
+    pub child_birthday: Option<NaiveDate>,
+}
+
+/// PUT /api/settings の本文。child_birthday を省くと今の誕生日のまま (消すことはできない)
+#[derive(Deserialize)]
+pub struct SettingsBody {
+    pub museum_name: String,
+    pub owner_name: String,
+    #[serde(default)]
+    pub child_birthday: Option<NaiveDate>,
 }
 
 async fn load_settings(state: &AppState) -> AppResult<Settings> {
     Ok(sqlx::query_as::<_, Settings>(
-        "SELECT museum_name, owner_name FROM museum_settings WHERE id = 1",
+        "SELECT museum_name, owner_name, child_birthday FROM museum_settings WHERE id = 1",
     )
     .fetch_one(&state.pool)
     .await?)
+}
+
+/// 子どもの誕生日 (未設定なら None)。作品の年齢 (crate::age) を計算するのに使う
+pub async fn child_birthday<'e>(executor: impl sqlx::PgExecutor<'e>) -> AppResult<Option<NaiveDate>> {
+    Ok(sqlx::query_scalar::<_, Option<NaiveDate>>("SELECT child_birthday FROM museum_settings WHERE id = 1")
+        .fetch_optional(executor)
+        .await?
+        .flatten())
 }
 
 pub async fn get_settings(State(state): State<AppState>) -> AppResult<Json<Settings>> {
@@ -65,8 +88,9 @@ pub async fn get_settings(State(state): State<AppState>) -> AppResult<Json<Setti
 
 pub async fn update_settings(
     State(state): State<AppState>,
-    Json(body): Json<Settings>,
+    Json(body): Json<SettingsBody>,
 ) -> AppResult<Json<Settings>> {
+    let before = child_birthday(&state.pool).await?;
     let museum_name = body.museum_name.trim();
     let owner_name = body.owner_name.trim();
     if museum_name.is_empty() || museum_name.chars().count() > 30 {
@@ -76,14 +100,26 @@ pub async fn update_settings(
         return Err(AppError::bad_request("名前は1〜30文字で入力してください"));
     }
 
+    if let Some(birthday) = body.child_birthday
+        && (birthday > Local::now().date_naive() || birthday.year() < 1900)
+    {
+        return Err(AppError::bad_request("誕生日の日付が正しくありません"));
+    }
+
     let settings = sqlx::query_as::<_, Settings>(
-        "UPDATE museum_settings SET museum_name = $1, owner_name = $2, updated_at = NOW() \
-         WHERE id = 1 RETURNING museum_name, owner_name",
+        "UPDATE museum_settings SET museum_name = $1, owner_name = $2, \
+            child_birthday = COALESCE($3, child_birthday), updated_at = NOW() \
+         WHERE id = 1 RETURNING museum_name, owner_name, child_birthday",
     )
     .bind(museum_name)
     .bind(owner_name)
+    .bind(body.child_birthday)
     .fetch_one(&state.pool)
     .await?;
+    // 誕生日が変わると作品の年齢が変わるので、年齢の合わないおへやの作品を、正しい年齢のおへやへ置き直す
+    if settings.child_birthday != before {
+        home_api::reconcile(&state).await?;
+    }
     Ok(Json(settings))
 }
 
@@ -287,7 +323,7 @@ fn room_description(id: &str) -> &'static str {
 /// 家具の GLB と壁紙のテクスチャの配信先 (main.rs の /home-assets)
 const HOME_ASSETS: &str = "/home-assets";
 
-static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
+pub(crate) static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
     let catalog = &*home::CATALOG;
     let texture = |file: &str| format!("{HOME_ASSETS}/textures/{file}");
     CatalogView {
@@ -335,6 +371,8 @@ static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
 
 #[derive(Serialize)]
 pub struct MuseumOverview {
+    /// このおへや (?room= のおへや。省いたら最近保存したおへや)。layout・slots・capacity・rooms はこのおへやのもの
+    room: home_api::RoomInfo,
     /// ホームの見出しの上に出す今日の日付 (例: "9月25日 木曜日")
     today_label: String,
     name: String,
@@ -361,7 +399,7 @@ pub struct MuseumOverview {
 }
 
 /// 配置 JSON の作品から、飾っている作品の置き場所を作る (作品の行が無い配置は飛ばす)
-fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView> {
+pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView> {
     layout
         .objects
         .iter()
@@ -404,10 +442,14 @@ fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView> {
         .collect()
 }
 
-pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<MuseumOverview>> {
+pub async fn museum_overview(
+    State(state): State<AppState>,
+    Query(query): Query<home_api::RoomQuery>,
+) -> AppResult<Json<MuseumOverview>> {
+    let room = home_api::resolve_room(&state.pool, query.room).await?;
     let (settings, displayed, total, saved) = tokio::try_join!(
         load_settings(&state),
-        displayed_rows(&state),
+        displayed_rows(&state.pool, room.id),
         async {
             Ok::<i64, AppError>(
                 sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM artworks")
@@ -415,7 +457,7 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
                     .await?,
             )
         },
-        home_api::load_layout(&state.pool),
+        home_api::load_layout(&state.pool, room),
     )?;
     let layout = saved.layout;
 
@@ -425,6 +467,7 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
     let house = house_view(|room| state.room_model_urls.get(room.id).cloned());
 
     Ok(Json(MuseumOverview {
+        room: saved.room,
         today_label: today_label(Local::now().date_naive()),
         name: settings.museum_name,
         owner_name: settings.owner_name,

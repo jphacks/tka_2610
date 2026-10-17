@@ -47,9 +47,15 @@ export const queryClient = new QueryClient({
 
 /** キャッシュのキー。取り直すときもこのキーで指定する */
 export const keys = {
+  /** おへやごとのおうちの全体像の、共通の先頭（取り直すときはこれで全部のおへや） */
   museum: ['museum'] as const,
-  /** おうちの配置 JSON（GET /api/home/layout） */
+  /** おへや roomId のおうちの全体像（GET /api/museum?room=）。省くと「今の年齢のおへや」 */
+  museumOf: (roomId?: string | null) => ['museum', roomId ?? 'default'] as const,
+  /** おへやの配置 JSON（GET /api/home/layout?room=） */
   layout: ['home', 'layout'] as const,
+  /** 年齢ごとのおへやの一覧（GET /api/ages）と、年齢ごとの積み上げ（GET /api/ages/{age}） */
+  ages: ['ages'] as const,
+  ageStack: (age: number) => ['ages', age] as const,
   settings: ['settings'] as const,
   artworks: (params: ListParams) => ['artworks', params] as const,
   artwork: (id: string) => ['artwork', id] as const,
