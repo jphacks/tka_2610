@@ -57,6 +57,7 @@ export { useAddRoom, useAgeStack, useAges, useDeleteRoom } from './ages'
 export { MEMORY_LIMITS, hasMemories, kindOfFile, probeMedia, useDeleteMemory, useUpdateMemory, useUploadMemory } from './memories'
 export type { UploadMemoryInput } from './memories'
 export {
+  fetchArtworkDetail,
   prefetchArtwork,
   useArtwork,
   useArtworks,

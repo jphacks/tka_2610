@@ -8,11 +8,14 @@
 // 開発用に、PC でも URL に ?input=touch を付けるとタッチの操作になる（docs/walk.md）。
 // 飾る作品の変更（ほかの端末で飾った・外した）は 3 秒ごとに取り直して反映する（Unity 版と同じ間隔）。
 // 3D の中身は WalkScene（three/ の遅延読み込みの中）。この画面は、読み込み中・操作の説明・照準・仮想スティック・作品カード・エラーの表示を受け持つ。
+// 声のおもいで：声のある作品を照準で 1 秒見ていると、その作品の最初の声を 1 回流す（useWalkVoice。同じ作品は、開いている間に 1 回だけ）。
+// 目をそらすと小さくして止める。右上の音符のボタンで入・切（localStorage に覚える。はじめは入）。作品カードにも「声をきく」を出す。
+// 歩き始めのクリック・タッチのあとに流すので、ブラウザの自動再生の制限にはかからない。
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useArtwork, useMuseum } from '../api'
+import { fetchArtworkDetail, useArtwork, useMuseum, type Memory, type MemoryCounts, type SlotView } from '../api'
 import { ErrorBoundary, GlassButton, Img, Screen, Spinner } from '../components'
-import { BackIcon } from '../icons'
+import { BackIcon, NoteIcon, PauseIcon, PlayIcon, StopIcon } from '../icons'
 import { useNav } from '../nav'
 import {
   StageShell,
@@ -43,6 +46,105 @@ type StickListener = (stick: TouchStick | null) => void
 /** 飾る作品の変更を取り直す間隔（Unity 版の MuseumApiClient と同じ 3 秒） */
 const REFRESH_MS = 3000
 
+/** 声の自動再生の入・切を覚えるキー（値は 'off' のときだけ切） */
+const AUTO_VOICE_KEY = 'walk-auto-voice'
+/** 照準を合わせてから声を流すまで（ミリ秒） */
+const VOICE_DWELL_MS = 1000
+/** 目をそらしたときに小さくしていく長さ（ミリ秒） */
+const VOICE_FADE_MS = 400
+
+const readAutoVoice = () => {
+  try {
+    return localStorage.getItem(AUTO_VOICE_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+/** 「写真 2・動画 1・声 1」 */
+const memoryLabel = (c: MemoryCounts) =>
+  [
+    ['写真', c.photo],
+    ['動画', c.video],
+    ['声', c.audio],
+  ]
+    .filter(([, n]) => Number(n) > 0)
+    .map(([label, n]) => `${label} ${n}`)
+    .join('・')
+
+/**
+ * 照準の先（作品カードを開いていればその作品）に声のおもいでがあれば、1 秒後にその作品の最初の声を 1 回流す。
+ * 目をそらす・切にすると、小さくして止める。流しているものを返す（画面の下に出す）
+ */
+function useWalkVoice(targetId: string | null, slots: SlotView[] | undefined, enabled: boolean) {
+  const audio = useRef<HTMLAudioElement | null>(null)
+  const played = useRef(new Set<string>())
+  const fade = useRef<number | null>(null)
+  // 作品カードの「声をきく」で流したか（自動再生を切にしていても流す）
+  const manual = useRef(false)
+  const [playing, setPlaying] = useState<{ artworkId: string; title: string } | null>(null)
+  const playingId = playing?.artworkId ?? null
+
+  const stop = useCallback((smooth: boolean) => {
+    const a = audio.current
+    if (fade.current !== null) clearInterval(fade.current)
+    fade.current = null
+    setPlaying(null)
+    if (!a || a.paused) return
+    if (!smooth) return a.pause()
+    const step = a.volume / (VOICE_FADE_MS / 50)
+    fade.current = window.setInterval(() => {
+      a.volume = Math.max(0, a.volume - step)
+      if (a.volume > 0) return
+      a.pause()
+      if (fade.current !== null) clearInterval(fade.current)
+      fade.current = null
+    }, 50)
+  }, [])
+
+  // 目をそらした・ほかの作品へ移った・切にしたら止める（作品カードで流した声は、カードを開いている間は止めない）
+  useEffect(() => {
+    if (playingId && (playingId !== targetId || (!enabled && !manual.current))) stop(true)
+  }, [targetId, enabled, playingId, stop])
+
+  /** 作品の最初の声を流す（作品カードの「声をきく」からも呼ぶ） */
+  const play = useCallback((artworkId: string, voice: Memory, title: string, byHand = false) => {
+    manual.current = byHand
+    played.current.add(artworkId)
+    if (fade.current !== null) clearInterval(fade.current)
+    fade.current = null
+    const a = audio.current ?? (audio.current = new Audio())
+    a.src = voice.url
+    a.volume = 1
+    a.onended = () => setPlaying(null)
+    a.play()
+      .then(() => setPlaying({ artworkId, title }))
+      .catch(() => setPlaying(null))
+  }, [])
+
+  // 照準を合わせて 1 秒たったら流す
+  useEffect(() => {
+    if (!enabled || !targetId || played.current.has(targetId)) return
+    const slot = slots?.find((s) => s.artwork.id === targetId)
+    if (!slot || slot.artwork.memory_counts.audio === 0) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const detail = await fetchArtworkDetail(targetId).catch(() => null)
+      const voice = detail?.memories.find((m) => m.kind === 'audio')
+      if (!cancelled && voice) play(targetId, voice, slot.artwork.title)
+    }, VOICE_DWELL_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [targetId, enabled, slots, play])
+
+  // 画面を離れたら止める
+  useEffect(() => () => stop(false), [stop])
+
+  return { playing, play, stop: () => stop(true) }
+}
+
 export default function MuseumWalk() {
   const [params] = useSearchParams()
   const museum = useMuseum({ roomId: params.get('room'), refetchInterval: REFRESH_MS })
@@ -67,6 +169,18 @@ export default function MuseumWalk() {
   const showGuide = ready && !selected && (touch ? !touchWalking : !status.walking)
 
   const closeCard = useCallback(() => setSelected(null), [])
+  const [autoVoice, setAutoVoice] = useState(readAutoVoice)
+  const voice = useWalkVoice(selected ?? aimedId, museum.data?.slots, autoVoice && ready)
+  const toggleAutoVoice = () => {
+    const next = !autoVoice
+    setAutoVoice(next)
+    try {
+      localStorage.setItem(AUTO_VOICE_KEY, next ? 'on' : 'off')
+    } catch {
+      /* 覚えられなくても、開いている間は切り替わる */
+    }
+  }
+  const aimedHasVoice = !!aimedId && !!museum.data?.slots.find((s) => s.artwork.id === aimedId && s.artwork.memory_counts.audio > 0)
 
   const back = (
     <GlassButton
@@ -100,6 +214,13 @@ export default function MuseumWalk() {
                       やめる
                     </button>
                   )}
+                  <GlassButton
+                    label={autoVoice ? '作品の声を自動で流さない' : '作品の声を自動で流す'}
+                    className={`walk-voice-toggle${autoVoice ? ' on' : ''}`}
+                    onClick={toggleAutoVoice}
+                  >
+                    <NoteIcon size={18} />
+                  </GlassButton>
                 </span>
               </div>
 
@@ -139,7 +260,9 @@ export default function MuseumWalk() {
                     (touch ? (
                       // タッチでは照準を合わせたまま押せるよう、作品の名前の下に大きな「見る」を出す
                       <div className="walk-aim walk-aim-touch">
-                        <span>「{aimedTitle}」</span>
+                        <span>
+                          「{aimedTitle}」{aimedHasVoice && <NoteIcon size={14} className="walk-aim-voice" />}
+                        </span>
                         <button
                           type="button"
                           className="btn btn-filled btn-small walk-look"
@@ -150,7 +273,9 @@ export default function MuseumWalk() {
                       </div>
                     ) : (
                       <p className="walk-aim">
-                        「{aimedTitle}」
+                        <span>
+                          「{aimedTitle}」{aimedHasVoice && <NoteIcon size={14} className="walk-aim-voice" />}
+                        </span>
                         <small>E またはクリックで見る</small>
                       </p>
                     ))}
@@ -160,8 +285,24 @@ export default function MuseumWalk() {
 
               {touch && <WalkStick listener={stickListener} />}
 
+              {voice.playing && !selected && (
+                <div className="walk-voice-now glass-dark" role="status">
+                  <NoteIcon size={15} />
+                  <span>「{voice.playing.title}」の声</span>
+                  <button type="button" className="walk-voice-stop" aria-label="声を止める" onClick={voice.stop}>
+                    <StopIcon size={14} />
+                  </button>
+                </div>
+              )}
+
               {selected && (
-                <WalkArtworkCard id={selected} onClose={closeCard} onOpen={() => nav.push(`/artworks/${selected}`, selected)} />
+                <WalkArtworkCard
+                  id={selected}
+                  onClose={closeCard}
+                  onOpen={() => nav.push(`/artworks/${selected}`, selected)}
+                  voicePlaying={voice.playing?.artworkId === selected}
+                  onVoice={(memory, title) => (voice.playing?.artworkId === selected ? voice.stop() : voice.play(selected, memory, title, true))}
+                />
               )}
 
               {museum.data && modelUrl === null && (
@@ -214,8 +355,24 @@ function WalkStick({ listener }: { listener: RefObject<StickListener | null> }) 
 }
 
 /** 照準の先の作品の情報（Unity 版の作品カードと同じ役目）。ここから作品の詳細画面へ進める */
-function WalkArtworkCard({ id, onClose, onOpen }: { id: string; onClose: () => void; onOpen: () => void }) {
-  const artwork = useArtwork(id).data?.artwork
+function WalkArtworkCard({
+  id,
+  onClose,
+  onOpen,
+  voicePlaying,
+  onVoice,
+}: {
+  id: string
+  onClose: () => void
+  onOpen: () => void
+  /** この作品の声を流しているか */
+  voicePlaying: boolean
+  /** 「声をきく」・「止める」 */
+  onVoice: (voice: Memory, title: string) => void
+}) {
+  const detail = useArtwork(id).data
+  const artwork = detail?.artwork
+  const voice = detail?.memories?.find((m) => m.kind === 'audio')
 
   // Esc でも閉じる
   useEffect(() => {
@@ -238,12 +395,21 @@ function WalkArtworkCard({ id, onClose, onOpen }: { id: string; onClose: () => v
             <h2>{artwork.title}</h2>
             <p className="walk-card-meta num">{[artwork.author_label, artwork.date_long].filter(Boolean).join('　')}</p>
             {artwork.memo && <p className="walk-card-memo">{artwork.memo}</p>}
+            {artwork.memory_counts && memoryLabel(artwork.memory_counts) && (
+              <p className="walk-card-meta">おもいで　{memoryLabel(artwork.memory_counts)}</p>
+            )}
             {artwork.room_name && (
               <p className="walk-card-meta">
                 <span className="on-view" /> {artwork.room_name}
               </p>
             )}
             <div className="walk-card-actions">
+              {voice && (
+                <button className="btn btn-outline btn-small walk-card-voice" onClick={() => onVoice(voice, artwork.title)}>
+                  {voicePlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
+                  {voicePlaying ? '止める' : '声をきく'}
+                </button>
+              )}
               <button className="btn btn-filled btn-small" onClick={onOpen}>
                 詳しく見る
               </button>
