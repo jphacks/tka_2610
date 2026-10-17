@@ -48,9 +48,6 @@ async fn main() {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
 
-    let public_base_url =
-        env::var("PUBLIC_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
-
     let media_dir = env::var("MEDIA_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest_dir.join("data").join("media"));
@@ -104,7 +101,6 @@ async fn main() {
 
     let state = AppState {
         pool,
-        public_base_url,
         media_dir: media_dir.clone(),
         museum_model_url,
     };
@@ -134,8 +130,6 @@ async fn main() {
             "/artworks/{id}/display",
             post(artworks::display_artwork).delete(artworks::undisplay_artwork),
         )
-        // Unity がポーリングする展示一覧
-        .route("/exhibits", get(museum_api::unity_exhibits))
         .layer(CompressionLayer::new())
         .layer(DefaultBodyLimit::max(40 * 1024 * 1024));
 
@@ -193,7 +187,6 @@ async fn main() {
     println!();
     println!("Web   : http://localhost:{port}");
     println!("API   : http://localhost:{port}/api/museum");
-    println!("Unity : http://localhost:{port}/api/exhibits");
     println!();
 
     axum::serve(listener, app).await.expect("server failed");

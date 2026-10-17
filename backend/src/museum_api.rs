@@ -1,19 +1,11 @@
-//! 博物館全体の API (Web 画面 ②⑤⑦⑩) と Unity 用の展示一覧
+//! 博物館全体の API (Web 画面 ②⑤⑦⑩)
 
-use std::hash::{DefaultHasher, Hash, Hasher};
-
-use axum::{
-    extract::State,
-    http::{header, HeaderMap, HeaderValue, StatusCode},
-    response::{IntoResponse, Response},
-    Json,
-};
+use axum::{extract::State, Json};
 use chrono::{Datelike, Local, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    artworks::date_short,
     error::{AppError, AppResult},
     museum::{self, FloorView},
     state::{media_url, AppState, MediaKind},
@@ -23,11 +15,6 @@ use crate::{
 struct DisplayedRow {
     id: Uuid,
     title: String,
-    child_name: String,
-    age: Option<i16>,
-    made_on: NaiveDate,
-    memo: String,
-    category: String,
     thumb_file: String,
     model_file: String,
     tint: String,
@@ -36,7 +23,7 @@ struct DisplayedRow {
 
 async fn displayed_rows(state: &AppState) -> AppResult<Vec<DisplayedRow>> {
     Ok(sqlx::query_as::<_, DisplayedRow>(
-        "SELECT id, title, child_name, age, made_on, memo, category, thumb_file, model_file, tint, slot_id \
+        "SELECT id, title, thumb_file, model_file, tint, slot_id \
          FROM artworks WHERE slot_id IS NOT NULL ORDER BY displayed_at ASC",
     )
     .fetch_all(&state.pool)
@@ -257,78 +244,4 @@ mod tests {
         let d = NaiveDate::from_ymd_opt(2026, 9, 25).unwrap();
         assert_eq!(today_label(d), "9月25日 金曜日");
     }
-}
-
-// =============================
-// Unity 用 GET /api/exhibits
-// =============================
-
-#[derive(Serialize, Hash)]
-pub struct UnityExhibit {
-    id: String,
-    title: String,
-    /// Unity は別プロセスなので絶対 URL
-    model_url: String,
-    slot_id: String,
-    status: &'static str,
-    /// 展示台ローカルの Y 回転 (度)。PlacePrefab の angle にそのまま渡す
-    yaw: i32,
-    child_name: String,
-    date_label: String,
-    memo: String,
-    category: String,
-}
-
-/// Unity が数秒おきにポーリングする。
-/// 変化が無ければ 304 を返すので、Unity 側は JSON のパースも不要になる。
-pub async fn unity_exhibits(State(state): State<AppState>, headers: HeaderMap) -> AppResult<Response> {
-    let base = state.public_base_url.trim_end_matches('/');
-
-    let exhibits: Vec<UnityExhibit> = displayed_rows(&state)
-        .await?
-        .into_iter()
-        .filter_map(|r| {
-            let slot = museum::slot(&r.slot_id)?;
-            let child = match r.age {
-                Some(age) if !r.child_name.is_empty() => format!("{}（{}歳）", r.child_name, age),
-                _ => r.child_name.clone(),
-            };
-            Some(UnityExhibit {
-                id: r.id.to_string(),
-                title: r.title,
-                model_url: format!("{base}{}", media_url(MediaKind::Model, &r.model_file)),
-                slot_id: r.slot_id,
-                status: "ready",
-                yaw: museum::unity_local_yaw(slot).round() as i32,
-                child_name: child,
-                date_label: date_short(r.made_on),
-                memo: r.memo,
-                category: r.category,
-            })
-        })
-        .collect();
-
-    let mut hasher = DefaultHasher::new();
-    exhibits.hash(&mut hasher);
-    let etag = format!("\"{:016x}\"", hasher.finish());
-
-    let not_modified = headers
-        .get(header::IF_NONE_MATCH)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v == etag);
-
-    let etag_value = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
-
-    if not_modified {
-        return Ok((StatusCode::NOT_MODIFIED, [(header::ETAG, etag_value)]).into_response());
-    }
-
-    Ok((
-        [
-            (header::ETAG, etag_value),
-            (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
-        ],
-        Json(exhibits),
-    )
-        .into_response())
 }

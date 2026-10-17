@@ -11,43 +11,41 @@ pub struct SlotDef {
     pub id: &'static str,
     /// 展示台の天板中心
     pub position: [f32; 3],
-    /// Unity シーン上の展示台自身の Y 回転
-    pub unity_rotation: f32,
     /// 博物館GLB(Web表示)に含まれる展示台か。false は Unity の別館のみ
     pub in_main_model: bool,
 }
 
 pub const SLOTS: &[SlotDef] = &[
-    SlotDef { id: "SLOT_001", position: [0.00, 1.08, -6.10], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_002", position: [-3.95, 1.08, -0.70], unity_rotation: 180.0, in_main_model: true },
-    SlotDef { id: "SLOT_003", position: [3.95, 1.08, -0.70], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_004", position: [-4.00, 1.08, -10.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_005", position: [4.00, 1.08, -10.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_006", position: [-9.65, 1.08, -7.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_007", position: [-9.65, 1.08, -2.10], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_008", position: [-9.65, 1.08, 6.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_009", position: [-9.65, 1.08, 11.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_010", position: [9.65, 1.08, -7.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_011", position: [9.65, 1.08, -2.10], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_012", position: [9.65, 1.08, 6.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_013", position: [9.65, 1.08, 11.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_014", position: [-3.80, 1.08, 12.25], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_015", position: [3.80, 1.08, 12.25], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_016", position: [-9.35, 5.30, -8.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_017", position: [-9.35, 5.30, -0.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_018", position: [-9.35, 5.30, 7.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_019", position: [9.35, 5.30, -8.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_020", position: [9.35, 5.30, -0.50], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_021", position: [9.35, 5.30, 7.00], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_022", position: [-4.00, 5.30, 12.40], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_023", position: [4.00, 5.30, 12.40], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_024", position: [0.00, 5.30, -12.45], unity_rotation: 0.0, in_main_model: true },
-    SlotDef { id: "SLOT_025", position: [-17.10, 1.08, 0.20], unity_rotation: 0.0, in_main_model: false },
-    SlotDef { id: "SLOT_026", position: [-17.10, 1.08, 3.00], unity_rotation: 0.0, in_main_model: false },
-    SlotDef { id: "SLOT_027", position: [-17.10, 1.08, 5.80], unity_rotation: 0.0, in_main_model: false },
-    SlotDef { id: "SLOT_028", position: [17.10, 1.08, 0.20], unity_rotation: 0.0, in_main_model: false },
-    SlotDef { id: "SLOT_029", position: [17.10, 1.08, 3.00], unity_rotation: 0.0, in_main_model: false },
-    SlotDef { id: "SLOT_030", position: [17.10, 1.08, 5.80], unity_rotation: 0.0, in_main_model: false },
+    SlotDef { id: "SLOT_001", position: [0.00, 1.08, -6.10], in_main_model: true },
+    SlotDef { id: "SLOT_002", position: [-3.95, 1.08, -0.70], in_main_model: true },
+    SlotDef { id: "SLOT_003", position: [3.95, 1.08, -0.70], in_main_model: true },
+    SlotDef { id: "SLOT_004", position: [-4.00, 1.08, -10.50], in_main_model: true },
+    SlotDef { id: "SLOT_005", position: [4.00, 1.08, -10.50], in_main_model: true },
+    SlotDef { id: "SLOT_006", position: [-9.65, 1.08, -7.50], in_main_model: true },
+    SlotDef { id: "SLOT_007", position: [-9.65, 1.08, -2.10], in_main_model: true },
+    SlotDef { id: "SLOT_008", position: [-9.65, 1.08, 6.00], in_main_model: true },
+    SlotDef { id: "SLOT_009", position: [-9.65, 1.08, 11.00], in_main_model: true },
+    SlotDef { id: "SLOT_010", position: [9.65, 1.08, -7.50], in_main_model: true },
+    SlotDef { id: "SLOT_011", position: [9.65, 1.08, -2.10], in_main_model: true },
+    SlotDef { id: "SLOT_012", position: [9.65, 1.08, 6.00], in_main_model: true },
+    SlotDef { id: "SLOT_013", position: [9.65, 1.08, 11.00], in_main_model: true },
+    SlotDef { id: "SLOT_014", position: [-3.80, 1.08, 12.25], in_main_model: true },
+    SlotDef { id: "SLOT_015", position: [3.80, 1.08, 12.25], in_main_model: true },
+    SlotDef { id: "SLOT_016", position: [-9.35, 5.30, -8.00], in_main_model: true },
+    SlotDef { id: "SLOT_017", position: [-9.35, 5.30, -0.50], in_main_model: true },
+    SlotDef { id: "SLOT_018", position: [-9.35, 5.30, 7.00], in_main_model: true },
+    SlotDef { id: "SLOT_019", position: [9.35, 5.30, -8.00], in_main_model: true },
+    SlotDef { id: "SLOT_020", position: [9.35, 5.30, -0.50], in_main_model: true },
+    SlotDef { id: "SLOT_021", position: [9.35, 5.30, 7.00], in_main_model: true },
+    SlotDef { id: "SLOT_022", position: [-4.00, 5.30, 12.40], in_main_model: true },
+    SlotDef { id: "SLOT_023", position: [4.00, 5.30, 12.40], in_main_model: true },
+    SlotDef { id: "SLOT_024", position: [0.00, 5.30, -12.45], in_main_model: true },
+    SlotDef { id: "SLOT_025", position: [-17.10, 1.08, 0.20], in_main_model: false },
+    SlotDef { id: "SLOT_026", position: [-17.10, 1.08, 3.00], in_main_model: false },
+    SlotDef { id: "SLOT_027", position: [-17.10, 1.08, 5.80], in_main_model: false },
+    SlotDef { id: "SLOT_028", position: [17.10, 1.08, 0.20], in_main_model: false },
+    SlotDef { id: "SLOT_029", position: [17.10, 1.08, 3.00], in_main_model: false },
+    SlotDef { id: "SLOT_030", position: [17.10, 1.08, 5.80], in_main_model: false },
 ];
 
 pub struct RoomDef {
@@ -129,11 +127,6 @@ pub fn world_yaw(slot: &SlotDef) -> f32 {
 
     // 左右の展示台は中央通路の方を向く
     if x < 0.0 { 90.0 } else { -90.0 }
-}
-
-/// Unity の展示台はそれ自身が回転しているので、ローカル角度に直す
-pub fn unity_local_yaw(slot: &SlotDef) -> f32 {
-    (world_yaw(slot) - slot.unity_rotation).rem_euclid(360.0)
 }
 
 /// カテゴリに合った部屋の空き展示台 → 本館の空き → 別館 の順に探す
@@ -255,7 +248,5 @@ mod tests {
         assert_eq!(world_yaw(slot("SLOT_006").unwrap()), 90.0);
         assert_eq!(world_yaw(slot("SLOT_010").unwrap()), -90.0);
         assert_eq!(world_yaw(slot("SLOT_024").unwrap()), 0.0);
-        // SLOT_002 は Unity 上で 180° 回転しているのでローカル角度で補正
-        assert_eq!(unity_local_yaw(slot("SLOT_002").unwrap()), 270.0);
     }
 }
