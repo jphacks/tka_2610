@@ -119,7 +119,7 @@ import { HomeScene, StageShell } from '../three'
 | `ArtworkThumb.tsx` / `.css` | `ArtworkThumb` / `ThumbSkeletons` | 作品のサムネイルと、読み込み中の仮表示。`onSelect` を渡すと、詳細へのリンクではなく押すとそれを呼ぶボタンになる（⑫ の「追加」のシート） |
 | `Loading.tsx` / `.css` | `Spinner` / `Busy` / `StageFallback` | 読み込み中の表示 |
 | `ArtworkForm.tsx` / `.css` | `ArtworkForm` | 作品の登録・編集フォーム（③と⑨で共通） |
-| `MemorySection.tsx` / `.css` | `MemorySection` | ⑥ の「おもいで」。写真と動画は 3 列のタイル（動画は最初のコマと長さ）、声はリストの行（その場で再生）。「＋ 追加」のシートから写真・動画・音声ファイルを選ぶ（1 つずつ順に送り、進み具合を出す）・声を録音する。「⋯」でひとことを変える・消す |
+| `MemorySection.tsx` / `.css` | `MemorySection` | ⑥ の「おもいで」。写真と動画は 3 列のタイル（動画は最初のコマと長さ）、声はリストの行（その場で再生）。「＋ 追加」のシートから写真・動画・音声ファイルを選ぶ（1 つずつ順に送り、進み具合を出す）・声を録音する。スマホなど指で操作する端末（`pointer: coarse`）では「写真をとる」「動画をとる」も出し、その場でカメラを開く（`capture="environment"` の入力。PC では効かないので出さない）。「⋯」でひとことを変える・消す |
 | `MemoryViewer.tsx` / `.css` | `MemoryViewer` | おもいでの写真と動画を画面いっぱいで見る（左右の送り・なぞる・← →・Esc）。この端末で再生できない動画は、ダウンロードのリンクを出す。シートを上に重ねるため z-index は 40 |
 | `VoiceRecorder.tsx` / `.css` | `VoiceRecorder` | 声を録音するシート（`MediaRecorder`。`audio/mp4` を優先、だめなら webm・ogg。3 分まで。止めると聞き直せる）。マイクが使えない（https か localhost でない・許可しない）ときは理由を出し、音声ファイルを選ぶ方へ |
 | `ErrorBoundary.tsx` | `ErrorBoundary` | 子の描画中のエラーを受け止めて、代わりの表示を出す（⑪ で 3D を読み込めなかったとき） |

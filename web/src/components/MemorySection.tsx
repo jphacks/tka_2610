@@ -1,6 +1,7 @@
 // ⑥ 作品の詳細の「おもいで」。作品に付けた写真・動画・声の記録を並べ、足す・ひとことを変える・消すができる（Rust: backend/src/memories.rs）。
 // 写真と動画は 3 列のタイル（押すと MemoryViewer で画面いっぱいに見る）、声はリストの行（押すとその場で流す。<audio> を 1 つ使い回す）。
 // 「＋ 追加」のシートから、写真・動画や音声ファイルを選ぶ・声を録音する（VoiceRecorder）。選んだファイルは 1 つずつ順に送り、シートに進み具合を出す。
+// スマホなど指で操作する端末では、「写真をとる」「動画をとる」でその場でカメラを開ける（capture 付きの入力。PC では効かないので出さない）。
 import { useEffect, useRef, useState } from 'react'
 import {
   MEMORY_LIMITS,
@@ -12,12 +13,15 @@ import {
   type Memory,
   type UploadMemoryInput,
 } from '../api'
-import { GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
+import { CameraIcon, GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
 import { MemoryViewer } from './MemoryViewer'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
 import { VoiceRecorder } from './VoiceRecorder'
 import './MemorySection.css'
+
+/** その場で撮れる端末か（指で操作する端末。PC のブラウザは capture を無視してファイルを選ばせるだけなので出さない） */
+const canCapture = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
 
 /** 送っているファイル 1 つ（シートに出す） */
 interface Job {
@@ -82,6 +86,9 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
   const [target, setTarget] = useState<{ memory: Memory; mode: 'menu' | 'edit' | 'delete' } | null>(null)
   const pickVisual = useRef<HTMLInputElement>(null)
   const pickAudio = useRef<HTMLInputElement>(null)
+  const takePhoto = useRef<HTMLInputElement>(null)
+  const takeVideo = useRef<HTMLInputElement>(null)
+  const camera = canCapture()
 
   /** ファイルを 1 つずつ順に送る。全部送れたらシートを閉じる。送れなかったものはシートに理由を残す */
   const send = async (inputs: { input: UploadMemoryInput; name: string }[]) => {
@@ -250,7 +257,24 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
         />
       )}
 
-      {/* 追加のシート。ファイルを選ぶ入力は見えないようにして、ボタンから開く */}
+      {/* 追加のシート。ファイルを選ぶ入力は見えないようにして、ボタンから開く（撮る 2 つは、外側のカメラをすぐ開く） */}
+      {[
+        { ref: takePhoto, accept: 'image/*' },
+        { ref: takeVideo, accept: 'video/*' },
+      ].map(({ ref, accept }) => (
+        <input
+          key={accept}
+          ref={ref}
+          className="visually-hidden"
+          type="file"
+          accept={accept}
+          capture="environment"
+          onChange={(e) => {
+            onFiles(e.target.files)
+            e.target.value = ''
+          }}
+        />
+      ))}
       <input
         ref={pickVisual}
         className="visually-hidden"
@@ -298,9 +322,21 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
           </div>
         ) : (
           <div className="sheet-body">
-            <button className="btn btn-filled" onClick={() => pickVisual.current?.click()}>
+            {camera && (
+              <div className="memory-capture">
+                <button className="btn btn-filled" onClick={() => takePhoto.current?.click()}>
+                  <CameraIcon size={19} />
+                  写真をとる
+                </button>
+                <button className="btn btn-filled" onClick={() => takeVideo.current?.click()}>
+                  <VideoIcon size={19} />
+                  動画をとる
+                </button>
+              </div>
+            )}
+            <button className={`btn ${camera ? 'btn-outline' : 'btn-filled'}`} onClick={() => pickVisual.current?.click()}>
               <GalleryIcon size={19} />
-              写真・動画をえらぶ
+              {camera ? 'ライブラリからえらぶ' : '写真・動画をえらぶ'}
             </button>
             <button
               className="btn btn-outline"
@@ -317,7 +353,7 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
               音声ファイルをえらぶ
             </button>
             <p className="hint" style={{ margin: 0, textAlign: 'center' }}>
-              動画は 100 MB、写真と声は 20 MB まで。1 つの作品に 30 個まで残せます
+              動画は 100 MB{camera && '（スマホのカメラでおよそ 1 分）'}、写真と声は 20 MB まで。1 つの作品に 30 個まで残せます
             </p>
           </div>
         )}
