@@ -68,7 +68,7 @@ async fn main() {
     // 一人称で歩く画面だけで使う別の GLB。指定したときだけ使い、無ければ歩く画面も MUSEUM_MODEL_PATH の GLB を使う
     let walk_source = env::var("WALK_MODEL_PATH").ok().map(PathBuf::from);
 
-    // 4 部屋の家の建物 (部屋ごとの GLB。ファイル名は home::ROOM_DEFS の model)
+    // 家の建物 (部屋ごとの GLB。今はリビングの hub.glb だけ。ファイル名は home::ROOM_DEFS の model)
     let room_models_dir = env::var("HOME_ROOM_MODELS_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| static_dir.join("models").join("rooms"));

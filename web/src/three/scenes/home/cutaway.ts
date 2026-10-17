@@ -5,7 +5,7 @@
 //   壁のノード     … userData.side（north / south / east / west）
 //   その子のメッシュ … userData.role（wall_lower / wall_upper / trim_lower / trim_upper など）
 //   角の柱のノード … userData.side = 'corner'
-//   開いた側の印   … 左・右・前の部屋のリビング側。userData.side（開いた向き）と open。形が無いので、隠す物は無い
+//   開いた側の印   … 隣の部屋のリビング側（今の家には無い）。userData.side（開いた向き）と open。形が無いので、隠す物は無い
 // 壁のノードには userData.cutaway（南・東の壁は true）もあるが、南東からしか見なかったころの印で、今は使わない。
 // どの向きの壁をカットするかは、呼ぶ側が sides で決める。
 // 壁は下から 0.92 m までが wall_lower なので、カットしても腰の高さの壁と幅木は残る。

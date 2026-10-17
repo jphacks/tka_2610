@@ -11,7 +11,7 @@ pub struct AppState {
     pub museum_model_url: Option<String>,
     /// 一人称で歩く画面用の高画質版の配信URL (無ければ None。そのときは museum_model_url を使う)
     pub walk_model_url: Option<String>,
-    /// 4 部屋の建物の GLB の配信URL (部屋の id → URL)。ファイルが無い部屋は入らない (API では null)
+    /// 家の建物の GLB の配信URL (部屋の id → URL)。ファイルが無い部屋は入らない (API では null)
     pub room_model_urls: HashMap<&'static str, String>,
 }
 

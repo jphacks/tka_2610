@@ -1,7 +1,7 @@
-//! おうちの配置 JSON (v4) の型・検証・座標の計算。DB を使わない純粋な処理だけを置く。
+//! おうちの配置 JSON (v5) の型・検証・座標の計算。DB を使わない純粋な処理だけを置く。
 //!
 //! - 座標はメートル、Y-up。中央のリビング (hub) の中心が世界の原点で、床は y = 0。入口は南 (+Z) 側。
-//! - 家は 4 部屋 (ROOM_DEFS)。部屋は平行移動だけで回さない。部屋ごとに世界での中心 origin を持つ。
+//! - 家の部屋は ROOM_DEFS (今は中央のリビング hub だけ)。部屋は平行移動だけで回さない。部屋ごとに世界での中心 origin を持つ。
 //!   家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見た位置で、世界 = origin + position。
 //!   家具の上の作品は親の家具から決まる (部屋の平行移動は親に 1 回だけ掛かる)。
 //! - 家具の原点は底面の中心、正面は +Z。rotationY θ で +Z は (sinθ, 0, cosθ) を向く (three.js と同じ)。
@@ -20,9 +20,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
 
-/// 配置 JSON の版。4 は 10 × 10 と 8 × 8 の 4 部屋の家 (1〜3 は読み込むときに 4 に上げる)。
-/// 3 は 8 × 8 と 6 × 6 の 4 部屋 (V3_ROOM_SIZES)、2 はリビングだけ、1 はキットの JSON
-pub const SCHEMA_VERSION: u32 = 4;
+/// 配置 JSON の版。5 は中央のリビング (10 × 10) だけの家 (1〜4 は読み込むときに 5 に上げる)。
+/// 4 は 10 × 10 と 8 × 8 の 4 部屋、3 は 8 × 8 と 6 × 6 の 4 部屋 (V3_HUB_SIZE)、2 はリビングだけ、1 はキットの JSON
+pub const SCHEMA_VERSION: u32 = 5;
 pub const KIT_VERSION: &str = "1.1.0-home";
 
 /// 中央のリビングの id。床置きの作品で roomId を省いたときもこの部屋
@@ -33,7 +33,9 @@ pub const FLOOR_ID: &str = "1F";
 // 部屋の定義 (家の形はここだけに書く。/api/museum の house で Web に渡す)
 // =============================
 
-/// 壁の向き。北 = −Z (入口から入って正面)、南 = +Z (入口側)、西 = −X (左)、東 = +X (右)
+/// 壁の向き。北 = −Z (入口から入って正面)、南 = +Z (入口側)、西 = −X (左)、東 = +X (右)。
+/// 今の家 (リビングだけ・出入口なし) では使わない向きもある (出入口の判定のテストで使う)
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     North,
@@ -83,76 +85,42 @@ pub struct RoomDef {
     pub cutaway: &'static [Side],
 }
 
-/// 壁の厚さ (m)。隣の部屋は hub の壁を共有する (hub の内壁 ±5.0、外面 ±5.24 が隣の部屋の内壁)
+/// 壁の厚さ (m)。hub の内壁は ±5.0、外面は ±5.24
 pub const WALL_THICKNESS: f64 = 0.24;
 
-/// 出入口 (キット v1 の portal_arch_3m: バウ 3.0 m・通れる幅 2.10 m・アーチの頂 2.60 m)
+/// 出入口 (キット v1 の portal_arch_3m: バウ 3.0 m・通れる幅 2.10 m・アーチの頂 2.60 m)。
+/// 今の家には出入口が無い (部屋を戻すときと、出入口の判定のテストで使う)
+#[allow(dead_code)]
 const fn portal(side: Side) -> Door {
     Door { side, offset: 0.0, clear_width: 2.10, height: 2.60 }
 }
 
-/// 家の 4 部屋 (この順に API へ出す。作品の自動配置もこの順に部屋を探す)。
+/// 家の部屋 (この順に API へ出す。作品の自動配置もこの順に部屋を探す)。
 ///
-/// - hub (中央のリビング): 10 × 10 m、世界の原点。西・東・北の壁の中央に出入口
-/// - left・right・front: 8 × 8 m
-/// - left (左の部屋): −X 側。hub の西の壁を共有し、出入口は hub 側 (東)
-/// - right (右の部屋): +X 側。出入口は西
-/// - front (前の部屋): **−Z 側** (北。南の入口から入ると正面)。出入口は南。
-///   キット v1 は front を +Z (手前) に置く定義だが、この家では逆にしている
-///   (v2 までの front は使っていない仮の部屋で、家具も作品も無かったので影響はない)
-///
-/// 隣の部屋の中心は hub の中心から 5.0 + 0.24 + 4.0 = 9.24 m。
-/// 大きさを変えたら、建物の GLB (tools/home-rooms/build_rooms.py) と、保存済みの配置を上げる処理 (widen_rooms) も合わせる
-pub static ROOM_DEFS: [RoomDef; 4] = [
-    RoomDef {
-        id: "hub",
-        name: "中央のリビング",
-        origin: [0.0, 0.0],
-        size: [10.0, 10.0],
-        model: "hub.glb",
-        doors: &[portal(Side::West), portal(Side::East), portal(Side::North)],
-        cutaway: &[Side::South, Side::East],
-    },
-    RoomDef {
-        id: "left",
-        name: "左の部屋",
-        origin: [-9.24, 0.0],
-        size: [8.0, 8.0],
-        model: "left.glb",
-        doors: &[portal(Side::East)],
-        cutaway: &[Side::South],
-    },
-    RoomDef {
-        id: "right",
-        name: "右の部屋",
-        origin: [9.24, 0.0],
-        size: [8.0, 8.0],
-        model: "right.glb",
-        doors: &[portal(Side::West)],
-        cutaway: &[Side::South, Side::East],
-    },
-    RoomDef {
-        id: "front",
-        name: "前の部屋",
-        origin: [0.0, -9.24],
-        size: [8.0, 8.0],
-        model: "front.glb",
-        doors: &[portal(Side::South)],
-        cutaway: &[Side::East],
-    },
-];
+/// 今は中央のリビング (hub) の 1 部屋だけ。10 × 10 m、世界の原点。出入口は無い (壁はふさがっている)。
+/// 以前は hub の西・東・北に左・右・前の部屋 (8 × 8 m、中心は hub から 9.24 m) があり、hub の壁の中央の出入口でつながっていた
+/// (v4 まで。消した部屋の id は LEGACY_ROOM_IDS)。部屋を戻すときは、ここに RoomDef を足し、hub の doors に出入口を足して、
+/// 建物の GLB (tools/home-rooms/build_rooms.py)・配置の版の引き上げ・初期配置・総当たり表を合わせる (git の履歴に前の値がある)
+pub static ROOM_DEFS: [RoomDef; 1] = [RoomDef {
+    id: "hub",
+    name: "中央のリビング",
+    origin: [0.0, 0.0],
+    size: [10.0, 10.0],
+    model: "hub.glb",
+    doors: &[],
+    cutaway: &[Side::South, Side::East],
+}];
 
-/// v3 の部屋の内寸 (hub 8 × 8、ほかは 6 × 6)。v3 までの配置を読むときに、部屋が広がった分だけ壁ぎわの物を動かすのに使う
-const V3_ROOM_SIZES: [(&str, [f64; 2]); 4] = [("hub", [8.0, 8.0]), ("left", [6.0, 6.0]), ("right", [6.0, 6.0]), ("front", [6.0, 6.0])];
+/// v4 まであった左・右・前の部屋の id。v4 までの配置にあるこの部屋の物は、読むときに外す
+const LEGACY_ROOM_IDS: [&str; 3] = ["left", "right", "front"];
 
-fn v3_room_size(id: &str) -> [f64; 2] {
-    V3_ROOM_SIZES.iter().find(|(room, _)| *room == id).map_or([0.0; 2], |(_, size)| *size)
-}
+/// v3 までの hub の内寸。v3 までの配置を読むときに、部屋が広がった分だけ壁ぎわの物を動かすのに使う
+const V3_HUB_SIZE: [f64; 2] = [8.0, 8.0];
 
 /// 壁からこれより近い物を「壁ぎわの物」として、v3 から v4 に上げるときに壁といっしょに動かす (足元の外接長方形と壁の内側の面の距離, m)
 const WALL_HUG: f64 = 0.6;
 
-/// id の部屋 (hub / left / right / front)
+/// id の部屋 (今は hub だけ)
 pub fn room_def(id: &str) -> Option<&'static RoomDef> {
     ROOM_DEFS.iter().find(|d| d.id == id)
 }
@@ -231,20 +199,17 @@ pub struct Layout {
     pub objects: Vec<LayoutObject>,
 }
 
-/// 4 部屋の仕上げ (壁紙・床材)。どの部屋も enabled: true で、大きさは ROOM_DEFS のまま
+/// 部屋の仕上げ (壁紙・床材)。今は中央のリビング (hub) だけ。enabled: true で、大きさは ROOM_DEFS のまま
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Rooms {
     pub hub: Room,
-    pub left: Room,
-    pub right: Room,
-    pub front: Room,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Room {
     /// 常に true (キットの JSON と同じ形にするために残している)
     pub enabled: bool,
-    /// 内寸 (m)。hub は 10、ほかは 8 で変えられない
+    /// 内寸 (m)。hub は 10 で変えられない
     pub width: i64,
     pub depth: i64,
     /// 壁紙 (WALLS のどれか。plaster / oak / brick / limestone と内装セットの 5 種)
@@ -265,7 +230,7 @@ pub enum LayoutObject {
 pub struct Furniture {
     pub id: String,
     pub asset_id: String,
-    /// 置いている部屋 (hub / left / right / front)
+    /// 置いている部屋 (今は hub だけ)
     pub room_id: String,
     /// 部屋の中心から見た位置
     pub position: [f64; 3],
@@ -280,7 +245,7 @@ pub struct ArtworkObject {
     /// 載せている家具の id。無ければ床に置く
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
-    /// 床に置くときだけ、置いている部屋 (hub / left / right / front)。
+    /// 床に置くときだけ、置いている部屋 (今は hub だけ)。
     /// 家具の上の作品は None (部屋は親の家具の部屋)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub room_id: Option<String>,
@@ -680,7 +645,7 @@ pub fn room_rect(def: &RoomDef) -> Rect {
 
 /// 出入口の前の、新しく置いたり動かしたりできない場所 (部屋の中心から見た座標)。
 /// 壁に沿って出入口の中心 (offset) から ±DOOR_ZONE_WIDTH / 2、壁の内側の面から部屋の中へ DOOR_ZONE_DEPTH。
-/// 例: hub の東の出入口は x ∈ [2.85, 4.0]・z ∈ [−1.27, 1.27]、左の部屋の東の出入口は x ∈ [1.85, 3.0]
+/// 例: 10 × 10 の部屋の東の出入口は x ∈ [3.85, 5.0]・z ∈ [−1.27, 1.27] (今の家には出入口が無い)
 pub fn door_zone(def: &RoomDef, door: &Door) -> Rect {
     let (hw, hd) = (def.size[0] / 2.0, def.size[1] / 2.0);
     let (lo, hi) = (door.offset - DOOR_ZONE_WIDTH / 2.0, door.offset + DOOR_ZONE_WIDTH / 2.0);
@@ -709,21 +674,20 @@ pub fn raw_schema_version(raw: &Value) -> Option<u64> {
     raw.get("schemaVersion").and_then(Value::as_u64)
 }
 
-/// 配置 JSON の形を確かめて、正規化した配置 (いつも v4) を返す。位置 (重なり・はみ出し) は見ない。
+/// 配置 JSON の形を確かめて、正規化した配置 (いつも v5) を返す。位置 (重なり・はみ出し) は見ない。
 ///
-/// - schemaVersion 1 (キットの JSON) と 2 (リビングだけの家) は 4 に上げる。
-///   4 部屋とも enabled: true にし、左・右・前の部屋の大きさは決まった大きさにそろえる (v2 までは使っていない仮の値)。
-///   壁紙・床材はそのまま。
-/// - v3 (8 × 8 と 6 × 6 の 4 部屋) は 4 に上げる。部屋が広がった分だけ、壁ぎわの物を壁といっしょに動かす (widen_from_v3)。
-/// - 部屋の大きさは版ごとに決まっている (v4 は hub 10 × 10、ほかは 8 × 8。v3 は 8 × 8 と 6 × 6)。違えば Err。
-/// - 家具と床置きの作品の roomId は hub / left / right / front のどれか
+/// - schemaVersion 1 (キットの JSON)・2 (リビングだけの家)・3 (8 × 8 と 6 × 6 の 4 部屋)・4 (10 × 10 と 8 × 8 の 4 部屋) は 5 に上げる。
+///   リビングの壁紙・床材はそのまま。左・右・前の部屋とそこにあった物 (家具・床の作品・その家具の上の作品) は外す (drop_legacy_rooms)。
+/// - v3 までは hub が 8 × 8 だったので、部屋が広がった分だけ、壁ぎわの物を壁といっしょに動かす (widen_from_v3)。
+/// - hub の大きさは版ごとに決まっている (v4・v5 は 10 × 10、v3 までは 8 × 8)。違えば Err。
+/// - v5 の rooms は hub だけ。家具と床置きの作品の roomId は hub
 pub fn parse_layout(raw: Value) -> Result<Layout, String> {
     let Value::Object(root) = raw else {
         return Err("配置データの形式が正しくありません".into());
     };
     let version = match root.get("schemaVersion").and_then(Value::as_u64) {
-        Some(v @ 1..=4) => v,
-        _ => return Err("配置データの版 (schemaVersion) は 1〜4 にしてください".into()),
+        Some(v @ 1..=5) => v,
+        _ => return Err("配置データの版 (schemaVersion) は 1〜5 にしてください".into()),
     };
     let v1 = version == 1;
     let rooms = parse_rooms(root.get("rooms"), version)?;
@@ -731,6 +695,7 @@ pub fn parse_layout(raw: Value) -> Result<Layout, String> {
         .get("objects")
         .and_then(Value::as_array)
         .ok_or("配置データに objects がありません")?;
+    let list = if version <= 4 { drop_legacy_rooms(list) } else { list.clone() };
     if list.len() > MAX_OBJECTS {
         return Err(format!("置けるのは {MAX_OBJECTS} 個までです"));
     }
@@ -749,6 +714,27 @@ pub fn parse_layout(raw: Value) -> Result<Layout, String> {
         rooms,
         objects,
     })
+}
+
+/// v4 までの配置から、消した部屋 (LEGACY_ROOM_IDS) にある物を外す: その部屋の家具・床置きの作品と、その家具の上の作品。
+/// 外した作品は配置から無くなるので、起動時の reconcile が空いている所へ置き直す (空きが無ければ「飾っていない」に戻る)
+fn drop_legacy_rooms(list: &[Value]) -> Vec<Value> {
+    let in_legacy_room =
+        |item: &Value| item.get("roomId").and_then(Value::as_str).is_some_and(|id| LEGACY_ROOM_IDS.contains(&id));
+    let is_furniture = |item: &Value| item.get("kind").and_then(Value::as_str) != Some("artwork");
+    let dropped: HashSet<&str> = list
+        .iter()
+        .filter(|item| is_furniture(item) && in_legacy_room(item))
+        .filter_map(|item| item.get("id").and_then(Value::as_str))
+        .collect();
+    list.iter()
+        .filter(|item| {
+            let on_dropped = item.get("parentId").and_then(Value::as_str).is_some_and(|p| dropped.contains(p));
+            let floor_in_legacy = item.get("parentId").is_none() && in_legacy_room(item);
+            !on_dropped && !floor_in_legacy
+        })
+        .cloned()
+        .collect()
 }
 
 /// v3 までの配置の物 1 つを、広げた部屋 (v4) に合わせて動かす。
@@ -773,7 +759,7 @@ fn widen_from_v3(obj: &mut LayoutObject) {
         LayoutObject::Artwork(_) => return,
     };
     let Some(def) = room_def(room_id) else { return };
-    let old = v3_room_size(def.id);
+    let old = V3_HUB_SIZE;
     // 1 つの向き (x か z) で、v3 の壁の内側の面からの距離を見て、近い側の壁へ広がった分だけ動かす
     let shift = |min: f64, max: f64, old_size: f64, new_size: f64| -> f64 {
         let (half, grow) = (old_size / 2.0, (new_size - old_size) / 2.0);
@@ -820,6 +806,8 @@ pub fn repair_layout(raw: Value, sizes: &Sizes) -> Result<(Layout, Vec<String>),
         .and_then(Value::as_array)
         .cloned()
         .ok_or("配置データに objects がありません")?;
+    // 消した部屋の物は、家具も作品も先に外す (parse_layout と同じ)
+    let list = if version.is_some_and(|v| v <= 4) { drop_legacy_rooms(&list) } else { list };
     let is_artwork = |item: &Value| !v1 && item.get("kind").and_then(Value::as_str) == Some("artwork");
 
     // 家具だけで検証する (順番は元のまま)
@@ -858,11 +846,16 @@ pub fn repair_layout(raw: Value, sizes: &Sizes) -> Result<(Layout, Vec<String>),
     Ok((layout, dropped))
 }
 
-/// rooms を読む。4 部屋とも必要で、enabled は true にそろえる (false が来ても使う部屋にする)。
-/// 大きさは版ごとに決まっていて (v4 は ROOM_DEFS、v3 までは V3_ROOM_SIZES)、読んだ配置はいつも ROOM_DEFS の大きさにする。
-/// v1・v2 の左・右・前の部屋 (使っていなかった仮の部屋) だけは、4〜12 の整数ならどれでも読む
+/// rooms を読む。hub が必要で、enabled は true にそろえる (false が来ても使う部屋にする)。
+/// hub の大きさは版ごとに決まっていて (v4・v5 は ROOM_DEFS、v3 までは V3_HUB_SIZE)、読んだ配置はいつも ROOM_DEFS の大きさにする。
+/// v4 までの左・右・前の部屋は読まずに外す。v5 に hub 以外の部屋があれば Err
 fn parse_rooms(value: Option<&Value>, version: u64) -> Result<Rooms, String> {
     let rooms = value.and_then(Value::as_object).ok_or("配置データに rooms がありません")?;
+    if version >= 5
+        && let Some(other) = rooms.keys().find(|id| room_def(id).is_none())
+    {
+        return Err(format!("部屋「{other}」はありません (rooms は hub だけ)"));
+    }
     let room = |def: &RoomDef| -> Result<Room, String> {
         let id = def.id;
         let r = rooms
@@ -873,7 +866,7 @@ fn parse_rooms(value: Option<&Value>, version: u64) -> Result<Rooms, String> {
             .and_then(Value::as_bool)
             .ok_or_else(|| format!("部屋 {id} の enabled がありません"))?;
         let fixed = [def.size[0] as i64, def.size[1] as i64];
-        let expected = if version <= 3 { v3_room_size(id).map(|v| v as i64) } else { fixed };
+        let expected = if version <= 3 { V3_HUB_SIZE.map(|v| v as i64) } else { fixed };
         let size = |key: &str| {
             r.get(key)
                 .and_then(Value::as_i64)
@@ -881,8 +874,7 @@ fn parse_rooms(value: Option<&Value>, version: u64) -> Result<Rooms, String> {
                 .ok_or_else(|| format!("部屋 {id} の大きさは 4〜12 の整数にしてください"))
         };
         let size = [size("width")?, size("depth")?];
-        let placeholder = version < 3 && id != HUB_ID;
-        if size != expected && !placeholder {
+        if size != expected {
             return Err(format!("部屋の大きさは変えられません ({} は {} × {} m)", def.name, expected[0], expected[1]));
         }
         let wall = r.get("wall").and_then(Value::as_str).filter(|w| WALLS.contains(w));
@@ -893,8 +885,8 @@ fn parse_rooms(value: Option<&Value>, version: u64) -> Result<Rooms, String> {
         Ok(Room { enabled: true, width: fixed[0], depth: fixed[1], wall: wall.into(), floor: floor.into() })
     };
 
-    let [hub, left, right, front] = &ROOM_DEFS;
-    Ok(Rooms { hub: room(hub)?, left: room(left)?, right: room(right)?, front: room(front)? })
+    let [hub] = &ROOM_DEFS;
+    Ok(Rooms { hub: room(hub)? })
 }
 
 /// roomId (家具は必須、床置きの作品は省くと hub) を確かめる
@@ -1261,7 +1253,7 @@ mod tests {
     const ART_B: &str = "00000000-0000-4000-8000-00000000000b";
     const ART_C: &str = "00000000-0000-4000-8000-00000000000c";
 
-    /// 4 部屋 (hub が hub_size、ほかは size。仕上げは初期配置と同じ)
+    /// 4 部屋 (v4 まで。hub が hub_size、ほかは size。仕上げは v4 の初期配置と同じ)
     fn rooms_sized(hub_size: i64, size: i64) -> Value {
         let room = |size: i64, wall: &str, floor: &str| {
             json!({ "enabled": true, "width": size, "depth": size, "wall": wall, "floor": floor })
@@ -1274,8 +1266,13 @@ mod tests {
         })
     }
 
-    /// v4 の 4 部屋 (hub 10 × 10、ほかは 8 × 8)
+    /// v5 の rooms (中央のリビング 10 × 10 だけ)
     fn rooms() -> Value {
+        json!({ "hub": { "enabled": true, "width": 10, "depth": 10, "wall": "plaster", "floor": "oak" } })
+    }
+
+    /// v4 の 4 部屋 (hub 10 × 10、ほかは 8 × 8)
+    fn rooms_v4() -> Value {
         rooms_sized(10, 8)
     }
 
@@ -1332,16 +1329,13 @@ mod tests {
         assert!(capacity >= 13, "capacity = {capacity}");
         // 低い台が 2 並びになって 3 + 3 (cells_use_depth_on_deep_tops)
         assert_eq!(capacity, 17);
-        // 家具はすべて中央のリビング。ほかの部屋は空室
+        // 部屋は中央のリビングだけ
         let by_room = capacity_by_room(&layout);
-        assert_eq!(by_room.len(), 4);
-        assert_eq!((by_room["hub"], by_room["left"], by_room["right"], by_room["front"]), (17, 0, 0, 0));
-        // 4 部屋とも使う部屋で、仕上げは部屋ごと
-        let rooms = &layout.rooms;
-        assert!([&rooms.hub, &rooms.left, &rooms.right, &rooms.front].iter().all(|r| r.enabled));
-        assert_eq!((rooms.hub.width, rooms.left.width, rooms.right.depth, rooms.front.depth), (10, 8, 8, 8));
-        assert_eq!((rooms.front.wall.as_str(), rooms.front.floor.as_str()), ("brick", "limestone"));
-        assert_eq!((rooms.left.wall.as_str(), rooms.right.wall.as_str()), ("oak", "plaster"));
+        assert_eq!(by_room.len(), 1);
+        assert_eq!(by_room["hub"], 17);
+        let hub = &layout.rooms.hub;
+        assert!(hub.enabled);
+        assert_eq!((hub.width, hub.depth, hub.wall.as_str(), hub.floor.as_str()), (10, 10, "plaster", "oak"));
     }
 
     /// v3 (8 × 8 と 6 × 6 の 4 部屋) のころの初期配置
@@ -1355,7 +1349,7 @@ mod tests {
         assert_eq!(raw_schema_version(&raw), Some(3));
         let layout = validate_layout(raw).unwrap();
         assert_eq!(layout.schema_version, SCHEMA_VERSION);
-        assert_eq!((layout.rooms.hub.width, layout.rooms.hub.depth, layout.rooms.left.width), (10, 10, 8));
+        assert_eq!((layout.rooms.hub.width, layout.rooms.hub.depth), (10, 10));
         let position = |id: &str| match layout.objects.iter().find(|o| o.id() == id) {
             Some(LayoutObject::Furniture(f)) => f.position,
             _ => panic!("{id}"),
@@ -1386,19 +1380,19 @@ mod tests {
             "kitVersion": KIT_VERSION,
             "rooms": rooms_v3(),
             "objects": [
-                furniture_in("left", "desk", "home_craft_desk", 0.0, 2.4, PI),
+                furniture("desk", "home_craft_desk", 0.0, 3.4, PI),
                 on_top("art-1", ART_A, "desk", 0.1, 0.0, 0.0),
-                on_floor("left", "art-2", ART_B, 2.3, -2.3),
-                on_floor("front", "art-3", ART_C, 0.0, 0.0),
+                on_floor("hub", "art-2", ART_B, 3.3, -3.3),
+                on_floor("hub", "art-3", ART_C, 0.0, 0.0),
             ],
         });
         let layout = validate_layout(raw.clone()).unwrap();
         let LayoutObject::Furniture(desk) = &layout.objects[0] else { panic!() };
-        assert_eq!(desk.position, [0.0, 0.0, 3.4]);
+        assert_eq!(desk.position, [0.0, 0.0, 4.4]);
         let LayoutObject::Artwork(on_desk) = &layout.objects[1] else { panic!() };
         assert_eq!(on_desk.position, [0.1, 0.0, 0.0]);
         let LayoutObject::Artwork(corner) = &layout.objects[2] else { panic!() };
-        assert_eq!(corner.position, [3.3, 0.0, -3.3]);
+        assert_eq!(corner.position, [4.3, 0.0, -4.3]);
         let LayoutObject::Artwork(middle) = &layout.objects[3] else { panic!() };
         assert_eq!(middle.position, [0.0, 0.0, 0.0]);
         // 直すとき (repair_layout) も、作品を同じように動かす
@@ -1423,18 +1417,14 @@ mod tests {
     }
 
     #[test]
-    fn default_layout_keeps_doorways_clear() {
-        // 初期配置 (v4) の家具は、どれも出入口の前にかからない
+    fn house_has_no_doorways() {
+        // 今の家 (リビングだけ) には出入口が無いので、新しく置く物・動かした物でも出入口の判定に掛からない
         let layout = default_layout();
-        assert!(door_blockers(&layout).is_empty(), "{:?}", door_blockers(&layout));
-        // v3 の初期配置は、ソファ (北)・飾り棚 (西)・サイドボード (東)・白い台座 (西) が出入口の前にかかっていた。
-        // v4 に上げると出入口の前も壁といっしょに動くので、かかるのは壁ぎわの白い台座 (西) だけになる。
-        // 動かさなければそのまま読めて、保存もできる
+        assert!(ROOM_DEFS.iter().all(|d| d.doors.is_empty()));
+        assert!(door_blockers(&layout).is_empty());
+        // v3 のころの初期配置で出入口の前にあった家具 (ソファ・飾り棚・サイドボード・白い台座) も、今はかからない
         let layout = validate_layout(v3_default_layout()).unwrap();
-        assert_eq!(door_blockers(&layout), vec!["home-011"]);
-        let unchanged = moved_ids(&layout, &layout);
-        assert!(unchanged.is_empty());
-        check_placement(&layout, &Sizes::new(), DoorPolicy::OnlyMoved(&unchanged)).unwrap();
+        assert!(door_blockers(&layout).is_empty(), "{:?}", door_blockers(&layout));
     }
 
     #[test]
@@ -1452,59 +1442,56 @@ mod tests {
         assert_eq!(raw_schema_version(&raw), Some(2));
         let layout = validate_layout(raw).unwrap();
         assert_eq!(layout.schema_version, SCHEMA_VERSION);
-        // 4 部屋とも使う部屋になり、壁紙・床材はそのまま
-        let rooms = &layout.rooms;
-        assert!([&rooms.hub, &rooms.left, &rooms.right, &rooms.front].iter().all(|r| r.enabled));
-        assert_eq!(rooms.front.wall, "brick");
+        // リビングは 10 × 10 になり、壁紙・床材はそのまま。左・右・前の部屋 (仮の部屋) は無くなる
+        assert_eq!((layout.rooms.hub.width, layout.rooms.hub.depth), (10, 10));
+        assert_eq!(layout.rooms.hub.wall, "plaster");
         // 物はそのまま (すべて hub。壁から離れているので動かない)。roomId を省いた床の作品は hub
         let ids: Vec<&str> = layout.objects.iter().map(LayoutObject::id).collect();
         assert_eq!(ids, vec!["console", "art-1", "art-2"]);
         assert!(layout.objects.iter().all(|o| layout.room_of(o).unwrap().id == "hub"));
         let value = serde_json::to_value(&layout).unwrap();
         assert_eq!(value["schemaVersion"], SCHEMA_VERSION);
-        assert_eq!(value["rooms"]["left"]["enabled"], true);
+        assert_eq!(value["rooms"].as_object().unwrap().len(), 1);
         assert_eq!(value["objects"][2]["roomId"], "hub");
-        // 保存し直した v4 も同じ配置として読める
+        // 保存し直した v5 も同じ配置として読める
         assert_eq!(validate_layout(value).unwrap(), layout);
-
-        // v2 までの左・右・前の大きさは仮の値なので、今の大きさ (8 × 8) にそろえる。hub は 8 × 8 (v2 の大きさ) から 10 × 10 に
-        let mut odd = rooms_v2();
-        odd["left"]["width"] = json!(7);
-        let layout = validate_layout(json!({ "schemaVersion": 2, "rooms": odd, "objects": [] })).unwrap();
-        assert_eq!((layout.rooms.left.width, layout.rooms.left.depth), (8, 8));
-        assert_eq!((layout.rooms.hub.width, layout.rooms.hub.depth), (10, 10));
     }
 
     #[test]
     fn rejects_resized_rooms_and_unknown_room_ids() {
-        // 部屋の大きさは版ごとに決まっている (v4 は 10 × 10 と 8 × 8、v3 は 8 × 8 と 6 × 6)
-        for (version, base) in [(4, rooms()), (3, rooms_v3())] {
-            for (id, key) in [("hub", "width"), ("left", "depth"), ("front", "width")] {
+        // リビングの大きさは版ごとに決まっている (v4・v5 は 10 × 10、v3 は 8 × 8)
+        for (version, base) in [(5, rooms()), (4, rooms_v4()), (3, rooms_v3())] {
+            for key in ["width", "depth"] {
                 let mut room = base.clone();
-                room[id][key] = json!(9);
+                room["hub"][key] = json!(9);
                 let err = validate_layout(json!({ "schemaVersion": version, "rooms": room, "objects": [] })).unwrap_err();
-                assert!(err.contains("部屋の大きさは変えられません"), "v{version} {id}: {err}");
+                assert!(err.contains("部屋の大きさは変えられません"), "v{version} {key}: {err}");
             }
         }
-        // 版が 5 以上なら読まない
-        assert!(validate_layout(json!({ "schemaVersion": 5, "rooms": rooms(), "objects": [] })).is_err());
-        // 家具・床置きの作品の roomId は 4 部屋のどれか
-        let err = layout_of(json!([furniture_in("attic", "f", "home_stool", 0.0, 0.0, 0.0)])).unwrap_err();
-        assert!(err.contains("attic"), "{err}");
-        let err = layout_of(json!([on_floor("back", "art-1", ART_A, 0.0, 0.0)])).unwrap_err();
-        assert!(err.contains("back"), "{err}");
+        // 版が 6 以上なら読まない
+        assert!(validate_layout(json!({ "schemaVersion": 6, "rooms": rooms(), "objects": [] })).is_err());
+        // v5 の rooms は hub だけ (左・右・前の部屋は無い)
+        let err = validate_layout(json!({ "schemaVersion": 5, "rooms": rooms_v4(), "objects": [] })).unwrap_err();
+        assert!(err.contains("部屋「"), "{err}");
+        // 家具・床置きの作品の roomId は hub だけ
+        for room in ["attic", "left", "front"] {
+            let err = layout_of(json!([furniture_in(room, "f", "home_stool", 0.0, 0.0, 0.0)])).unwrap_err();
+            assert!(err.contains(room), "{err}");
+        }
+        let err = layout_of(json!([on_floor("right", "art-1", ART_A, 0.0, 0.0)])).unwrap_err();
+        assert!(err.contains("right"), "{err}");
         let mut no_room = furniture("f", "home_stool", 0.0, 0.0, 0.0);
         no_room.as_object_mut().unwrap().remove("roomId");
         assert!(layout_of(json!([no_room])).is_err());
         // 家具の上の作品の roomId は使わない (親の家具の部屋)
         let layout = layout_of(json!([
-            furniture_in("left", "stool", "home_stool", 0.0, 0.0, 0.0),
+            furniture("stool", "home_stool", 0.0, 0.0, 0.0),
             { "kind": "artwork", "id": "art-1", "artworkId": ART_A, "parentId": "stool", "roomId": "front", "position": [0, 0, 0], "rotationY": 0 },
         ]))
         .unwrap();
         let LayoutObject::Artwork(a) = &layout.objects[1] else { panic!() };
         assert_eq!(a.room_id, None);
-        assert_eq!(layout.room_of(&layout.objects[1]).unwrap().id, "left");
+        assert_eq!(layout.room_of(&layout.objects[1]).unwrap().id, "hub");
     }
 
     #[test]
@@ -1523,7 +1510,7 @@ mod tests {
         .unwrap();
         assert_eq!(layout.schema_version, SCHEMA_VERSION);
         assert_eq!(layout.kit_version, KIT_VERSION);
-        assert!(layout.rooms.left.enabled && layout.rooms.front.enabled);
+        assert!(layout.rooms.hub.enabled);
         assert_eq!(layout.objects.len(), 2);
         assert!(layout.objects.iter().all(|o| matches!(o, LayoutObject::Furniture(_))));
         let value = serde_json::to_value(&layout).unwrap();
@@ -1549,132 +1536,109 @@ mod tests {
     }
 
     #[test]
-    fn rejects_wall_clearance_in_small_room() {
-        // 8 × 8 の部屋の置ける範囲は ±3.88。スツール (0.52) は中心 ±3.62 まで
-        for room in ["left", "right", "front"] {
-            assert!(layout_of(json!([furniture_in(room, "s", "home_stool", -3.62, -3.62, 0.0)])).is_ok(), "{room}");
-            let err = layout_of(json!([furniture_in(room, "s", "home_stool", -3.7, -3.62, 0.0)])).unwrap_err();
-            let name = room_def(room).unwrap().name;
-            assert!(err.contains(&format!("{name} の壁に近すぎます")), "{room}: {err}");
-            // hub なら同じ位置に置ける
-            assert!(layout_of(json!([furniture("s", "home_stool", -3.7, -3.62, 0.0)])).is_ok());
-        }
-        // 床置きの作品 (枠 0.8) は中心 ±3.48 まで
-        assert!(layout_of(json!([on_floor("left", "art-1", ART_A, 3.48, -3.48)])).is_ok());
-        let err = layout_of(json!([on_floor("left", "art-1", ART_A, 3.5, -3.48)])).unwrap_err();
-        assert!(err.contains("左の部屋 の壁"), "{err}");
-        assert_rect(room_rect(room_def("left").unwrap()), [-3.88, 3.88, -3.88, 3.88]);
-        assert_rect(room_rect(room_def("hub").unwrap()), [-4.88, 4.88, -4.88, 4.88]);
+    fn v4_layout_drops_the_removed_rooms() {
+        // v4 (4 部屋) の配置を読むと、左・右・前の部屋の家具・床の作品と、その家具の上の作品を外す。hub の物はそのまま
+        let raw = json!({
+            "schemaVersion": 4,
+            "kitVersion": KIT_VERSION,
+            "rooms": rooms_v4(),
+            "objects": [
+                furniture("console", "home_console", 0.0, 2.0, 0.0),
+                on_top("art-1", ART_A, "console", 0.0, 0.0, 0.0),
+                furniture_in("left", "left-slim", "plinth_slim", 1.0, 1.0, 0.0),
+                on_top("art-2", ART_B, "left-slim", 0.0, 0.0, 0.0),
+                on_floor("front", "art-3", ART_C, 0.0, 0.0),
+                on_floor("hub", "art-4", "00000000-0000-4000-8000-00000000000d", -2.0, -2.0),
+            ],
+        });
+        let layout = validate_layout(raw.clone()).unwrap();
+        assert_eq!(layout.schema_version, SCHEMA_VERSION);
+        let ids: Vec<&str> = layout.objects.iter().map(LayoutObject::id).collect();
+        assert_eq!(ids, vec!["console", "art-1", "art-4"]);
+        // リビングの壁紙・床材はそのまま。v4 の hub は 10 × 10 なので物は動かない
+        assert_eq!(layout.rooms.hub.wall, "plaster");
+        let LayoutObject::Furniture(console) = &layout.objects[0] else { panic!() };
+        assert_eq!(console.position, [0.0, 0.0, 2.0]);
+        // 直すとき (repair_layout) も同じように外す
+        let (repaired, dropped) = repair_layout(raw, &Sizes::new()).unwrap();
+        assert!(dropped.is_empty());
+        assert_eq!(repaired, layout);
     }
 
     #[test]
-    fn rooms_do_not_collide_across_rooms() {
-        // 同じローカル座標でも部屋が違えば重ならない
-        let layout = layout_of(json!([
-            furniture("hub-plinth", "plinth_ivory", 1.0, 1.0, 0.0),
-            furniture_in("left", "left-plinth", "plinth_ivory", 1.0, 1.0, 0.0),
-            furniture_in("right", "right-plinth", "plinth_ivory", 1.0, 1.0, 0.0),
-            on_floor("front", "art-1", ART_A, 1.0, 1.0),
-        ]))
-        .unwrap();
-        assert_eq!(layout.objects.len(), 4);
-        // 同じ部屋なら重なる
+    fn floor_artworks_collide_with_furniture() {
+        // 床置きの作品も家具と重ならない
         let err = layout_of(json!([
-            furniture_in("left", "a", "plinth_ivory", 1.0, 1.0, 0.0),
-            on_floor("left", "art-1", ART_A, 1.2, 1.0),
+            furniture("a", "plinth_ivory", 1.0, 1.0, 0.0),
+            on_floor("hub", "art-1", ART_A, 1.2, 1.0),
         ]))
         .unwrap_err();
         assert!(err.contains("重なって"), "{err}");
-        // ラグは同じ部屋でも重なってよい
+        // ラグは重なってよい
         assert!(layout_of(json!([
-            furniture_in("front", "rug", "home_rug", 0.0, 0.0, 0.0),
-            furniture_in("front", "table", "home_coffee_table", 0.0, 0.0, 0.0),
+            furniture("rug", "home_rug", 0.0, 0.0, 0.0),
+            furniture("table", "home_coffee_table", 0.0, 0.0, 0.0),
+            on_floor("hub", "art-1", ART_A, 1.6, 0.5),
         ]))
         .is_ok());
     }
 
+    /// 出入口のある部屋 (今の家には出入口が無いので、テストのためだけに作る。以前の hub と同じ 10 × 10・西・東・北)
+    static DOOR_ROOM: RoomDef = RoomDef {
+        id: "door-room",
+        name: "出入口のある部屋",
+        origin: [0.0, 0.0],
+        size: [10.0, 10.0],
+        model: "",
+        doors: &[portal(Side::West), portal(Side::East), portal(Side::North)],
+        cutaway: &[],
+    };
+
     #[test]
-    fn door_zones_follow_room_defs() {
-        let hub = room_def("hub").unwrap();
-        let zones: Vec<Rect> = hub.doors.iter().map(|d| door_zone(hub, d)).collect();
+    fn door_zones_follow_the_doors() {
+        let zones: Vec<Rect> = DOOR_ROOM.doors.iter().map(|d| door_zone(&DOOR_ROOM, d)).collect();
         assert_eq!(zones.len(), 3);
         // 西・東・北 (キットと同じ: 幅 2.54、壁から 1.15)
         assert_rect(zones[0], [-5.0, -3.85, -1.27, 1.27]);
         assert_rect(zones[1], [3.85, 5.0, -1.27, 1.27]);
         assert_rect(zones[2], [-1.27, 1.27, -5.0, -3.85]);
-        let one = |id: &str| {
-            let room = room_def(id).unwrap();
-            assert_eq!(room.doors.len(), 1, "{id}");
-            door_zone(room, &room.doors[0])
-        };
-        assert_rect(one("left"), [2.85, 4.0, -1.27, 1.27]);
-        assert_rect(one("right"), [-4.0, -2.85, -1.27, 1.27]);
-        assert_rect(one("front"), [-1.27, 1.27, 2.85, 4.0]);
-        // 隣の部屋は hub の壁を共有する: 隣の部屋の内壁 = hub の外壁 (5.0 + 0.24)
-        for id in ["left", "right", "front"] {
-            let room = room_def(id).unwrap();
-            let distance = room.origin[0].abs().max(room.origin[1].abs());
-            assert!(close(distance - room.size[0] / 2.0, hub.size[0] / 2.0 + WALL_THICKNESS), "{id}");
-        }
+        // 南の出入口と、壁の中心からずらした出入口
+        let small = RoomDef { size: [8.0, 8.0], doors: &[], ..DOOR_ROOM };
+        assert_rect(door_zone(&small, &portal(Side::South)), [-1.27, 1.27, 2.85, 4.0]);
+        let offset = Door { offset: 1.0, ..portal(Side::North) };
+        assert_rect(door_zone(&small, &offset), [-0.27, 2.27, -4.0, -2.85]);
     }
 
     #[test]
-    fn door_zone_only_for_moved_objects() {
-        // 東の出入口 (x 3.85〜5.0、z ±1.27) にかかるサイドボード
+    fn moved_ids_finds_moved_and_new_objects() {
         let stored = layout_of(json!([
             furniture("console", "home_console", 3.7, 1.55, -FRAC_PI_2),
             furniture("sofa", "home_sofa", 0.0, 2.5, 0.0),
         ]))
         .unwrap();
-        // 保存済みの物は読めて、動かさなければ保存もできる
-        let check = |after: &Layout| check_placement(after, &Sizes::new(), DoorPolicy::OnlyMoved(&moved_ids(&stored, after)));
-        assert!(check(&stored).is_ok());
-        // ソファだけ動かしてもよい (サイドボードは見ない)
+        assert!(moved_ids(&stored, &stored).is_empty());
+        // 動かした物だけ
         let mut after = stored.clone();
         let LayoutObject::Furniture(sofa) = &mut after.objects[1] else { panic!() };
         sofa.position[0] = 0.5;
         assert_eq!(moved_ids(&stored, &after), HashSet::from(["sofa".to_string()]));
-        assert!(check(&after).is_ok());
-        // ゾーンの中でサイドボードを動かすと置けない
-        let mut after = stored.clone();
-        let LayoutObject::Furniture(console) = &mut after.objects[0] else { panic!() };
-        console.position[2] = 1.4;
-        let err = check(&after).unwrap_err();
-        assert!(err.contains("中央のリビング の出入口の前には置けません"), "{err}");
         // 回すだけでも動かした扱い。2π 回したのは同じ向き
-        let mut after = stored.clone();
         let turn = |after: &mut Layout, rotation_y: f64| {
             let LayoutObject::Furniture(console) = &mut after.objects[0] else { panic!() };
             console.rotation_y = rotation_y;
         };
+        let mut after = stored.clone();
         turn(&mut after, wrap_angle(-FRAC_PI_2 + TAU));
         assert!(moved_ids(&stored, &after).is_empty());
         turn(&mut after, FRAC_PI_2);
-        assert!(check(&after).is_err());
-        // ゾーンの外へ動かすのはよい
-        let mut after = stored.clone();
-        let LayoutObject::Furniture(console) = &mut after.objects[0] else { panic!() };
-        console.position[2] = 2.4;
-        assert!(check(&after).is_ok());
-        // 新しく置く物がゾーンにかかれば置けない (家具も床置きの作品も)
-        for new in [furniture("stool", "home_stool", 4.3, 0.0, 0.0), on_floor("hub", "art-1", ART_A, -4.3, 0.0)] {
-            let mut raw = serde_json::to_value(&stored).unwrap();
-            raw["objects"].as_array_mut().unwrap().push(new);
-            let after = parse_layout(raw).unwrap();
-            assert!(check(&after).unwrap_err().contains("出入口の前"));
-            // 起動時・読むとき (Ignore) は見ない
-            assert!(check_placement(&after, &Sizes::new(), DoorPolicy::Ignore).is_ok());
-        }
-        // 左・右・前の部屋の出入口 (左の部屋は東、x 2.85〜4.0)
+        assert_eq!(moved_ids(&stored, &after), HashSet::from(["console".to_string()]));
+        // 新しく置いた物も入る。出入口が無いので、どこに置いても出入口の判定には掛からない
         let mut raw = serde_json::to_value(&stored).unwrap();
-        raw["objects"].as_array_mut().unwrap().push(furniture_in("left", "stool", "home_stool", 3.0, 0.5, 0.0));
-        let err = check(&parse_layout(raw).unwrap()).unwrap_err();
-        assert!(err.contains("左の部屋 の出入口の前"), "{err}");
-        // 別の部屋へ移すのも動かした扱い
-        let mut after = stored.clone();
-        let LayoutObject::Furniture(sofa) = &mut after.objects[1] else { panic!() };
-        sofa.room_id = "front".into();
-        assert_eq!(moved_ids(&stored, &after), HashSet::from(["sofa".to_string()]));
+        raw["objects"].as_array_mut().unwrap().push(furniture("stool", "home_stool", 4.3, 0.0, 0.0));
+        let after = parse_layout(raw).unwrap();
+        let moved = moved_ids(&stored, &after);
+        assert_eq!(moved, HashSet::from(["stool".to_string()]));
+        assert!(check_placement(&after, &Sizes::new(), DoorPolicy::OnlyMoved(&moved)).is_ok());
     }
 
     #[test]
@@ -1816,72 +1780,53 @@ mod tests {
     #[test]
     fn world_of_adds_room_origin() {
         let layout = layout_of(json!([
-            furniture_in("right", "desk", "home_craft_desk", 1.0, 2.0, 0.0),
+            furniture("desk", "home_craft_desk", 1.0, 2.0, 0.0),
             on_top("art-1", ART_A, "desk", 0.1, 0.0, 0.0),
-            on_floor("front", "art-2", ART_B, 0.0, 1.0),
-            furniture_in("left", "console", "home_console", 0.5, -1.0, -FRAC_PI_2),
+            on_floor("hub", "art-2", ART_B, 0.0, 1.0),
+            furniture("console", "home_console", -3.0, -1.0, -FRAC_PI_2),
             on_top("art-3", ART_C, "console", 0.5, 0.0, 0.0),
         ]))
         .unwrap();
         let world = |i: usize| world_of(&layout, &layout.objects[i]).unwrap();
         let near = |p: [f64; 3], want: [f64; 3]| p.iter().zip(want).all(|(a, b)| close(*a, b));
-        // 右の部屋の家具 (1, 0, 2) → 世界 (9.24 + 1, 0, 2)
+        // リビングの中心は世界の原点なので、家具 (1, 0, 2) は世界でも (1, 0, 2)
         let (pos, yaw) = world(0);
-        assert!(near(pos, [10.24, 0.0, 2.0]) && yaw == 0.0, "{pos:?}");
+        assert!(near(pos, [1.0, 0.0, 2.0]) && yaw == 0.0, "{pos:?}");
         // その上の作品 = 家具の世界座標 + 面の中心 + 作品の位置 (工作机の天板の高さ 0.795)
         let (pos, _) = world(1);
-        assert!(near(pos, [10.34, 0.795, 2.0]), "{pos:?}");
-        // 前の部屋の床の作品 (0, 0, 1) → 世界 (0, 0, −9.24 + 1)
+        assert!(near(pos, [1.1, 0.795, 2.0]), "{pos:?}");
+        // 床の作品 (0, 0, 1)
         let (pos, _) = world(2);
-        assert!(near(pos, [0.0, 0.0, -8.24]), "{pos:?}");
-        // 左の部屋で -90° 回したサイドボードの上の作品: 家具の世界座標 (−8.74, 0, −1) + 回した (0.5, 0) = (0, 0.5)
+        assert!(near(pos, [0.0, 0.0, 1.0]), "{pos:?}");
+        // -90° 回したサイドボードの上の作品: 家具の世界座標 (−3, 0, −1) + 回した (0.5, 0) = (0, 0.5)
         let (pos, yaw) = world(4);
-        assert!(near(pos, [-8.74, 0.891, -0.5]), "{pos:?}");
+        assert!(near(pos, [-3.0, 0.891, -0.5]), "{pos:?}");
         assert!(close(yaw_degrees(yaw), -90.0));
         // 作品の部屋は親の家具の部屋
-        assert_eq!(layout.room_of(&layout.objects[1]).unwrap().id, "right");
-        assert_eq!(layout.room_of_id("art-2").unwrap().name, "前の部屋");
-        assert_eq!(layout.room_of_id("art-3").unwrap().id, "left");
+        assert_eq!(layout.room_of(&layout.objects[1]).unwrap().id, "hub");
+        assert_eq!(layout.room_of_id("art-2").unwrap().name, "中央のリビング");
     }
 
     #[test]
-    fn pick_spot_prefers_room_and_fails_when_full() {
-        // hub の飾り棚 (2 か所)・左の部屋の細い台座 (1 か所)。右の部屋は家具なし
+    fn pick_spot_fills_the_room_and_fails_when_full() {
+        // 飾り棚 (2 か所)・細い台座 (1 か所)
         let mut layout = layout_of(json!([
-            furniture_in("left", "slim", "plinth_slim", 0.0, 0.0, 0.0),
+            furniture("slim", "plinth_slim", 2.0, 0.0, 0.0),
             furniture("shelf", "home_display_shelf", 0.0, 0.0, 0.0),
         ]))
         .unwrap();
-        // 部屋を指定しなければ hub から (配置 JSON では左の部屋の台座が先でも)
-        assert_eq!(pick_spot(&layout, &Sizes::new(), None, None, None).unwrap().parent_id, "shelf");
-        // 左の部屋を指定すると左の部屋の家具だけ
-        let spot = pick_spot(&layout, &Sizes::new(), None, Some("left"), None).unwrap();
-        assert_eq!(spot.parent_id, "slim");
-        // 家具の無い部屋はいっぱい (ほかの部屋には置かない)
-        assert_eq!(pick_spot(&layout, &Sizes::new(), None, Some("right"), None), None);
-        // 左の部屋が埋まると、左の部屋を指定したときは None。指定しなければ hub に置ける
-        layout.objects.push(artwork_on(Uuid::from_u128(1), spot));
-        let layout = validate_layout(serde_json::to_value(&layout).unwrap()).unwrap();
-        assert_eq!(pick_spot(&layout, &Sizes::new(), None, Some("left"), None), None);
-        assert_eq!(pick_spot(&layout, &Sizes::new(), None, None, None).unwrap().parent_id, "shelf");
-        // 指定した部屋に無い家具を prefer_parent にしても、その部屋の中だけを探す
-        assert_eq!(pick_spot(&layout, &Sizes::new(), None, Some("left"), Some("shelf")), None);
-        assert_eq!(capacity_by_room(&layout)["left"], 1);
-        assert_eq!(capacity_by_room(&layout)["hub"], 2);
+        assert_eq!(capacity_by_room(&layout)["hub"], 3);
         assert_eq!(capacity(&layout), 3);
-
-        // hub が埋まると左の部屋へ (部屋は hub → left → right → front の順)
-        let mut layout = layout_of(json!([
-            furniture_in("front", "front-slim", "plinth_slim", 0.0, 0.0, 0.0),
-            furniture_in("left", "left-slim", "plinth_slim", 0.0, 0.0, 0.0),
-            furniture("hub-slim", "plinth_slim", 0.0, 0.0, 0.0),
-        ]))
-        .unwrap();
-        for (i, want) in ["hub-slim", "left-slim", "front-slim"].iter().enumerate() {
+        // 飾り棚が先 (SUPPORT_ORDER)。hub を指定しても同じ
+        assert_eq!(pick_spot(&layout, &Sizes::new(), None, None, None).unwrap().parent_id, "shelf");
+        assert_eq!(pick_spot(&layout, &Sizes::new(), None, Some("hub"), None).unwrap().parent_id, "shelf");
+        // 無い部屋を指定すると None
+        assert_eq!(pick_spot(&layout, &Sizes::new(), None, Some("left"), None), None);
+        for i in 0..3 {
             let spot = pick_spot(&layout, &Sizes::new(), None, None, None).unwrap();
-            assert_eq!(spot.parent_id, *want, "{i}");
-            layout.objects.push(artwork_on(Uuid::from_u128(i as u128 + 1), spot));
+            layout.objects.push(artwork_on(Uuid::from_u128(i + 1), spot));
         }
+        let layout = validate_layout(serde_json::to_value(&layout).unwrap()).unwrap();
         assert_eq!(pick_spot(&layout, &Sizes::new(), None, None, None), None);
     }
 
@@ -2205,7 +2150,8 @@ mod tests {
         assert_eq!(moved, vec!["home-007", "home-008", "home-009", "home-011"]);
         assert_eq!(capacity_by_room(&layout)["hub"], capacity(&layout));
         // 出入口の前にかかる家具があっても、動かさなければ保存できる
-        assert_eq!(door_blockers(&layout), vec!["home-011"]);
+        // 出入口が無いので、出入口の前にかかる家具も無い
+        assert!(door_blockers(&layout).is_empty());
         check_placement(&layout, &Sizes::new(), DoorPolicy::OnlyMoved(&moved_ids(&layout, &layout))).unwrap();
 
         // アトリエの 13 点の実寸でも通り、どれも 1 倍以下で置かれる
@@ -2269,33 +2215,22 @@ mod tests {
     }
 
     #[test]
-    fn finish_pack_wall_and_floor_round_trip_in_every_room() {
-        // 内装セットの壁紙・床材を、どの部屋にも保存して読み直せる (物はそのまま)
+    fn finish_pack_wall_and_floor_round_trip() {
+        // 内装セットの壁紙・床材を保存して読み直せる (物はそのまま)
         let theme = |wall: &str, floor: &str| {
             let mut raw = raw_layout(json!([furniture("sofa", "home_sofa", 0.0, 2.0, 0.0)]));
-            for id in ["hub", "left", "right", "front"] {
-                raw["rooms"][id]["wall"] = json!(wall);
-                raw["rooms"][id]["floor"] = json!(floor);
-            }
+            raw["rooms"]["hub"]["wall"] = json!(wall);
+            raw["rooms"]["hub"]["floor"] = json!(floor);
             raw
         };
         for (wall, floor) in FINISH_PACK_WALLS.iter().zip(&FINISH_PACK_FLOORS) {
             let layout = validate_layout(theme(wall, floor)).unwrap_or_else(|e| panic!("{wall} / {floor}: {e}"));
-            for room in [&layout.rooms.hub, &layout.rooms.left, &layout.rooms.right, &layout.rooms.front] {
-                assert_eq!((room.wall.as_str(), room.floor.as_str()), (*wall, *floor));
-            }
+            let hub = &layout.rooms.hub;
+            assert_eq!((hub.wall.as_str(), hub.floor.as_str()), (*wall, *floor));
             assert_eq!(layout.objects.len(), 1);
             let again = validate_layout(serde_json::to_value(&layout).unwrap()).unwrap();
             assert_eq!(again, layout);
         }
-        // 部屋ごとに別の仕上げも持てる
-        let mut raw = raw_layout(json!([]));
-        raw["rooms"]["left"]["wall"] = json!("soft_brick");
-        raw["rooms"]["front"]["floor"] = json!("nero_marble");
-        let layout = validate_layout(raw).unwrap();
-        assert_eq!((layout.rooms.left.wall.as_str(), layout.rooms.left.floor.as_str()), ("soft_brick", "oak"));
-        assert_eq!((layout.rooms.front.wall.as_str(), layout.rooms.front.floor.as_str()), ("brick", "nero_marble"));
-        assert_eq!(layout.rooms.hub.wall, "plaster");
         // 壁紙の名前は床に使えない (逆も)。知らない名前は今までどおり 400 の文言になる
         for (key, value) in [("floor", "soft_brick"), ("wall", "white_oak"), ("wall", "marble")] {
             let mut raw = raw_layout(json!([]));
@@ -2546,11 +2481,7 @@ mod tests {
     /// 部屋が違えば同じローカル座標でも重ならないので、3 つとも置ける。どの部屋の出入口の前にもかからない
     fn rooms_layout() -> Value {
         let [x, z] = ROOMS_PLINTH_AT;
-        let objects: Vec<Value> = ["left", "right", "front"]
-            .iter()
-            .map(|room| furniture_in(room, &format!("f-{room}"), "plinth_ivory", x, z, 0.0))
-            .collect();
-        let raw = raw_layout(json!(objects));
+        let raw = raw_layout(json!([furniture("f-hub", "plinth_ivory", x, z, 0.0)]));
         validate_layout(raw.clone()).unwrap();
         raw
     }
@@ -2589,11 +2520,11 @@ mod tests {
 
     /// 表の上の段に書く説明 (Web の check-placement.mjs を書く人向け)
     const NOTES: [&str; 8] = [
-        "配置 JSON は schemaVersion 4 (10 × 10 と 8 × 8 の 4 部屋)。家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見たローカル座標。部屋は回さない",
+        "配置 JSON は schemaVersion 5 (中央のリビング hub 10 × 10 の 1 部屋。出入口なし)。家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見たローカル座標。部屋は回さない",
         "house は /api/museum の house と同じ形 (model_url は null)。部屋の置ける範囲は ±(size / 2 − wall_margin)、はみ出しは 2 mm (tolerance ではなく home.rs の TOLERANCE = 0.002) まで許す",
         "door_zone: 出入口の前の置けない場所。壁に沿って出入口の中心 (offset) から ±width / 2、壁の内側の面から部屋の中へ depth。重なりと同じく 2 mm より深くかかったら置けない",
-        "layouts.supports = 作品を載せられる家具を hub に 1 つずつ。layouts.floor = 空の家。layouts.rooms = 左・右・前の部屋に白い台座 (f-left・f-right・f-front) を同じローカル座標 (3.2, 0, 3.2) に置いた家 (hub は空)",
-        "cases: surface が \"floor\" の行は room (hub・left・right・front) の床に layouts.rooms で置く (候補の roomId = room)。それ以外の行は \"<assetId>/<面の id>\" の面に layouts.supports で置く (parentId = \"f-<assetId>\")",
+        "layouts.supports = 作品を載せられる家具を hub に 1 つずつ。layouts.floor = 空の家。layouts.rooms = hub の (3.2, 0, 3.2) に白い台座 (f-hub) を置いた家 (床の隅の候補が台座と重なる)",
+        "cases: surface が \"floor\" の行は room (house.rooms の部屋。今は hub だけ) の床に layouts.rooms で置く (候補の roomId = room)。それ以外の行は \"<assetId>/<面の id>\" の面に layouts.supports で置く (parentId = \"f-<assetId>\")",
         "cases の target: 面は centre・+x・-z・+x+z の 4 つ、床はそれに -x・+z を足した 6 つ (targets の座標を、面または部屋の矩形へ clamp_to_rect で寄せた位置が position)",
         "cases の候補 (id \"cand\") は新しく置いた物として判定する (DoorPolicy::OnlyMoved({cand}))。床の候補は所属する部屋の出入口の前にかかると ok: false。layouts の家具は保存済みの物なので出入口の前を見ない",
         "extra: layout に objects (保存済みの物) を足して candidate (id \"cand\") を置けるか。moved が true なら候補の出入口の前を見る、false なら見ない (動かしていない保存済みの物と同じ扱い)",
@@ -2672,7 +2603,7 @@ mod tests {
             }
         }
 
-        // 置いてある作品との重なり・壁・床の額縁・寸法の分からない作品・部屋・出入口
+        // 置いてある作品との重なり・壁・床の額縁・寸法の分からない作品・床の台座
         let id_of = |name: &str| arts.iter().find(|a| a.0 == name).unwrap().1;
         let console = On::Surface("f-home_console", TOP_SURFACE);
         let floor_of = |room: &'static str| On::Floor(room);
@@ -2695,7 +2626,6 @@ mod tests {
             // 床の帆船を x 4.7 に置くと壁から 12 cm 空かない
             ("floor-near-wall", "floor", vec![], boat_on("hub", 4.7, 0.0), true),
             // 額縁 (幅 1.35) は床の枠 0.8 に縮むので、壁ぎわ (4.08〜4.88) にも置ける。床の帆船 (2.22〜2.78) とも重ならない
-            // (z 2.5 なので東の出入口 (z ±1.27) にはかからない)
             (
                 "frame-on-floor",
                 "floor",
@@ -2720,60 +2650,27 @@ mod tests {
                 art_object(CANDIDATE_ID, rocket, console, 0.0, 0.0, FRAC_PI_4),
                 true,
             ),
-            // 左・右・前の台座 (3.2, 3.2) に近い (2.8, 2.8) でも、hub なら重ならない。左の部屋なら台座と重なる
-            ("cross-room-same-local-position", "rooms", vec![], boat_on("hub", 2.8, 2.8), true),
-            ("same-room-overlap-left", "rooms", vec![], boat_on("left", 2.8, 2.8), true),
-            // 8 × 8 の部屋の壁 (置ける範囲 ±3.88): x 3.6 なら帆船の端がちょうど 3.88、x 3.7 ははみ出す
-            ("small-room-wall-edge", "floor", vec![], boat_on("left", 3.6, -1.8), true),
-            ("small-room-wall", "floor", vec![], boat_on("left", 3.7, -1.8), true),
-            // hub の東の出入口 (x 3.85〜5.0、z ±1.27)。新しく置く・動かすなら置けない。動かしていない保存済みの物なら読める
-            ("door-zone-moved", "floor", vec![], boat_on("hub", 4.3, 0.0), true),
-            ("door-zone-existing", "floor", vec![], boat_on("hub", 4.3, 0.0), false),
-            // 帆船の端 (3.85) がゾーンの縁にちょうど接するだけなら置ける (2 mm まで許す)
-            ("door-zone-touching", "floor", vec![], boat_on("hub", 3.57, 0.0), true),
-            // 8 × 8 の部屋の出入口: 左は東 (x 2.85〜4.0)、右は西 (x −4.0〜−2.85)、前は南 (z 2.85〜4.0)
-            ("door-zone-left", "floor", vec![], boat_on("left", 3.3, 0.5), true),
-            ("door-zone-right", "floor", vec![], boat_on("right", -3.3, -0.5), true),
-            ("door-zone-front", "floor", vec![], boat_on("front", 0.5, 3.3), true),
-            // 家具の候補も同じ。細い台座 (0.59) を左の部屋の出入口の前に置くと置けない
+            // 床の台座 (3.2, 3.2) に近い (2.8, 2.8) の帆船は台座と重なる。(1.8, 1.8) なら重ならない
+            ("floor-overlap-plinth", "rooms", vec![], boat_on("hub", 2.8, 2.8), true),
+            ("floor-beside-plinth", "rooms", vec![], boat_on("hub", 1.8, 1.8), true),
+            // 家具の候補も同じ。白い台座を台座と同じ (3.2, 3.2) に置くと重なる
             (
-                "furniture-door-zone-left",
-                "floor",
-                vec![],
-                furniture_in("left", CANDIDATE_ID, "plinth_slim", 3.3, 0.0, 0.0),
-                true,
-            ),
-            // 白い台座を台座と同じ (3.2, 3.2) に: hub なら置ける、右の部屋なら f-right と重なる
-            (
-                "furniture-cross-room",
+                "furniture-overlap-plinth",
                 "rooms",
                 vec![],
-                furniture_in("hub", CANDIDATE_ID, "plinth_ivory", 3.2, 3.2, 0.0),
+                furniture(CANDIDATE_ID, "plinth_ivory", 3.2, 3.2, 0.0),
                 true,
             ),
-            (
-                "furniture-same-room-right",
-                "rooms",
-                vec![],
-                furniture_in("right", CANDIDATE_ID, "plinth_ivory", 3.2, 3.2, 0.0),
-                true,
-            ),
-            // ラグ (3.0 × 2.26) は台座と重なってよい (右の部屋の f-right の上。西の出入口にはかからない) が、
-            // 出入口の前は見る (前の部屋の南の出入口)
+            // ラグ (3.0 × 2.26) は台座と重なってよい
             (
                 "rug-over-plinth",
                 "rooms",
                 vec![],
-                furniture_in("right", CANDIDATE_ID, "home_rug", 2.0, 2.5, 0.0),
+                furniture(CANDIDATE_ID, "home_rug", 2.0, 2.5, 0.0),
                 true,
             ),
-            (
-                "rug-in-door-zone",
-                "rooms",
-                vec![],
-                furniture_in("front", CANDIDATE_ID, "home_rug", 0.0, 2.6, 0.0),
-                true,
-            ),
+            // 以前の東の出入口の前 (x 3.85〜5.0、z ±1.27)。出入口が無くなったので、新しく置く物でも置ける
+            ("former-door-zone", "floor", vec![], boat_on("hub", 4.3, 0.0), true),
         ];
         let extra: Vec<Value> = extra_cases
             .into_iter()

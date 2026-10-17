@@ -64,7 +64,7 @@
   pointer-events: auto;
 }
 
-/* 部屋の切り替え（中央・左・右・前）。.glass と一緒に使う。中の切り替えボタンは Segmented */
+/* 部屋の切り替え（house.rooms の部屋。部屋が 1 つなら出さない）。.glass と一緒に使う。中の切り替えボタンは Segmented */
 .edit-rooms {
   width: min(100%, 300px);
   padding: 4px;

@@ -205,7 +205,7 @@ pub async fn put_layout(State(state): State<AppState>, body: Bytes) -> AppResult
 
 /// 配置の行が無ければ初期配置を入れる。読めない配置が入っていたら、置けない作品だけを外して保存し直す。
 /// 家具や部屋がおかしくて直せないときだけ初期配置に戻す。
-/// v1〜v3 の配置は v4 (広げた 4 部屋) に上げて保存し直す (壁ぎわの物は壁といっしょに動かす。home::widen_from_v3)。出入口の前は見ない
+/// v1〜v4 の配置は v5 (リビングだけ) に上げて保存し直す (左・右・前の部屋の物は外し、v3 までは壁ぎわの物を壁といっしょに動かす)。出入口の前は見ない
 pub async fn ensure_layout(state: &AppState) -> AppResult<()> {
     let default = home::default_layout();
     let inserted = sqlx::query(

@@ -5,7 +5,7 @@
 // 各ルールの横に、対応する Rust のテスト（home.rs の tests）の名前を書いている。
 //
 // 座標：メートル、Y-up。床は y = 0。家具の原点は底面の中心、正面は +Z。
-//   家は 4 部屋（中央の hub と、左・右・前）。部屋どうしは平行移動だけで回転はない。
+//   家の部屋は house.rooms から受け取る（今は中央の hub だけ）。部屋どうしは平行移動だけで回転はない。
 //   家具と床の作品の position は、所属する部屋（roomId）の中心を原点にした「部屋の中の位置」。
 //   世界座標 = 部屋の中心（house.rooms[].origin。roomOrigin）+ position（worldOf。Rust: world_of）。
 //   置けるかどうかは、部屋ごとに部屋の中の位置で調べる（部屋の矩形・出入口の前・同じ部屋の中の重なり）。
@@ -114,7 +114,7 @@ export function clampToRect(rect: Rect, w: number, d: number, rotationY: number,
 }
 
 /**
- * 部屋 roomId の中で家具を置ける範囲（部屋の中心が原点。壁から 12 cm 内側。hub は ±4.88、8 × 8 の部屋は ±3.88）。Rust: room_rect
+ * 部屋 roomId の中で家具を置ける範囲（部屋の中心が原点。壁から 12 cm 内側。hub は ±4.88）。Rust: room_rect
  * 大きさは配置 JSON の rooms[roomId]（Rust は ROOM_DEFS の size を使う。配置の大きさはそれと同じでないと 400 なので同じ値）。
  * 配置に無い部屋はリビングの大きさ
  */

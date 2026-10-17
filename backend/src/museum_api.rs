@@ -131,7 +131,7 @@ pub struct SlotView {
     artwork: SlotArtwork,
 }
 
-/// 部屋ごとの飾っている作品の数など (4 部屋。順番は home::ROOM_DEFS と同じ)
+/// 部屋ごとの飾っている作品の数など (順番は home::ROOM_DEFS と同じ。今はリビングだけ)
 #[derive(Serialize)]
 pub struct RoomView {
     id: &'static str,
@@ -280,9 +280,6 @@ pub(crate) fn house_view(model_url: impl Fn(&RoomDef) -> Option<String>) -> Hous
 fn room_description(id: &str) -> &'static str {
     match id {
         "hub" => "家族の作品を飾るリビング",
-        "left" => "リビングの左（西）の部屋",
-        "right" => "リビングの右（東）の部屋",
-        "front" => "入口から入って正面（北）の部屋",
         _ => "",
     }
 }
@@ -343,7 +340,7 @@ pub struct MuseumOverview {
     name: String,
     owner_name: String,
     /// 家の建物 (壁と床だけの GLB。MUSEUM_MODEL_PATH、既定は 8 × 8 m のリビングだけの home-empty.glb)。
-    /// 前の版の Web のために残している。4 部屋の建物は house.rooms[].model_url
+    /// 前の版の Web のために残している。今の建物は house.rooms[].model_url
     model_url: Option<String>,
     /// 一人称で歩く画面用の別の GLB (WALK_MODEL_PATH を指定したときだけ)。無ければ None (model_url を使う)
     walk_model_url: Option<String>,
@@ -351,7 +348,7 @@ pub struct MuseumOverview {
     displayed_count: usize,
     /// 作品を飾れる場所の数 (全部屋の、天板のある家具の置き場所の合計)
     capacity: usize,
-    /// 家の形 (4 部屋の位置・大きさ・出入口・建物の GLB)
+    /// 家の形 (部屋の位置・大きさ・出入口・建物の GLB。今はリビングだけ)
     house: HouseView,
     floors: Vec<FloorView>,
     rooms: Vec<RoomView>,
@@ -446,7 +443,7 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
     }))
 }
 
-/// 部屋ごとの数とサムネイル (4 部屋、ROOM_DEFS の順)。rows は飾った順なので、サムネイルは後ろから (最近飾った順)
+/// 部屋ごとの数とサムネイル (ROOM_DEFS の順)。rows は飾った順なので、サムネイルは後ろから (最近飾った順)
 fn room_views(slots: &[SlotView], rows: &[DisplayedRow], capacity: &HashMap<&'static str, usize>) -> Vec<RoomView> {
     home::ROOM_DEFS
         .iter()
@@ -603,10 +600,9 @@ mod tests {
         assert!(slots.iter().all(|s| s.room_id == Some("hub")));
     }
 
-    /// 今の版 (v4) の 4 部屋の rooms
+    /// 今の版 (v5) の rooms (中央のリビングだけ)
     fn rooms_now() -> serde_json::Value {
-        let room = |size: i64| serde_json::json!({ "enabled": true, "width": size, "depth": size, "wall": "plaster", "floor": "oak" });
-        serde_json::json!({ "hub": room(10), "left": room(8), "right": room(8), "front": room(8) })
+        serde_json::json!({ "hub": { "enabled": true, "width": 10, "depth": 10, "wall": "plaster", "floor": "oak" } })
     }
 
     #[test]
@@ -616,14 +612,14 @@ mod tests {
             "schemaVersion": home::SCHEMA_VERSION,
             "rooms": rooms_now(),
             "objects": [
-                { "kind": "furniture", "id": "desk", "assetId": "home_craft_desk", "roomId": "right",
+                { "kind": "furniture", "id": "desk", "assetId": "home_craft_desk", "roomId": "hub",
                   "position": [1.0, 0, 2.0], "rotationY": 0 },
                 { "kind": "artwork", "id": "art-1", "artworkId": ids[0], "parentId": "desk",
                   "position": [0.1, 0, 0], "rotationY": 0 },
-                { "kind": "artwork", "id": "art-2", "artworkId": ids[1], "roomId": "front",
-                  "position": [0.0, 0, 1.0], "rotationY": 0 },
-                { "kind": "furniture", "id": "slim", "assetId": "plinth_slim", "roomId": "left",
-                  "position": [-1.0, 0, 0.5], "rotationY": 0 },
+                { "kind": "artwork", "id": "art-2", "artworkId": ids[1], "roomId": "hub",
+                  "position": [-2.0, 0, 1.0], "rotationY": 0 },
+                { "kind": "furniture", "id": "slim", "assetId": "plinth_slim", "roomId": "hub",
+                  "position": [-3.0, 0, 0.5], "rotationY": 0 },
                 { "kind": "artwork", "id": "art-3", "artworkId": ids[2], "parentId": "slim",
                   "position": [0.0, 0, 0], "rotationY": 0 },
                 { "kind": "furniture", "id": "shelf", "assetId": "home_display_shelf", "roomId": "hub",
@@ -638,54 +634,39 @@ mod tests {
         let slots = slot_views(&layout, &rows);
         assert_eq!(slots.len(), 4);
         let close = |a: [f32; 3], b: [f32; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-5);
-        // 右の部屋の工作机 (9.24 + 1, 0, 2) の天板の上の作品 (x + 0.1)
-        assert_eq!(slots[0].room_id, Some("right"));
-        assert!(close(slots[0].position, [10.34, 0.795, 2.0]), "{:?}", slots[0].position);
-        // 前の部屋の床の作品 (0, 0, −9.24 + 1)
-        assert_eq!(slots[1].room_id, Some("front"));
-        assert!(close(slots[1].position, [0.0, 0.0, -8.24]), "{:?}", slots[1].position);
-        // 左の部屋の細い台座 (−9.24 − 1, 1.235, 0.5)
-        assert_eq!(slots[2].room_id, Some("left"));
-        assert!(close(slots[2].position, [-10.24, 1.235, 0.5]), "{:?}", slots[2].position);
-        assert_eq!(slots[3].room_id, Some("hub"));
+        // リビングの中心は世界の原点。工作机 (1, 0, 2) の天板の上の作品 (x + 0.1)
+        assert!(slots.iter().all(|s| s.room_id == Some("hub")));
+        assert!(close(slots[0].position, [1.1, 0.795, 2.0]), "{:?}", slots[0].position);
+        // 床の作品 (−2, 0, 1)
+        assert!(close(slots[1].position, [-2.0, 0.0, 1.0]), "{:?}", slots[1].position);
+        // 細い台座 (−3, 1.235, 0.5)
+        assert!(close(slots[2].position, [-3.0, 1.235, 0.5]), "{:?}", slots[2].position);
         assert!(close(slots[3].position, [-0.28, 0.843, 0.0]), "{:?}", slots[3].position);
 
-        // 部屋ごとの数・置き場所の数 (ROOM_DEFS の順)
+        // 部屋ごとの数・置き場所の数 (ROOM_DEFS の順。今はリビングだけ)。サムネイルは新しい 3 つ
         let rooms = room_views(&slots, &rows, &home::capacity_by_room(&layout));
         let summary: Vec<(&str, &str, usize, usize, usize)> =
             rooms.iter().map(|r| (r.id, r.name, r.count, r.capacity, r.thumbs.len())).collect();
-        assert_eq!(
-            summary,
-            vec![
-                ("hub", "中央のリビング", 1, 2, 1),
-                ("left", "左の部屋", 1, 1, 1),
-                ("right", "右の部屋", 1, 2, 1),
-                ("front", "前の部屋", 1, 0, 1),
-            ]
-        );
-        assert_eq!(rooms[1].thumbs[0], format!("/media/thumbs/{}.jpg", ids[2]));
+        assert_eq!(summary, vec![("hub", "中央のリビング", 4, 5, 3)]);
     }
 
     #[test]
     fn house_view_lists_room_defs() {
-        let house = house_view(|room| (room.id != "front").then(|| format!("/media/museum/room-{}.glb", room.id)));
+        let house = house_view(|room| Some(format!("/media/museum/room-{}.glb", room.id)));
         let value = serde_json::to_value(&house).unwrap();
         let text = serde_json::to_string(&house).unwrap();
         // f32 でも JSON には短く書かれる
-        assert!(text.contains("\"origin\":[-9.24,0.0]") && text.contains("\"wall_thickness\":0.24"), "{text}");
+        assert!(text.contains("\"origin\":[0.0,0.0]") && text.contains("\"wall_thickness\":0.24"), "{text}");
+        // 部屋は中央のリビングだけ。出入口は無い
         let rooms = value["rooms"].as_array().unwrap();
         let ids: Vec<&str> = rooms.iter().map(|r| r["id"].as_str().unwrap()).collect();
-        assert_eq!(ids, vec!["hub", "left", "right", "front"]);
+        assert_eq!(ids, vec!["hub"]);
         assert_eq!(rooms[0]["model_url"], "/media/museum/room-hub.glb");
-        assert!(rooms[3]["model_url"].is_null());
         assert_eq!(rooms[0]["size"], serde_json::json!([10.0, 10.0]));
-        assert_eq!(rooms[3]["size"], serde_json::json!([8.0, 8.0]));
-        let sides = |i: usize| -> Vec<&str> { rooms[i]["doors"].as_array().unwrap().iter().map(|d| d["side"].as_str().unwrap()).collect() };
-        assert_eq!(sides(0), vec!["west", "east", "north"]);
-        assert_eq!((sides(1), sides(2), sides(3)), (vec!["east"], vec!["west"], vec!["south"]));
+        assert_eq!(rooms[0]["doors"], serde_json::json!([]));
         assert_eq!(rooms[0]["cutaway"], serde_json::json!(["south", "east"]));
-        assert_eq!(rooms[3]["cutaway"], serde_json::json!(["east"]));
-        let door = &rooms[1]["doors"][0];
-        assert!((door["clear_width"].as_f64().unwrap() - 2.1).abs() < 1e-6 && door["offset"] == 0.0);
+        // 建物の GLB が無ければ model_url は null
+        let none = serde_json::to_value(house_view(|_| None)).unwrap();
+        assert!(none["rooms"][0]["model_url"].is_null());
     }
 }
