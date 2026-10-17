@@ -9,8 +9,8 @@
   - 1 つずつ：ノード名・extras（roomId・side・cutaway・role）・材質名・角の柱・壁と床の UV の決まり・大きさ（AABB）
   - 開口：hub の開口（有効幅 2.10 m・高さ 2.60 m）の中に、形が 1 つも無い（隣の部屋の GLB も置いて調べる）
   - 床：hub の中から開口をくぐって隣の部屋まで、床（role: floor）が y = 0 で切れ目なく続く。開口の下の帯は hub の床
-  - 開いた側：6×6 の部屋の hub 側に、壁も柱以外の形も無い
-  - 共有の壁：6×6 の部屋の形が hub の壁の中へ入り込んでいない（角の柱の足・柱頭だけは壁に少し埋まる）
+  - 開いた側：左・右・前の部屋の hub 側に、壁も柱以外の形も無い
+  - 共有の壁：左・右・前の部屋の形が hub の壁の中へ入り込んでいない（角の柱の足・柱頭だけは壁に少し埋まる）
   - ちらつき：家全体で、同じ平面・同じ向きの面が重なっているところが無い（z-fighting）
 """
 from __future__ import annotations
@@ -28,12 +28,12 @@ H = 3.2
 T = 0.24
 R = 1.05
 SPRING = 1.55
-ORIGINS = {'hub': (0.0, 0.0), 'left': (-7.24, 0.0), 'right': (7.24, 0.0), 'front': (0.0, -7.24)}
+ORIGINS = {'hub': (0.0, 0.0), 'left': (-9.24, 0.0), 'right': (9.24, 0.0), 'front': (0.0, -9.24)}
 EXPECT = {
-    'hub': {'size': (8.0, 8.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': {'south', 'east'}},
-    'left': {'size': (6.0, 6.0), 'open': 'east', 'doors': (), 'cutaway': {'south'}},
-    'right': {'size': (6.0, 6.0), 'open': 'west', 'doors': (), 'cutaway': {'south', 'east'}},
-    'front': {'size': (6.0, 6.0), 'open': 'south', 'doors': (), 'cutaway': {'east'}},
+    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': {'south', 'east'}},
+    'left': {'size': (8.0, 8.0), 'open': 'east', 'doors': (), 'cutaway': {'south'}},
+    'right': {'size': (8.0, 8.0), 'open': 'west', 'doors': (), 'cutaway': {'south', 'east'}},
+    'front': {'size': (8.0, 8.0), 'open': 'south', 'doors': (), 'cutaway': {'east'}},
 }
 # hub のどの壁の開口が、どの部屋へつながるか
 DOOR_TO_ROOM = {'west': 'left', 'east': 'right', 'north': 'front'}
@@ -483,7 +483,7 @@ def check_house(glbs):
         print(f'  door hub/{side} -> {rid}: {len(samples)} rays through the opening (|u| <= 1.02, y up to the arch - 0.02, '
               f'n -0.8..0.8) -> {len(hits)} hits')
 
-        # 床：hub の中（n = 3.5）から開口をくぐり、隣の部屋の奥（6×6 の部屋の中ほど）まで
+        # 床：hub の中（n = 3.5）から開口をくぐり、隣の部屋の奥（部屋の中ほど）まで
         (cx, cz), (ux, uz), (nx, nz) = frame
         rd = EXPECT[rid]['size'][1]
         points, labels = [], []
@@ -538,7 +538,7 @@ def check_house(glbs):
         print(f'  shared wall hub/{side}: {len(samples)} rays; first wall face seen from {rid}: faceRoom={rid} '
               f'{room_walls - len(bad_room)}/{room_walls}; seen from hub: untagged {len(by_sample) - len(bad_hub)}/{len(by_sample)}')
 
-    # 共有の壁：6×6 の部屋の形が hub の壁の外の面（±4.24）より hub 側へ入り込む量
+    # 共有の壁：左・右・前の部屋の形が hub の壁の外の面（±5.24）より hub 側へ入り込む量
     for rid, tris in room_tris.items():
         side = HUB_WALL_AT_OPEN[rid]
         frame = side_frame(side, hw, hd)
@@ -556,13 +556,13 @@ def check_house(glbs):
         print(f'  {rid} vs hub/{side} outer face: max penetration ' +
               ', '.join(f'{k} {max(v, 0):.4f}' for k, v in sorted(worst.items())))
 
-    # hub の形が外の面（±4.24）からはみ出す量。外側の幅木・回り縁（〜0.07 m）と、開口の枠の足元の台（0.075 m）だけのはず
+    # hub の形が外の面（±5.24）からはみ出す量。外側の幅木・回り縁（〜0.07 m）と、開口の枠の足元の台（0.075 m）だけのはず
     out = {}
     for a, b, c, mesh in hub_tris:
         for p in (a, b, c):
             v = max(abs(p[0]), abs(p[2])) - (hw / 2 + T)
             out[mesh['role']] = max(out.get(mesh['role'], -9), v)
-    print('  hub beyond its outer faces (4.24): ' + ', '.join(f'{k} {max(v, 0):.4f}' for k, v in sorted(out.items())))
+    print(f'  hub beyond its outer faces ({hw / 2 + T:.2f}): ' + ', '.join(f'{k} {max(v, 0):.4f}' for k, v in sorted(out.items())))
     for role, v in out.items():
         check(v <= 0.0751 if role.startswith('trim') else v <= 1e-6, f'hub: {role} sticks out {v:.4f} m')
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""4 部屋の家（中央 hub 8×8 m ＋ 左 left・右 right・前 front 6×6 m）の建物を、開発用の GLB で書き出す。
+"""4 部屋の家（中央 hub 10×10 m ＋ 左 left・右 right・前 front 8×8 m）の建物を、開発用の GLB で書き出す。
 
 - 書き出し先: backend/static/models/rooms/{hub,left,right,front}.glb
 - **開発用のシェル**です。本番品質の GLB は別に納品してもらい、同じ名前で差し替えます（仕様は docs/house-assets.md）。
@@ -10,7 +10,7 @@
 - 実行方法は README.md を見てください。確認は check_rooms.py（Python の標準ライブラリだけで動く）。
 
 座標: メートル、Y が上、床の上面が y = 0。部屋ごとに部屋の中心を原点にして書き出し、回転はしない。
-アプリは各 GLB を部屋の origin（hub (0,0)、left (−7.24,0)、right (7.24,0)、front (0,−7.24)）へ平行移動して置く。
+アプリは各 GLB を部屋の origin（hub (0,0)、left (−9.24,0)、right (9.24,0)、front (0,−9.24)）へ平行移動して置く。
 """
 from __future__ import annotations
 
@@ -52,10 +52,10 @@ BASE_T = 0.2  # 床の下の土台（role: foundation）まで含めた厚さ
 
 # 部屋。open は壁を作らない側（hub の壁と共有する）。doors は開口を開ける壁。cutaway は手前の壁のカットで隠す壁
 ROOMS = {
-    'hub': {'size': (8.0, 8.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': ('south', 'east')},
-    'left': {'size': (6.0, 6.0), 'open': 'east', 'doors': (), 'cutaway': ('south',)},
-    'right': {'size': (6.0, 6.0), 'open': 'west', 'doors': (), 'cutaway': ('south', 'east')},
-    'front': {'size': (6.0, 6.0), 'open': 'south', 'doors': (), 'cutaway': ('east',)},
+    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': ('south', 'east')},
+    'left': {'size': (8.0, 8.0), 'open': 'east', 'doors': (), 'cutaway': ('south',)},
+    'right': {'size': (8.0, 8.0), 'open': 'west', 'doors': (), 'cutaway': ('south', 'east')},
+    'front': {'size': (8.0, 8.0), 'open': 'south', 'doors': (), 'cutaway': ('east',)},
 }
 # 部屋の開いた側をふさいでいる hub の壁
 HUB_WALL_AT_OPEN = {'left': 'west', 'right': 'east', 'front': 'north'}

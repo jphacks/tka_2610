@@ -603,18 +603,18 @@ mod tests {
         assert!(slots.iter().all(|s| s.room_id == Some("hub")));
     }
 
-    /// v3 の 4 部屋の rooms
-    fn rooms_v3() -> serde_json::Value {
+    /// 今の版 (v4) の 4 部屋の rooms
+    fn rooms_now() -> serde_json::Value {
         let room = |size: i64| serde_json::json!({ "enabled": true, "width": size, "depth": size, "wall": "plaster", "floor": "oak" });
-        serde_json::json!({ "hub": room(8), "left": room(6), "right": room(6), "front": room(6) })
+        serde_json::json!({ "hub": room(10), "left": room(8), "right": room(8), "front": room(8) })
     }
 
     #[test]
     fn slot_view_world_positions_by_room() {
         let ids: Vec<Uuid> = (1..=4).map(Uuid::from_u128).collect();
         let layout = home::parse_layout(serde_json::json!({
-            "schemaVersion": 3,
-            "rooms": rooms_v3(),
+            "schemaVersion": home::SCHEMA_VERSION,
+            "rooms": rooms_now(),
             "objects": [
                 { "kind": "furniture", "id": "desk", "assetId": "home_craft_desk", "roomId": "right",
                   "position": [1.0, 0, 2.0], "rotationY": 0 },
@@ -638,15 +638,15 @@ mod tests {
         let slots = slot_views(&layout, &rows);
         assert_eq!(slots.len(), 4);
         let close = |a: [f32; 3], b: [f32; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-5);
-        // 右の部屋の工作机 (7.24 + 1, 0, 2) の天板の上の作品 (x + 0.1)
+        // 右の部屋の工作机 (9.24 + 1, 0, 2) の天板の上の作品 (x + 0.1)
         assert_eq!(slots[0].room_id, Some("right"));
-        assert!(close(slots[0].position, [8.34, 0.795, 2.0]), "{:?}", slots[0].position);
-        // 前の部屋の床の作品 (0, 0, −7.24 + 1)
+        assert!(close(slots[0].position, [10.34, 0.795, 2.0]), "{:?}", slots[0].position);
+        // 前の部屋の床の作品 (0, 0, −9.24 + 1)
         assert_eq!(slots[1].room_id, Some("front"));
-        assert!(close(slots[1].position, [0.0, 0.0, -6.24]), "{:?}", slots[1].position);
-        // 左の部屋の細い台座 (−7.24 − 1, 1.235, 0.5)
+        assert!(close(slots[1].position, [0.0, 0.0, -8.24]), "{:?}", slots[1].position);
+        // 左の部屋の細い台座 (−9.24 − 1, 1.235, 0.5)
         assert_eq!(slots[2].room_id, Some("left"));
-        assert!(close(slots[2].position, [-8.24, 1.235, 0.5]), "{:?}", slots[2].position);
+        assert!(close(slots[2].position, [-10.24, 1.235, 0.5]), "{:?}", slots[2].position);
         assert_eq!(slots[3].room_id, Some("hub"));
         assert!(close(slots[3].position, [-0.28, 0.843, 0.0]), "{:?}", slots[3].position);
 
@@ -672,14 +672,14 @@ mod tests {
         let value = serde_json::to_value(&house).unwrap();
         let text = serde_json::to_string(&house).unwrap();
         // f32 でも JSON には短く書かれる
-        assert!(text.contains("\"origin\":[-7.24,0.0]") && text.contains("\"wall_thickness\":0.24"), "{text}");
+        assert!(text.contains("\"origin\":[-9.24,0.0]") && text.contains("\"wall_thickness\":0.24"), "{text}");
         let rooms = value["rooms"].as_array().unwrap();
         let ids: Vec<&str> = rooms.iter().map(|r| r["id"].as_str().unwrap()).collect();
         assert_eq!(ids, vec!["hub", "left", "right", "front"]);
         assert_eq!(rooms[0]["model_url"], "/media/museum/room-hub.glb");
         assert!(rooms[3]["model_url"].is_null());
-        assert_eq!(rooms[0]["size"], serde_json::json!([8.0, 8.0]));
-        assert_eq!(rooms[3]["size"], serde_json::json!([6.0, 6.0]));
+        assert_eq!(rooms[0]["size"], serde_json::json!([10.0, 10.0]));
+        assert_eq!(rooms[3]["size"], serde_json::json!([8.0, 8.0]));
         let sides = |i: usize| -> Vec<&str> { rooms[i]["doors"].as_array().unwrap().iter().map(|d| d["side"].as_str().unwrap()).collect() };
         assert_eq!(sides(0), vec!["west", "east", "north"]);
         assert_eq!((sides(1), sides(2), sides(3)), (vec!["east"], vec!["west"], vec!["south"]));
