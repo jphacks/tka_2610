@@ -39,13 +39,13 @@
 
 1. `src/main.tsx`：起動するだけのファイル。全体のスタイルを読み込み、`App` を描画します。
 2. `src/App.tsx`：URL と画面の対応表です。どの URL でどの画面が出るかが 1 か所にまとまっています。
-3. `src/pages/Home.tsx`：ホーム画面。API からデータを取り（`api/`）、共通部品（`components/`）と 3D（`three/`）を並べる、という画面の基本の形が分かります。
+3. `src/pages/Room.tsx`：おへやの画面。API からデータを取り（`api/`）、共通部品（`components/`）と 3D（`three/`）を並べる、という画面の基本の形が分かります。
 
 ## ディレクトリ
 
 ```
 web/
-├── index.html          フォントの読み込み、/api/museum の先読み
+├── index.html          フォントの読み込み、/api/ages の先読み
 ├── vite.config.ts      開発サーバーの設定（/api・/media・/home-assets を 8080 番の Rust に中継）
 ├── tsconfig.check.json npm run check:placement 用（placement.ts だけを node_modules/.cache/placement-check/ に出力する）
 ├── scripts/
@@ -77,25 +77,28 @@ import { HomeScene, StageShell } from '../three'
 
 | 番号 | 画面 | URL | ファイル | 開き方 |
 |---|---|---|---|---|
-| ② | ホーム（画面いっぱいの 3D の家。はじめはリビングの中の近景で、引けば家全体。ドラッグで見回し、放っておくとゆっくり回る） | `/` | `Home.tsx` / `.css` | タブ |
+| ② | ホーム（年齢のチップと、その年齢のおへやを積み上げた 3D の建物） | `/`（`?age=年齢`） | `Home.tsx` / `.css` | タブ |
+| ②' | おへや（画面いっぱいの 3D のおへや。はじめはリビングの中の近景で、引けば家全体。ドラッグで見回し、放っておくとゆっくり回る） | `/rooms/:roomId` | `Room.tsx` / `.css` | push（② の階のラベルか「はいる」、⑦ のおへやの行から） |
 | ③ | 作品を追加 | `/add` | `AddArtwork.tsx` | モーダル |
 | ④ | 3D プレビュー | `/artworks/:id/preview` | `ArtworkPreview.tsx` / `.css` | モーダル |
 | ⑤ | おうちの中 | `/museum`（`?focus=作品ID` / `?room=部屋ID`） | `MuseumView.tsx` / `.css` | push |
 | ⑥ | 作品の詳細 | `/artworks/:id` | `ArtworkDetail.tsx` / `.css` | push |
-| ⑦ | おうちのマップ | `/map` | `MapView.tsx` / `.css` | タブ |
+| ⑦ | おうちのマップ（全部の年齢のおへやの一覧） | `/map` | `MapView.tsx` / `.css` | タブ |
 | ⑧ | 作品一覧 | `/collection`（`?category=種類`） | `Collection.tsx` | タブ |
 | ⑨ | 作品を編集 | `/artworks/:id/edit` | `EditArtwork.tsx` | モーダル |
 | ⑩ | 設定 | `/settings` | `Settings.tsx` / `.css` | タブ |
-| ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk` | `MuseumWalk.tsx` / `.css` | push（② の「歩く」、⑤ と ⑦ の「⋯」、⑫ の「鑑賞モードへ」から） |
-| ⑫ | 模様替え（家具と作品を動かす・回す・消す・足す、テーマを選ぶ） | `/home/edit` | `HomeEdit.tsx` / `.css` | push（② の「模様替え」、⑤ の「⋯」、⑦ の「お部屋」の下の「模様替え」から） |
+| ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk`（`?room=おへやID`） | `MuseumWalk.tsx` / `.css` | push（②' の「歩く」、⑤ の「⋯」、⑫ の「鑑賞モードへ」から） |
+| ⑫ | 模様替え（家具と作品を動かす・回す・消す・足す、テーマを選ぶ） | `/home/edit`（`?room=おへやID`） | `HomeEdit.tsx` / `.css` | push（②' の「模様替え」、⑤ の「⋯」から） |
 
 - 「開き方」は画面遷移アニメーションの種類です（後述の「画面遷移」）。
 - 各ファイルの先頭に、番号・URL・開き方を書いています。
 - `.css` がない画面は、共通のスタイル（`styles/`）と部品だけでできています。
-- ② は画面いっぱいの 3D の家（`HomeScene`）です。はじめはリビングの中の近景（手前に床ランプ、中央にソファとローテーブル、奥に棚）で、ピンチやホイールで引けば家全体まで見えます。3D の上に浮かぶ UI は 2 段だけで、上（`.stage-top`）に館名（押しても何もしない）とアバター（⑩ へ）、下部タブのすぐ上（`.home-dock`。`bottom: calc(var(--tabbar-space) + var(--safe-bottom))`）に飾っている数（しまってある作品があれば「・しまってある 3」を続ける）と、丸いボタンの「歩く」（⑪）・「模様替え」（⑫）があります。作品をタップすると ⑥ へ進みます（家具や床のタップは何もしない）。作品の追加は下部タブの「＋」です。ほかのタブと同じく、PC でもスマホの枠は残します。
+- ② は、上に館名とアバター（⑩ へ）、その下に年齢のチップ（`/api/ages` の `ages`。選んだ年齢は `?age=` に入れ、`nav.replace` で切り替える。はじめは今の年齢、そこに作品が無ければ作品のあるいちばん大きい年齢）、「4さいのおへや 8（しまってある 1）」の見出し、積み上げの 3D（`StackScene`。`/api/ages/{age}`）を並べます。3D の各階の左に「4さいのおへや 2（数）›」のラベルが出て、押すと ②' へ入ります。おへやが 1 つのときは下に「はいる」も出ます。「おへやを足す」（おへやの無い年齢では「おへやをつくる」）は `POST /api/ages/{age}/rooms` です。お誕生日が未設定のときは、⑩ への案内を出します。作品の追加は下部タブの「＋」です。
+- ②' は画面いっぱいの 3D のおへや（`HomeScene`）です。はじめはリビングの中の近景（手前に床ランプ、中央にソファとローテーブル、奥に棚）で、ピンチやホイールで引けば家全体まで見えます。3D の上に浮かぶ UI は 2 段だけで、上に戻る（② の `?age=` へ）とおへやの名前、下（`.room-dock`）に飾っている数と、丸いボタンの「歩く」（⑪）・「模様替え」（⑫）があります。どちらもこのおへやを `?room=` で渡します。作品をタップすると ⑥ へ進みます（家具や床のタップは何もしない）。
 - ⑪ 鑑賞モード と ⑫ 模様替え は、PC の広い画面ではスマホの枠をやめてウィンドウいっぱいに広げます（`MuseumWalk.css`・`HomeEdit.css`）。⑫ の右上の「鑑賞モードへ」は、PC でもスマホでも出します（⑪ はスマホではタッチで歩く。[walk.md](walk.md) の「スマホ（タッチ）」）。
-- ⑤ の `?room=` は部屋の id（今は `hub` だけ）です。カメラがその部屋の中心（`house.rooms[].origin`）へ寄ります。
-- ⑦ は、はじめに家全体（今はリビングだけ）が収まる距離から見下ろします。3D の部屋の名前のラベルを押すとカメラがその部屋へ寄り（ラベルが黒くなる）、寄っている部屋のラベルをもう一度押すと ⑤ の `?room=` へ進みます。寄っている間は 3D の左上に「家全体」が出て、押すと家全体の見え方へ戻ります（`MapView.tsx` の `focusRoom`）。下の「お部屋」のリストは `/api/museum` の `rooms` の部屋（今はリビングの 1 件）で、押すとすぐ ⑤ へ進みます。
+- ⑤ ⑪ ⑫ の `?room=` はおへやの id です（`useMuseum({ roomId })` で `/api/museum?room=` を取る）。省くとサーバーが選ぶおへや（今の年齢のいちばん下の階）です。⑥ と ④ からの「おうちで見る」は、その作品のおへや（`room_id`）を付けて ⑤ へ進みます。⑫ の「追加→作品」には、そのおへやの年齢の作品だけが出ます。
+- ⑦ は、年齢ごと（大きい年齢から）に、見出し（「4さい 8 / 8 点」）と「ホームで見る」（② の `?age=` へ `nav.tab`）、その年齢のおへやの行（最近飾った作品のサムネイル・名前・何階か・飾っている数 / 置き場所の数）を並べます。行を押すと ②' へ進みます。
+- ⑩ のプロフィールのシートで、子どものお誕生日（`child_birthday`）を変えられます。変えると、サーバーが作品を年齢のおへやへ置き直します。
 
 ## 共通部品（`components/`）
 
@@ -130,9 +133,9 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 | `StageShell.tsx` / `.css` | 3D を表示する枠。3D が描画されるまで「準備しています…」を重ねる。画面遷移のアニメーション中は 3D（`children`）をまだ置かない（`nav.ts` の `useNavSettled`。下の「画面遷移」）。three.js は使わない |
 | `walkPose.ts` | ⑪鑑賞モード で、歩いている位置と向きを覚えておく。詳細画面から戻ったときに続きから歩くため（three.js は使わない） |
 | `scenes/index.ts` | 重いコードのまとめ役。ここから辿れるものが 1 つの遅延読み込みファイルになる |
-| `scenes/Stage.tsx` | three.js のキャンバスと照明、背景色。②④⑤⑦⑫ の 5 つの 3D 画面の土台（⑪ の照明は `scenes/walk/lighting.tsx`） |
+| `scenes/Stage.tsx` | three.js のキャンバスと照明、背景色。②②'④⑤⑫ の 5 つの 3D 画面の土台（⑪ の照明は `scenes/walk/lighting.tsx`） |
 | `scenes/models.tsx` | GLB を読み込んで置く部品：家の建物 1 部屋分（`MuseumModel`。壁のカットは `HouseShells` がカメラに合わせて当てるので、ふだんは `cutaway = false` で触らない（`true` にすると `cutSides` の向きを固定でカットする）。`theme`（配置 JSON の `rooms[部屋]`）と `materials`（`catalog.materials`）で壁紙と床材を変える。複製した建物は行列を固定するので、部屋の位置へは親のグループで動かす）、作品を置く（`FittedModel`。`scale` を渡すとその倍率で置き、渡さなければ範囲 `fit` に収める）、先読み（`preloadModel`）。`MuseumModel` は画面から直接使わず、`HouseShells` から使う |
-| `scenes/home/HouseShells.tsx` | 家の建物を部屋ごとに置く。家の建物を描くのは、どの 3D 画面でもここだけ。`house.rooms` の部屋ごとに `MuseumModel` を 1 つ、部屋の中心（`origin`）へ動かした `SHELL_<部屋 id>` のグループに入れる。壁紙と床材は部屋ごと（`layout.rooms[部屋]`。⑫ では下書き）。隣の部屋と壁を共有するときは、共有する壁の隣の部屋に向いた面（`userData.faceRoom`）に、その部屋の壁紙を当てる（どの建物にも `faceThemes` = `layout.rooms` を渡す。今のリビングだけの家には、この面は無い）。`model_url` が null の部屋は描かない（console に 1 回だけ出す）。`cutaway` は `false`（⑪。カットに触らない）・`true`（カメラの側の 2 面。④）・`'house'`（さらに出入口のある壁をいつも。家全体を見下ろす ②⑤⑦⑫。今は出入口が無いので、カメラの側の 2 面だけ）。カメラの側の 2 面は、中の `CutawayFollower` が毎フレーム部屋ごとに、部屋の中心から見たカメラの位置で選び（`facingSides`。軸の近くでは 0.4 m のゆらぎ止め）、変わった部屋だけ `applyCutaway` で当て直す（⑦ は変化があるときだけ描くので、当て直したら描き直しを頼む）。建物を読み込んだとき・テーマを当て直したとき（`MuseumModel` の `onLoaded`）は、その場で当て直す。なので、どの向きから見ても部屋の中が見える。`onReady` は描く建物が全部そろったときに 1 回だけ、`onLoaded` は部屋ごと（部屋の id つき）。`walk` を付けると、`walk_model_url` があればリビングの建物の代わりに使う。`useShells` は描く建物の一覧（⑪ がいくつそろえばよいかを数える） |
+| `scenes/home/HouseShells.tsx` | 家の建物を部屋ごとに置く。家の建物を描くのは、どの 3D 画面でもここだけ。`house.rooms` の部屋ごとに `MuseumModel` を 1 つ、部屋の中心（`origin`）へ動かした `SHELL_<部屋 id>` のグループに入れる。壁紙と床材は部屋ごと（`layout.rooms[部屋]`。⑫ では下書き）。隣の部屋と壁を共有するときは、共有する壁の隣の部屋に向いた面（`userData.faceRoom`）に、その部屋の壁紙を当てる（どの建物にも `faceThemes` = `layout.rooms` を渡す。今のリビングだけの家には、この面は無い）。`model_url` が null の部屋は描かない（console に 1 回だけ出す）。`cutaway` は `false`（⑪。カットに触らない）・`true`（カメラの側の 2 面。④）・`'house'`（さらに出入口のある壁をいつも。家全体を見下ろす ②'⑤⑫。今は出入口が無いので、カメラの側の 2 面だけ）。カメラの側の 2 面は、中の `CutawayFollower` が毎フレーム部屋ごとに、部屋の中心から見たカメラの位置で選び（`facingSides`。軸の近くでは 0.4 m のゆらぎ止め）、変わった部屋だけ `applyCutaway` で当て直す（② は変化があるときだけ描くので、当て直したら描き直しを頼む）。建物を読み込んだとき・テーマを当て直したとき（`MuseumModel` の `onLoaded`）は、その場で当て直す。なので、どの向きから見ても部屋の中が見える。`onReady` は描く建物が全部そろったときに 1 回だけ、`onLoaded` は部屋ごと（部屋の id つき）。`walk` を付けると、`walk_model_url` があればリビングの建物の代わりに使う。`useShells` は描く建物の一覧（⑪ がいくつそろえばよいかを数える） |
 | `scenes/home/house.ts` | 部屋の定義（`house`）を扱う、three.js を使わない関数：部屋の一覧（`houseRoomsOf`。`house` の無い古いサーバーでは `model_url` のリビング 1 部屋）、描く建物（`shellsOf`・`shellUrlsOf`・`hasHouseModel`）、部屋と家全体の外形（`roomBounds`・`houseBounds`。内寸 + 壁の厚さ）、出入口のある壁の向き（`doorSidesOf`。家全体を見下ろす画面でいつもカットする。今は空）、カメラに家全体を収める見る先と距離（`frameCenter`・`fitDistance`・`cornersOf`）、壁の高さ `WALL_TOP`（3.2 m）。数値の部屋の定義は書かない |
 | `scenes/home/HomeObjects.tsx` | 配置 JSON（`layout`）と家具の一覧（`catalog`）のとおりに、家具と作品を置く。家具と作品を描くのは、どの 3D 画面でもここだけ。家具と床の作品は、部屋ごとの `ROOM_<部屋 id>` のグループ（部屋の中心 `house.rooms[].origin` へ平行移動。`house` を props で渡す。無ければ原点）の中に、配置 JSON の位置（部屋の中の位置）のまま置く。家具は `FURN_<id>`、作品は `ARTWORK_<id>` のグループで、家具の上の作品は家具のグループの子にする（部屋の平行移動は家具に 1 回だけ掛かる）。スマホなど（`pointer: coarse`）では、カメラに近い作品 6 つだけを置く（⑫ では `maxArtworks` で全部置く）。作品の大きさは、`slots` の実寸（`artwork.model_size`）を置き場所の枠（面の `art_fit`、床は `FLOOR_ART_FIT`）に収める倍率を `displayScale` で計算して、`FittedModel` に `scale` で渡す（`slots[].scale` と同じ式。下書きで回した・載せ換えた作品も、保存を待たずにその大きさになる。親の家具が見つからない作品は `slots[].scale` を使う。実寸が分からない作品は `scale` を渡さず、`fit` に収める）。⑫ 用に `onObjectPointerDown`（物を押した）と `previewTransform`（ドラッグ中の仮の位置と向き。作品は載せ換え先の `parentId`・`surface`（床なら `roomId`）も持ち、新しい家具のグループの下（床なら部屋のグループ）に描く）を受け取る。GLB の載り外しのほか、置いた物の位置・向き・部屋が変わったときも `onReady` を呼ぶ（⑪ が当たり判定を作り直す） |
 | `scenes/home/cutaway.ts` | 壁の上の部分を隠す（`applyCutaway(root, sides)`。`sides` の向きの壁だけを隠し、ほかは元に戻す。`null` で全部戻す）と、カメラの側の 2 面を選ぶ（`facingSides(dx, dz, prev)`。部屋の中心から見たカメラの位置で、dx > 0 なら東、dz > 0 なら南。`prev` を渡すと 0.4 m のゆらぎ止め）。家の GLB の `userData`（`side`・`role`）を見る。GLB の `cutaway` の印（南東から見るときの向き）は使わない |
@@ -140,9 +143,9 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 | `scenes/home/theme.ts` | 壁紙と床材（テーマ）を家の建物に当てる（`applyTheme`）。`MuseumModel` から呼ばれる |
 | `scenes/home/ClampTarget.tsx` | 視点の中心（`OrbitControls` の `target`）を、家の外形（`houseBounds`）から 0.5 m 内側・高さ 0.4〜2.5 m の中に収める。②⑤ で使う |
 | `scenes/CameraFlight.tsx` | カメラを目的地へなめらかに移動させる |
-| `scenes/HomeScene.tsx` | ②ホーム。画面いっぱいに、カメラの側の壁をカットした家（今はリビングだけ）を出す。はじめはリビングの中の近景：見る先 `LOOK_AT`（リビングの中心の少し北）から向き `DIRECTION`（東のやや南の、壁より上から約 37° 見下ろす）に、決まった距離 `START_DISTANCE`（8 m。画面の縦横では変えない）、画角 56°。手前に床ランプ、中央にソファとローテーブル、奥に棚が入る。ドラッグでぐるりと見回せる（`OrbitControls`。上下の角度は ⑤ と同じ 0.15π〜0.5π、平行移動はしない。視点の中心は `ClampTarget`）。距離は 3.5 m（作品に寄れる）から、全部の部屋の外形が画面に収まる距離（`fitDistance`）まで。引けば家全体まで見える。画面の大きさが変わったら収まる距離を測り直して、離れられる距離とカメラの `far`（いちばん離れても家の奥が切れない長さ）だけを変える。カメラを置くのははじめの 1 回だけで、置き直さない。放っておくとゆっくり自動で回る（`IdleRotate`。`autoRotateSpeed` 0.25 を 60 fps 換算で使い、1 周 240 秒。触ると止まり、最後の操作から 6 秒で再開。ページが隠れている間と「視差効果を減らす」の端末では回さない）。作品をタップすると `onSelect` |
+| `scenes/HomeScene.tsx` | ②'おへや。画面いっぱいに、カメラの側の壁をカットした家（今はリビングだけ）を出す。はじめはリビングの中の近景：見る先 `LOOK_AT`（リビングの中心の少し北）から向き `DIRECTION`（東のやや南の、壁より上から約 37° 見下ろす）に、決まった距離 `START_DISTANCE`（8 m。画面の縦横では変えない）、画角 56°。手前に床ランプ、中央にソファとローテーブル、奥に棚が入る。ドラッグでぐるりと見回せる（`OrbitControls`。上下の角度は ⑤ と同じ 0.15π〜0.5π、平行移動はしない。視点の中心は `ClampTarget`）。距離は 3.5 m（作品に寄れる）から、全部の部屋の外形が画面に収まる距離（`fitDistance`）まで。引けば家全体まで見える。画面の大きさが変わったら収まる距離を測り直して、離れられる距離とカメラの `far`（いちばん離れても家の奥が切れない長さ）だけを変える。カメラを置くのははじめの 1 回だけで、置き直さない。放っておくとゆっくり自動で回る（`IdleRotate`。`autoRotateSpeed` 0.25 を 60 fps 換算で使い、1 周 240 秒。触ると止まり、最後の操作から 6 秒で再開。ページが隠れている間と「視差効果を減らす」の端末では回さない）。作品をタップすると `onSelect` |
 | `scenes/MuseumScene.tsx` | ⑤おうちの中。カメラの側の壁をカットした家（今はリビングだけ）を、ドラッグでぐるりと見回す（水平の向きに制限は無い）。はじめはリビングを南東から見渡す位置。`?focus=` ならその作品の正面へ寄る。`?room=` ならその部屋の中心へ寄る。視点の中心は家の外形の中だけを動く（`home/ClampTarget.tsx`）。作品をクリックで詳細へ |
-| `scenes/MapScene.tsx` / `.css` | ⑦マップ。家全体（`house.rooms` の部屋。今はリビングだけ）を真上に近い斜め上から、全部が収まる距離で見下ろす（手前の壁はカット。部屋が 2 つ以上あるときは部屋どうしの間の壁も）。部屋の中心の上に名前と飾っている数のラベルを出し、`focusRoom` の部屋へカメラを寄せる（距離は部屋の大きさに比例。8 m の部屋で今までと同じ 13.7 m）。`.css` はラベル（寄っている部屋は `.focused`） |
+| `scenes/StackScene.tsx` / `.css` | ②ホームの積み上げの建物。ある年齢のおへや（`/api/ages/{age}` の `rooms`。1 階から）を、1 階分の高さ `FLOOR_PITCH`（壁の高さ + 0.7 m）ずつ上へずらしたグループに入れて縦に重ね、南東の斜め上から、全部の階が収まる距離（`fitDistance`）で見下ろす。建物・家具・作品はほかの画面と同じ `HouseShells`（`cutaway`。カメラの側の 2 面をカット）と `HomeObjects` で、階ごとに `museumOf` で 1 おへや分の `Museum` の形にして渡す。階ごとに drei の `Html` で、建物の南西の角に名前と数のラベル（`.stack-label`。押すと `onRoom`）を出す。ドラッグで回せる（`OrbitControls`。平行移動なし）。変化があるときだけ描く（`frameloop="demand"`）。`onReady` は全部の階の建物がそろったとき |
 | `scenes/PreviewScene.tsx` | ④3D プレビュー。リビングの中心（`house` の `hub` の `origin`）の台座の上で作品が回る（家具は置かない。建物は `house.rooms` の全部の部屋（今はリビング）を置き、手前（カメラの側）の壁だけカットする） |
 | `scenes/WalkScene.tsx` | ⑪鑑賞モード。家の中を一人称で歩く（今はリビングの中だけ。出入口のある家なら、くぐってほかの部屋へも行ける）。照準の先の作品を選ぶ。家具にも当たる。天井とダウンライトは部屋ごと。PC はキーボードとマウス（`walk/FirstPersonControls.tsx`）、タッチの端末（画面が `touch` で渡す）は仮想スティックとなぞる操作（`walk/TouchControls.tsx`）で、タッチのときは画面の仕上げなどを省いた軽い表示にする。部品は `scenes/walk/` にあり、説明は [walk.md](walk.md) |
 | `scenes/HomeEditScene.tsx` | ⑫模様替え。カメラの側の壁をカットした家（今はリビングだけ）を斜め上から見下ろし（はじめは南東から。ドラッグでどの向きにも回せる）、家具や作品を押して選ぶ・ドラッグで動かす。画面で選んだ部屋（`roomId`）へカメラが寄る（`RoomCamera`。はじめは南東から、切り替えたときはそのとき見ている向きのままで、距離は部屋の大きさの比で伸び縮みさせる）。どの部屋の物も選べるが、物は自分の部屋から出ない。作品は、ポインタの先の同じ部屋の家具の面（天板・本棚の段）か床へ載せ換えられる。選んだ物の下に板を敷き、置ける場所なら緑、置けない場所なら赤にする。出入口のある部屋では、ドラッグ中にその部屋の出入口の前を薄い赤で示す（`DoorZones`。今は出入口が無いので出ない）。R で 90° 回す、Delete / Backspace で消す、Esc で選ぶのをやめる。部屋を切り替えるとドラッグをやめる |
@@ -228,14 +231,15 @@ Rust のファイルと対応するように分けています。
 | `index.ts` | 入口。画面からは `import { useMuseum } from '../api'` で読み込む | |
 | `types.ts` | API の型。Rust の構造体名をコメントに書いている。配置 JSON（`Layout`。v5。`rooms` は `hub` だけ）だけは camelCase。テーマの型（`HomeTheme`・`HomeMaterial`・`WallFinish`・`FloorFinish`）、部屋の型（`RoomId`・`Side`・`LayoutRoom`）と家の形（`House`・`HouseRoom`・`HouseDoor`。`Museum.house`）もここ | DTO（`ArtworkDto`、`MuseumOverview`、`Layout`、`HouseView` など） |
 | `client.ts` | 通信の共通処理（`request`、`ApiError`）、TanStack Query の設定、キャッシュのキー | `error.rs`（`{ "error": "..." }` の形） |
-| `museum.ts` | おうちの全体像（家の GLB・配置 JSON・家具の一覧・飾っている作品）と設定：`useMuseum`、`useSettings`、`useUpdateSettings` | `museum_api.rs` |
-| `home.ts` | 配置 JSON の読み書き：`useLayout`（`GET /api/home/layout`）、`useSaveLayout`（`PUT`。保存すると、おうちの全体像と作品の一覧も取り直す。置き方がおかしいと 400 で、Rust の日本語の文言の `ApiError` になる）、`saveLayoutOnLeave`（画面を閉じるときに `keepalive` で送る。結果は待たない）。⑫ は配置を `useMuseum` から読み、`useLayout` は今は使っていない | `home_api.rs` |
-| `artworks.ts` | 作品：取得は `useArtworks`、`useArtwork`。変更は `useCreateArtwork`、`useUpdateArtwork`、`useDeleteArtwork`、`useFavorite`、`useDisplay`（おうちに飾る・飾るのをやめる。`roomId` を渡すと本文 `{ room_id }` でその部屋に飾る） | `artworks.rs` |
+| `museum.ts` | おへや 1 つの全体像（家の GLB・配置 JSON・家具の一覧・飾っている作品）と設定：`useMuseum({ roomId })`（キャッシュのキーは `keys.museumOf(roomId)`）、`useSettings`、`useUpdateSettings`（お誕生日を変えると作品のおへやが変わるので、年齢の一覧・おへや・作品も取り直す） | `museum_api.rs` |
+| `ages.ts` | 年齢とおへや：`useAges`（`GET /api/ages`）、`useAgeStack(age)`（`GET /api/ages/{age}`）、`useAddRoom`（`POST /api/ages/{age}/rooms`）、`useDeleteRoom`（`DELETE /api/rooms/{id}`。今は画面から使っていない） | `ages_api.rs` |
+| `home.ts` | おへや 1 つの配置 JSON の読み書き（どれも `roomId` を取り、`?room=` を付ける）：`useLayout`（`GET /api/home/layout`）、`useSaveLayout`（`PUT`。保存すると、おうちの全体像と作品の一覧も取り直す。置き方がおかしいと 400 で、Rust の日本語の文言の `ApiError` になる）、`saveLayoutOnLeave`（画面を閉じるときに `keepalive` で送る。結果は待たない）。⑫ は配置を `useMuseum` から読み、`useLayout` は今は使っていない | `home_api.rs` |
+| `artworks.ts` | 作品：取得は `useArtworks`、`useArtwork`。変更は `useCreateArtwork`、`useUpdateArtwork`、`useDeleteArtwork`、`useFavorite`、`useDisplay`（おうちに飾る・飾るのをやめる。`roomId`（おへやの id）を渡すと本文 `{ room_id }` でそのおへやに飾る。省くと、作品の年齢のおへやにサーバーが置く） | `artworks.rs` |
 
 - 型は Rust の API の形と同じです。API の項目を増やしたら、`types.ts` の型も合わせます。
 - 変更が成功すると、関係する一覧・おうちの情報・配置 JSON を自動で取り直します（`useInvalidate`）。画面側で取り直す処理を書く必要はありません。
 - 一覧で取得済みの作品は、詳細画面を開いた瞬間に表示されます（`placeholderData`）。
-- `/api/museum` は `index.html` で先読みしていて、最初の 1 回だけその結果を使います（`museum.ts`）。
+- `/api/ages` は `index.html` で先読みしています（ホームが最初に使う。`fetch` の URL が同じなら、ブラウザが先読みの結果を使う）。
 
 ## 画面遷移（`nav.ts` と `nav.css`）
 
