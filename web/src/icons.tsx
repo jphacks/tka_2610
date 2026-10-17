@@ -217,3 +217,50 @@ export const ThemeIcon = (p: IconProps) => (
     <rect x="9.75" y="14" width="2.5" height="6.5" rx="1" />
   </Svg>
 )
+
+/** 声を録る */
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" />
+  </Svg>
+)
+
+/** 再生（塗りの三角） */
+export const PlayIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor" />
+  </Svg>
+)
+
+/** 一時停止 */
+export const PauseIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6.5" y="5" width="3.6" height="14" rx="1" fill="currentColor" stroke="none" />
+    <rect x="13.9" y="5" width="3.6" height="14" rx="1" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
+/** 録音を止める（塗りの四角） */
+export const StopIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
+/** 動画 */
+export const VideoIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="6" width="13" height="12" rx="2.5" />
+    <path d="m16 10.5 5-3v9l-5-3" />
+  </Svg>
+)
+
+/** 声（音符） */
+export const NoteIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 18V5.5l10-2V16" />
+    <circle cx="6.5" cy="18" r="2.5" />
+    <circle cx="16.5" cy="16" r="2.5" />
+  </Svg>
+)

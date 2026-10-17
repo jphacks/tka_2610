@@ -41,7 +41,7 @@ export function useArtwork(id: string | undefined) {
     queryFn: () => request<ArtworkDetail>(`/api/artworks/${id}`),
     placeholderData: () => {
       const artwork = id ? findCachedArtwork(client, id) : undefined
-      return artwork ? { artwork, related: [] } : undefined
+      return artwork ? { artwork, related: [], memories: [] } : undefined
     },
   })
 }
@@ -77,6 +77,7 @@ function useStoreArtwork() {
     client.setQueryData<ArtworkDetail>(keys.artwork(artwork.id), (old) => ({
       artwork,
       related: old?.related ?? [],
+      memories: old?.memories ?? [],
     }))
   }
 }
