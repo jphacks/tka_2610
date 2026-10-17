@@ -17,6 +17,7 @@ use crate::{
     error::{AppError, AppResult},
     home::{self, Layout, LayoutObject, RoomDef},
     home_api,
+    memories::MemoryCounts,
     state::{media_url, AppState, MediaKind},
 };
 
@@ -31,13 +32,20 @@ pub(crate) struct DisplayedRow {
     model_width: Option<f64>,
     model_height: Option<f64>,
     model_depth: Option<f64>,
+    /// おもいでの数 (3D の印と鑑賞モードのカードで使う)
+    memory_photo: i64,
+    memory_video: i64,
+    memory_audio: i64,
 }
 
 /// おへやに飾っている作品 (飾った順)
 pub(crate) async fn displayed_rows(pool: &sqlx::PgPool, room: Uuid) -> AppResult<Vec<DisplayedRow>> {
     Ok(sqlx::query_as::<_, DisplayedRow>(
         "SELECT id, title, thumb_file, model_file, model_kind, tint, \
-            model_width, model_height, model_depth \
+            model_width, model_height, model_depth, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'photo') AS memory_photo, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'video') AS memory_video, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'audio') AS memory_audio \
          FROM artworks WHERE slot_id IS NOT NULL AND house_room_id = $1 ORDER BY displayed_at ASC",
     )
     .bind(room)
@@ -139,6 +147,8 @@ pub struct SlotArtwork {
     /// 作品の実寸 (幅・高さ・奥行き, m)。GLB から測れなかった作品は None。
     /// Web が同じ値で拡縮率と足元を計算するので、f32 に丸めずそのまま返す (丸めると壁ぎりぎりの位置の判定がずれる)
     model_size: Option<[f64; 3]>,
+    /// おもいで (写真・動画・声の記録) の数
+    memory_counts: MemoryCounts,
 }
 
 /// 飾っている作品 1 つの置き場所 (博物館の展示台のころの名前のまま。中身は配置 JSON の作品)
@@ -436,6 +446,11 @@ pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView
                     tint: row.tint.clone(),
                     model_kind: row.model_kind.clone(),
                     model_size: size.map(|s| s.size),
+                    memory_counts: MemoryCounts {
+                        photo: row.memory_photo,
+                        video: row.memory_video,
+                        audio: row.memory_audio,
+                    },
                 },
             })
         })
@@ -566,6 +581,9 @@ mod tests {
             model_width: size.map(|s| s[0]),
             model_height: size.map(|s| s[1]),
             model_depth: size.map(|s| s[2]),
+            memory_photo: 0,
+            memory_video: 0,
+            memory_audio: 0,
         }
     }
 

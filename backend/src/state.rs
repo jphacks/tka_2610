@@ -21,6 +21,8 @@ pub enum MediaKind {
     Image,
     Thumb,
     Model,
+    /// 作品のおもいで (写真・動画・声。写真の小さい画像も同じフォルダ)
+    Memory,
 }
 
 impl MediaKind {
@@ -29,6 +31,7 @@ impl MediaKind {
             MediaKind::Image => "images",
             MediaKind::Thumb => "thumbs",
             MediaKind::Model => "models",
+            MediaKind::Memory => "memories",
         }
     }
 }
