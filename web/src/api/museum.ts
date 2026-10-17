@@ -1,4 +1,4 @@
-// 博物館の全体像と設定（Rust: backend/src/museum_api.rs）。
+// おうちの全体像（家の建物・配置 JSON・飾っている作品）と設定（Rust: backend/src/museum_api.rs）。
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, jsonInit, keys, request } from './client'
@@ -6,7 +6,7 @@ import type { Museum, Settings } from './types'
 
 // index.html で先読みしている /api/museum を最初の 1 回だけ再利用する
 let preloadedMuseum: Promise<Museum> | null = fetch('/api/museum').then((r) => {
-  if (!r.ok) throw new ApiError(r.status, '博物館の情報を取得できません')
+  if (!r.ok) throw new ApiError(r.status, 'おうちの情報を取得できません')
   return r.json()
 })
 
@@ -15,9 +15,14 @@ export function forgetPreloadedMuseum() {
   preloadedMuseum = null
 }
 
-export function useMuseum() {
+/**
+ * おうちの全体像。refetchInterval（ミリ秒）を渡すと、その間隔で取り直す
+ * （鑑賞モードで、ほかの端末で飾った・外した作品をすぐ反映するため。Unity 版の 3 秒ごとの確認と同じ）
+ */
+export function useMuseum({ refetchInterval }: { refetchInterval?: number } = {}) {
   return useQuery({
     queryKey: keys.museum,
+    refetchInterval,
     queryFn: () => {
       if (preloadedMuseum) {
         const p = preloadedMuseum

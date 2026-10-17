@@ -18,13 +18,15 @@ sqlx = { version = "0.8", features = [
     "chrono",
     "macros",
     "migrate",
-    "tls-rustls"
+    "tls-rustls",
+    "json"
 ] }
 
 # マイグレーションのチェックサム (SHA-384) の計算
 sha2 = "0.10"
 
-uuid = { version = "1", features = ["serde", "v4"] }
+# v5 は seed の作品 id（assetId から毎回同じ id を作る）
+uuid = { version = "1", features = ["serde", "v4", "v5"] }
 
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 

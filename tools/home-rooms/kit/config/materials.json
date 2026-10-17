@@ -1,0 +1,82 @@
+{
+  "oak": {
+    "id": "oak",
+    "tileMeters": [
+      1.0,
+      1.0
+    ],
+    "baseColor": "assets/textures/oak_base.jpg",
+    "normal": "assets/textures/oak_normal.png",
+    "orm": "assets/textures/oak_orm.png"
+  },
+  "oak_floor": {
+    "id": "oak_floor",
+    "tileMeters": [
+      2.0,
+      2.0
+    ],
+    "baseColor": "assets/textures/oak_floor_base.jpg",
+    "normal": "assets/textures/oak_floor_normal.png",
+    "orm": "assets/textures/oak_floor_orm.png"
+  },
+  "oak_wall": {
+    "id": "oak_wall",
+    "tileMeters": [
+      1.0,
+      1.0
+    ],
+    "baseColor": "assets/textures/oak_wall_base.jpg",
+    "normal": "assets/textures/oak_wall_normal.png",
+    "orm": "assets/textures/oak_wall_orm.png"
+  },
+  "plaster": {
+    "id": "plaster",
+    "tileMeters": [
+      1.0,
+      1.0
+    ],
+    "baseColor": "assets/textures/plaster_base.jpg",
+    "normal": "assets/textures/plaster_normal.png",
+    "orm": "assets/textures/plaster_orm.png"
+  },
+  "brick": {
+    "id": "brick",
+    "tileMeters": [
+      1.0,
+      0.6
+    ],
+    "baseColor": "assets/textures/brick_base.jpg",
+    "normal": "assets/textures/brick_normal.png",
+    "orm": "assets/textures/brick_orm.png"
+  },
+  "limestone": {
+    "id": "limestone",
+    "tileMeters": [
+      1.0,
+      1.0
+    ],
+    "baseColor": "assets/textures/limestone_base.jpg",
+    "normal": "assets/textures/limestone_normal.png",
+    "orm": "assets/textures/limestone_orm.png"
+  },
+  "travertine": {
+    "id": "travertine",
+    "tileMeters": [
+      1.0,
+      1.0
+    ],
+    "baseColor": "assets/textures/travertine_base.jpg",
+    "normal": "assets/textures/travertine_normal.png",
+    "orm": "assets/textures/travertine_orm.png"
+  },
+  "fabric": {
+    "id": "fabric",
+    "tileMeters": [
+      0.5,
+      0.5
+    ],
+    "baseColor": "assets/textures/fabric_base.jpg",
+    "normal": "assets/textures/fabric_normal.png",
+    "orm": "assets/textures/fabric_orm.png"
+  }
+}

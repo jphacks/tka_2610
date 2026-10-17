@@ -1,25 +1,33 @@
-// ⑦ 博物館のマップ（/map）。タブ。
-// 見取り図の 3D（フロアの切り替え）と、展示室のリスト。
+// ⑦ おうちのマップ（/map）。タブ。
+// 家全体（4 部屋）を上から見下ろす 3D と、部屋のリスト。リストの下の「模様替え」から ⑫ 模様替えへ。
+// 3D の部屋の名前のラベルを押すと、カメラがその部屋へ寄る。寄っている部屋のラベルをもう一度押すと、その部屋の ⑤ おうちの中へ。
+// 寄っている間は左上の「家全体」で、家全体の見え方へ戻る。
+// 「⋯」のメニューから、⑤ おうちの中・⑪ 鑑賞モード（PC とスマホのどちらでも歩ける）・⑧ 作品一覧へ進める。
 import { Suspense, useEffect, useState } from 'react'
 import { useMuseum } from '../api'
-import { ActionMenu, Img, NavBar, Screen, Segmented } from '../components'
-import { ChevronRight, GalleryIcon, MoreIcon, MuseumIcon, WalkIcon } from '../icons'
+import { ActionMenu, Img, NavBar, Screen } from '../components'
+import { ChevronRight, GalleryIcon, MoreIcon, MuseumIcon, SofaIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
-import { MapScene, StageShell, warmUp3D } from '../three'
+import { MapScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, warmUp3D } from '../three'
 import './MapView.css'
-
-type Floor = '1F' | '2F'
 
 export default function MapView() {
   const museum = useMuseum()
   const nav = useNav()
-  const [floor, setFloor] = useState<Floor>('1F')
   const [ready, setReady] = useState(false)
   const [menu, setMenu] = useState(false)
+  /** カメラが寄っている部屋（null なら家全体） */
+  const [focusRoom, setFocusRoom] = useState<string | null>(null)
 
   useEffect(() => {
-    if (museum.data) warmUp3D(museum.data.model_url)
+    if (museum.data) warmUp3D(shellUrlsOf(museum.data), furnitureUrlsOf(museum.data))
   }, [museum.data])
+
+  /** ラベルを押した：はじめは寄るだけ。寄っている部屋をもう一度押したら、その部屋の「おうちの中」へ */
+  const onRoom = (id: string) => {
+    if (focusRoom === id) nav.push(`/museum?room=${id}`)
+    else setFocusRoom(id)
+  }
 
   const rooms = museum.data?.rooms ?? []
 
@@ -27,7 +35,7 @@ export default function MapView() {
     <Screen tabbar>
       <NavBar
         large
-        eyebrow="ミュージアム"
+        eyebrow="おうち"
         title={museum.data?.name ?? 'はるのミュージアム'}
         right={
           <button className="icon-btn" aria-label="メニュー" onClick={() => setMenu(true)}>
@@ -36,36 +44,29 @@ export default function MapView() {
         }
       />
 
-      <div className="map-controls">
-        <Segmented<Floor>
-          label="フロア"
-          options={[
-            { value: '1F', label: '1F' },
-            { value: '2F', label: '2F' },
-          ]}
-          value={floor}
-          onChange={setFloor}
-        />
-      </div>
-
-      <StageShell className="map-stage" ready={ready || (!!museum.data && !museum.data.model_url)}>
+      <StageShell
+        className="map-stage"
+        ready={ready || (!!museum.data && !hasHouseModel(museum.data))}
+        overlay={
+          focusRoom && (
+            <button type="button" className="map-whole glass" onClick={() => setFocusRoom(null)}>
+              家全体
+            </button>
+          )
+        }
+      >
         {museum.data && (
           <Suspense fallback={null}>
-            <MapScene
-              museum={museum.data}
-              floor={floor}
-              onRoom={(id) => nav.push(`/museum?room=${id}`)}
-              onReady={() => setReady(true)}
-            />
+            <MapScene museum={museum.data} focusRoom={focusRoom} onRoom={onRoom} onReady={() => setReady(true)} />
           </Suspense>
         )}
       </StageShell>
 
       <div className="page">
         <div className="section-head">
-          <h2>展示室</h2>
+          <h2>お部屋</h2>
           <button className="btn-plain" onClick={() => nav.push('/museum')}>
-            館内を歩く
+            おうちに入る
           </button>
         </div>
         <div className="list-group" style={{ marginTop: 0 }}>
@@ -80,9 +81,7 @@ export default function MapView() {
               )}
               <span className="grow">
                 <div className="name">{room.name}</div>
-                <div className="desc">
-                  {room.description}・{room.floors.join('/')}
-                </div>
+                <div className="desc">{room.description}</div>
               </span>
               <span className="detail">
                 {room.count} / {room.capacity}
@@ -90,15 +89,26 @@ export default function MapView() {
               <ChevronRight size={16} strokeWidth={2.2} className="chev" />
             </button>
           ))}
+          <button className="list-item room-row" onClick={() => nav.push('/home/edit')}>
+            <div className="thumb">
+              <SofaIcon size={22} />
+            </div>
+            <span className="grow">
+              <div className="name">模様替え</div>
+              <div className="desc">家具を動かしたり、作品を飾ったりする</div>
+            </span>
+            <ChevronRight size={16} strokeWidth={2.2} className="chev" />
+          </button>
         </div>
-        <p className="note">作品は種類ごとの部屋に自動で飾られます。</p>
+        <p className="note">作品を飾ると、空いている棚や机の上に自動で置かれます。</p>
       </div>
 
       <ActionMenu
         open={menu}
         onClose={() => setMenu(false)}
         items={[
-          { label: '館内を歩く', icon: <WalkIcon size={19} />, onSelect: () => nav.push('/museum') },
+          { label: 'おうちに入る', icon: <MuseumIcon size={19} />, onSelect: () => nav.push('/museum') },
+          { label: '鑑賞モード', icon: <WalkIcon size={19} />, onSelect: () => nav.push('/museum/walk') },
           { label: '作品一覧', icon: <GalleryIcon size={19} />, onSelect: () => nav.tab('/collection') },
         ]}
       />

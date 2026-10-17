@@ -16,8 +16,10 @@ import ArtworkPreview from './pages/ArtworkPreview'
 import Collection from './pages/Collection'
 import EditArtwork from './pages/EditArtwork'
 import Home from './pages/Home'
+import HomeEdit from './pages/HomeEdit'
 import MapView from './pages/MapView'
 import MuseumView from './pages/MuseumView'
+import MuseumWalk from './pages/MuseumWalk'
 import Settings from './pages/Settings'
 import './App.css'
 
@@ -46,6 +48,10 @@ export default function App() {
               <Route path="/artworks/:id/preview" element={<ArtworkPreview />} />
               {/* ⑤ 博物館の中（push）。?focus=作品ID / ?room=部屋ID でカメラを寄せる */}
               <Route path="/museum" element={<MuseumView />} />
+              {/* ⑪ 鑑賞モード（push）。家の中を一人称で歩く。PC は WASD とマウス、スマホはタッチ（仮想スティックとなぞる操作） */}
+              <Route path="/museum/walk" element={<MuseumWalk />} />
+              {/* ⑫ 模様替え（push）。家具や作品をドラッグで動かす・回す・消す・足す。HomeEdit */}
+              <Route path="/home/edit" element={<HomeEdit />} />
               {/* どれにも当てはまらない URL はホームを出す */}
               <Route path="*" element={<Home />} />
             </Routes>

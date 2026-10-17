@@ -48,6 +48,8 @@ export const queryClient = new QueryClient({
 /** キャッシュのキー。取り直すときもこのキーで指定する */
 export const keys = {
   museum: ['museum'] as const,
+  /** おうちの配置 JSON（GET /api/home/layout） */
+  layout: ['home', 'layout'] as const,
   settings: ['settings'] as const,
   artworks: (params: ListParams) => ['artworks', params] as const,
   artwork: (id: string) => ['artwork', id] as const,

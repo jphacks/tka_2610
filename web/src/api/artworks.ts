@@ -1,10 +1,10 @@
 // 作品の取得と変更（Rust: backend/src/artworks.rs）。
-// 変更が成功すると、関係する一覧と博物館の情報を自動で取り直す（useInvalidate）。
+// 変更が成功すると、関係する一覧とおうちの情報を自動で取り直す（useInvalidate）。
 
 import { QueryClient, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { jsonInit, keys, request } from './client'
 import { forgetPreloadedMuseum } from './museum'
-import type { Artwork, ArtworkDetail, ArtworkList, ListParams } from './types'
+import type { Artwork, ArtworkDetail, ArtworkList, ListParams, RoomId } from './types'
 
 // ---------- 取得 ----------
 
@@ -64,6 +64,8 @@ function useInvalidate() {
     return Promise.all([
       client.invalidateQueries({ queryKey: ['artworks'] }),
       client.invalidateQueries({ queryKey: keys.museum }),
+      // 飾る・外す・削除で、配置 JSON も変わる
+      client.invalidateQueries({ queryKey: keys.layout }),
       ...extra.map((queryKey) => client.invalidateQueries({ queryKey })),
     ])
   }
@@ -136,12 +138,20 @@ export function useFavorite() {
   })
 }
 
+/**
+ * おうちに飾る（display: true）・飾るのをやめる（false）。
+ * roomId を渡すと、その部屋の空いている場所に置く（本文 { room_id }。空きが無ければ 409 で、ほかの部屋には置かない）。
+ * 省くと、全部の部屋から（リビングを先に）サーバーが選ぶ
+ */
 export function useDisplay() {
   const invalidate = useInvalidate()
   const store = useStoreArtwork()
   return useMutation({
-    mutationFn: ({ id, display }: { id: string; display: boolean }) =>
-      request<Artwork>(`/api/artworks/${id}/display`, { method: display ? 'POST' : 'DELETE' }),
+    mutationFn: ({ id, display, roomId }: { id: string; display: boolean; roomId?: RoomId }) =>
+      request<Artwork>(
+        `/api/artworks/${id}/display`,
+        display && roomId ? jsonInit('POST', { room_id: roomId }) : { method: display ? 'POST' : 'DELETE' },
+      ),
     onSuccess: (artwork) => {
       store(artwork)
       return invalidate()

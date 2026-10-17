@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:placement": "tsc -p tsconfig.check.json && node scripts/check-placement.mjs",
+    "check:theme": "tsc -p tsconfig.theme-check.json && node scripts/check-theme.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

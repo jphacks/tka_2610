@@ -1,108 +1,74 @@
 // ② ホーム（/）。タブ。
-// 上に 3D の博物館、下に最近の作品。
+// 画面いっぱいの 3D の家（HomeScene）。はじめはリビングの中を壁の上から見下ろす近景で、引けば 4 部屋の家全体まで見える
+// （カメラの側と部屋どうしの間の壁はカットする）。ドラッグで見回せて、放っておくとゆっくり回る。作品をタップすると ⑥ 作品の詳細へ。
+// 3D の上に浮かぶ UI は 2 段だけ：上に館名とアバター（⑩ 設定へ）、タブバーのすぐ上に飾っている数と「歩く」（⑪ 鑑賞モード）・
+// 「模様替え」（⑫）の丸いボタン。作品の追加はタブバーの「＋」から。
+// スマホの枠（.app）は、ほかのタブと同じく残す（PC で枠を外すのは ⑪ と ⑫ だけ）。
 import { Suspense, useEffect, useState } from 'react'
-import { useArtworks, useMuseum } from '../api'
-import { ArtworkThumb, GlassButton, NavBar, Screen, TLink, ThumbSkeletons, useToast } from '../components'
-import { BellIcon, ChevronRight } from '../icons'
+import { useMuseum } from '../api'
+import { GlassButton, Screen, TLink } from '../components'
+import { SofaIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
-import { HeroScene, StageShell, warmUp3D } from '../three'
+import { HomeScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, warmUp3D } from '../three'
 import './Home.css'
 
 export default function Home() {
   const museum = useMuseum()
-  const recent = useArtworks({ sort: 'recent', limit: 6 })
   const nav = useNav()
-  const toast = useToast()
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (museum.data) warmUp3D(museum.data.model_url)
+    if (museum.data) warmUp3D(shellUrlsOf(museum.data), furnitureUrlsOf(museum.data))
   }, [museum.data])
 
-  const name = museum.data?.name ?? 'はるのミュージアム'
-  const initial = (museum.data?.owner_name ?? 'は').slice(0, 1)
-  const items = recent.data?.items ?? []
+  const data = museum.data
+  const initial = (data?.owner_name ?? 'は').slice(0, 1)
+  // しまってある（飾っていない）作品の数
+  const stored = data ? data.total_artworks - data.displayed_count : 0
 
   return (
-    <Screen tabbar>
-      <NavBar
-        large
-        eyebrow={museum.data?.today_label ?? ' '}
-        title={name}
-        right={
-          <>
-            <button className="icon-btn" aria-label="お知らせ" onClick={() => toast('新しいお知らせはありません')}>
-              <BellIcon size={21} />
-            </button>
-            <TLink to="/settings" kind="tab" className="avatar" aria-label="マイページ">
-              {initial}
-            </TLink>
-          </>
-        }
-      />
-
+    <Screen tabbar className="home-screen">
       <StageShell
-        className="home-hero"
-        ready={ready || museum.data?.model_url === null}
+        className="home-stage"
+        ready={ready || (!!data && !hasHouseModel(data))}
         overlay={
           <>
-            <div className="hero-scrim" />
-            <div className="hero-text">
-              <p>
-                たくさんの作品が、
-                <br />
-                ここに集まっています。
-              </p>
-              <small className="num">{museum.data ? `${museum.data.displayed_count}点を展示中` : ' '}</small>
+            <div className="stage-top home-top">
+              {data && <span className="stage-title glass home-title">{data.name}</span>}
+              <TLink to="/settings" kind="tab" className="avatar home-avatar" aria-label="マイページ">
+                {initial}
+              </TLink>
             </div>
-            <GlassButton label="博物館に入る" className="hero-go" onClick={() => nav.push('/museum')}>
-              <ChevronRight size={22} strokeWidth={2.2} />
-            </GlassButton>
+            <div className="home-dock">
+              {data && (
+                <p className="home-status glass">
+                  <span className="num">{data.displayed_count}</span>点を飾っています
+                  {stored > 0 && (
+                    <>
+                      ・しまってある <span className="num">{stored}</span>
+                    </>
+                  )}
+                </p>
+              )}
+              <div className="home-actions">
+                <GlassButton label="歩く" className="home-action" onClick={() => nav.push('/museum/walk')}>
+                  <WalkIcon size={21} />
+                </GlassButton>
+                <GlassButton label="模様替え" className="home-action" onClick={() => nav.push('/home/edit')}>
+                  <SofaIcon size={21} />
+                </GlassButton>
+              </div>
+            </div>
           </>
         }
       >
-        {museum.data && (
+        {data && (
           <Suspense fallback={null}>
-            <div style={{ position: 'absolute', inset: 0 }} onClick={() => nav.push('/museum')}>
-              <HeroScene museum={museum.data} onReady={() => setReady(true)} />
-            </div>
+            <HomeScene museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReady(true)} />
           </Suspense>
         )}
+        {data && !hasHouseModel(data) && <div className="stage-fallback">家の 3D モデル (GLB) が見つかりません</div>}
       </StageShell>
-
-      <div className="page">
-        <div className="section-head">
-          <h2>最近の作品</h2>
-          {items.length > 0 && (
-            <TLink to="/collection" kind="tab" className="btn-plain">
-              すべて見る
-            </TLink>
-          )}
-        </div>
-
-        {recent.isPending ? (
-          <div className="grid-3">
-            <ThumbSkeletons />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="empty">
-            <p>
-              まだ作品がありません。
-              <br />
-              絵や工作を撮って、最初の一点を飾りましょう。
-            </p>
-            <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
-              作品を追加
-            </button>
-          </div>
-        ) : (
-          <div className="grid-3">
-            {items.map((a, i) => (
-              <ArtworkThumb key={a.id} artwork={a} index={i} showBadge />
-            ))}
-          </div>
-        )}
-      </div>
     </Screen>
   )
 }

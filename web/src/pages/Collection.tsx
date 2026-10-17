@@ -81,7 +81,7 @@ export default function Collection() {
         onClose={() => setMenu(false)}
         items={[
           { label: '作品を追加', icon: <PlusIcon size={19} />, onSelect: () => nav.modal('/add') },
-          { label: '博物館のマップ', icon: <MuseumIcon size={19} />, onSelect: () => nav.tab('/map') },
+          { label: 'おうちのマップ', icon: <MuseumIcon size={19} />, onSelect: () => nav.tab('/map') },
         ]}
       />
     </Screen>

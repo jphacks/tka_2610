@@ -3,24 +3,45 @@
 //
 //   types.ts     API の型（Rust の DTO と同じ形）
 //   client.ts    通信の共通処理（fetch・エラー・キャッシュの設定）
-//   museum.ts    博物館の全体像と設定
-//   artworks.ts  作品の一覧・詳細・登録・編集・削除・お気に入り・展示
+//   museum.ts    おうちの全体像（/api/museum）と設定
+//   home.ts      おうちの配置 JSON の読み書き（模様替え）
+//   artworks.ts  作品の一覧・詳細・登録・編集・削除・お気に入り・飾る
 
 export type {
   Artwork,
   ArtworkDetail,
   ArtworkList,
+  ArtworkObject,
+  CatalogAsset,
+  CatalogSurface,
   Category,
   CategoryCount,
+  FloorFinish,
   FloorView,
+  FurnitureObject,
+  HomeCatalog,
+  HomeMaterial,
+  HomeTheme,
+  House,
+  HouseDoor,
+  HouseRoom,
+  Layout,
+  LayoutObject,
+  LayoutRoom,
   ListParams,
   Museum,
+  RoomId,
   RoomView,
+  SavedLayout,
   Settings,
+  Side,
   SlotView,
+  Vec3,
+  WallFinish,
 } from './types'
 export { ApiError, queryClient } from './client'
 export { useMuseum, useSettings, useUpdateSettings } from './museum'
+export { saveLayoutOnLeave, useLayout, useSaveLayout } from './home'
 export {
   prefetchArtwork,
   useArtwork,

@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useCreateArtwork, useMuseum } from '../api'
 import { ArtworkForm, Busy, NavBar, Screen } from '../components'
 import { useNav } from '../nav'
-import { warmUp3D } from '../three'
+import { shellUrlsOf, warmUp3D } from '../three'
 
 export default function AddArtwork() {
   const nav = useNav()
@@ -13,7 +13,7 @@ export default function AddArtwork() {
 
   // 入力している間に 3D の準備をしておき、次のプレビュー画面をすぐ出す
   useEffect(() => {
-    if (museum.data) warmUp3D(museum.data.model_url)
+    if (museum.data) warmUp3D(shellUrlsOf(museum.data))
   }, [museum.data])
 
   return (

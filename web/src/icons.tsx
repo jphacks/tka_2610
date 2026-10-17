@@ -175,3 +175,45 @@ export const WalkIcon = (p: IconProps) => (
     <path d="m9 21 2.5-6.5L14 17v4M8 11l2.5-3.5h3l2 3.5 2.5 1M11.5 14.5 12 8" />
   </Svg>
 )
+
+/** 模様替え（ソファ） */
+export const SofaIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 11V8.5A2.5 2.5 0 0 1 7.5 6h9A2.5 2.5 0 0 1 19 8.5V11" />
+    <path d="M3 13a2 2 0 0 1 4 0v1h10v-1a2 2 0 0 1 4 0v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4Z" />
+    <path d="M6 18v2M18 18v2" />
+  </Svg>
+)
+
+/** 回す（時計回りの矢印） */
+export const RotateIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+    <path d="M20 4v4.5h-4.5" />
+  </Svg>
+)
+
+/** 消す（ごみ箱） */
+export const TrashIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 7h16M9.5 7V4.5h5V7" />
+    <path d="M6 7l1 13h10l1-13M10 11v5.5M14 11v5.5" />
+  </Svg>
+)
+
+/** 元に戻す */
+export const UndoIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </Svg>
+)
+
+/** テーマ（壁紙と床材。ペンキのローラー） */
+export const ThemeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="4" y="3.5" width="13" height="5" rx="1.5" />
+    <path d="M17 6h2.5v5.5H11V14" />
+    <rect x="9.75" y="14" width="2.5" height="6.5" rx="1" />
+  </Svg>
+)

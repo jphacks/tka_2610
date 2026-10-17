@@ -1,23 +1,43 @@
 /* 画面遷移のアニメーション（View Transitions）。
    nav.ts が <html> に付ける data-nav（push / pop / modal / dismiss / tab / fade）ごとに動きを決める。
-   仕組みは docs/frontend.md の「画面遷移」を参照 */
+   仕組みは docs/frontend.md の「画面遷移」を参照。
+   長さは push / pop 0.32 秒、modal / dismiss 0.3 秒、tab / fade 0.18 秒、上部のバーと下部タブ 0.2 秒。
+   はね返らない ease-out（tokens.css の --ease-out）で短く終える。長いと、前の画面が残っているように見えるため。
+   古い画面の写しには filter（明るさ）をかけない。画面全体の写しを毎フレーム描き直すことになり、重い（少しだけ薄くする） */
 
 ::view-transition-group(*) {
-  animation-duration: 0.5s;
-  animation-timing-function: var(--spring);
+  animation-duration: 0.32s;
+  animation-timing-function: var(--ease-out);
+}
+
+/* アプリの外（PC で端末の枠の外に見える背景）は、画面が変わっても同じ。重ねて動かすと無駄に重いので動かさない */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
 }
 
 html[data-nav='push']::view-transition-old(app),
 html[data-nav='push']::view-transition-new(app),
 html[data-nav='pop']::view-transition-old(app),
-html[data-nav='pop']::view-transition-new(app),
+html[data-nav='pop']::view-transition-new(app) {
+  mix-blend-mode: normal;
+  animation-duration: 0.32s;
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+html[data-nav='modal']::view-transition-group(*),
+html[data-nav='dismiss']::view-transition-group(*) {
+  animation-duration: 0.3s;
+}
+
 html[data-nav='modal']::view-transition-old(app),
 html[data-nav='modal']::view-transition-new(app),
 html[data-nav='dismiss']::view-transition-old(app),
 html[data-nav='dismiss']::view-transition-new(app) {
   mix-blend-mode: normal;
-  animation-duration: 0.5s;
-  animation-timing-function: var(--spring);
+  animation-duration: 0.3s;
+  animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }
 
@@ -57,7 +77,7 @@ html[data-nav='push']::view-transition-old(app) {
 @keyframes push-out {
   to {
     transform: translateX(-28%);
-    filter: brightness(0.92);
+    opacity: 0.9;
   }
 }
 
@@ -80,7 +100,7 @@ html[data-nav='pop']::view-transition-new(app) {
 @keyframes pop-in {
   from {
     transform: translateX(-28%);
-    filter: brightness(0.92);
+    opacity: 0.9;
   }
 }
 
@@ -103,7 +123,7 @@ html[data-nav='modal']::view-transition-old(app) {
 @keyframes modal-behind {
   to {
     transform: scale(0.94);
-    filter: brightness(0.88);
+    opacity: 0.85;
   }
 }
 
@@ -126,16 +146,18 @@ html[data-nav='dismiss']::view-transition-new(app) {
 @keyframes modal-front {
   from {
     transform: scale(0.94);
-    filter: brightness(0.88);
+    opacity: 0.85;
   }
 }
 
+/* タブの切り替えと、履歴を置き換える遷移は、全部（バー・タブ・共有要素も）を素早いクロスフェードにする */
 html[data-nav='tab']::view-transition-group(*),
 html[data-nav='tab']::view-transition-old(*),
 html[data-nav='tab']::view-transition-new(*),
-html[data-nav='fade']::view-transition-old(app),
-html[data-nav='fade']::view-transition-new(app) {
-  animation-duration: 0.22s;
+html[data-nav='fade']::view-transition-group(*),
+html[data-nav='fade']::view-transition-old(*),
+html[data-nav='fade']::view-transition-new(*) {
+  animation-duration: 0.18s;
   animation-timing-function: ease;
 }
 
@@ -143,5 +165,5 @@ html[data-nav='fade']::view-transition-new(app) {
 ::view-transition-new(navbar),
 ::view-transition-old(tabbar),
 ::view-transition-new(tabbar) {
-  animation-duration: 0.25s;
+  animation-duration: 0.2s;
 }

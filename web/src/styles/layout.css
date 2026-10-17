@@ -5,7 +5,7 @@
   padding: 0 20px 28px;
 }
 
-/* セクションの見出し（「最近の作品」など）。右にリンクを置ける */
+/* セクションの見出し（「関連する作品」「お部屋」など）。右にリンクを置ける */
 .section-head {
   display: flex;
   align-items: baseline;

@@ -1,0 +1,264 @@
+/* ⑫ 模様替え（HomeEdit）。全画面の 3D と、右上の「鑑賞モードへ」・下の部屋の切り替え・状態の表示とツールバー・追加とテーマのシートの中身。
+   上の操作列（.stage-top / .stage-title）は styles/stage-overlay.css */
+
+/* PC では、スマホの枠をやめてウィンドウいっぱいに広げる（物をドラッグする場所を広く取るため。鑑賞モードの MuseumWalk.css と同じ） */
+.app:has(.edit-screen) {
+  max-width: none;
+}
+
+@media (min-width: 600px) and (min-height: 700px) {
+  .app:has(.edit-screen) {
+    height: 100dvh;
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* 広い画面でも、シートはスマホの幅くらいにして真ん中に出す（Sheet.css の左右 8px を上書き） */
+.edit-screen .sheet {
+  left: max(8px, calc(50% - 260px));
+  right: max(8px, calc(50% - 260px));
+}
+
+.edit-stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* 右上の「鑑賞モードへ」。.glass と一緒に使う */
+.edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  transition: transform 0.35s var(--spring);
+}
+
+.edit-pill:active {
+  transform: scale(0.94);
+}
+
+/* 下側を少し暗くして、ツールバーを読みやすくする。3D の操作はツールバー以外の所へ通す */
+.edit-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 56px 12px calc(14px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(22, 15, 10, 0.42), rgba(22, 15, 10, 0));
+  pointer-events: none;
+}
+
+.edit-toolbar {
+  pointer-events: auto;
+}
+
+/* 部屋の切り替え（中央・左・右・前）。.glass と一緒に使う。中の切り替えボタンは Segmented */
+.edit-rooms {
+  width: min(100%, 300px);
+  padding: 4px;
+  border-radius: 13px;
+  pointer-events: auto;
+}
+
+.edit-rooms .segmented {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* 選んだ物の名前・置けない理由・操作の説明と、保存の状態。.glass と一緒に使う */
+.edit-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 7px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.edit-status .label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.edit-status.invalid .label {
+  color: var(--red);
+}
+
+.edit-save {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: default;
+}
+
+/* 保存に失敗したときだけ押せる（もう一度保存する） */
+.edit-save.error {
+  color: var(--red);
+  text-decoration: underline;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* 追加・テーマ・回す・消す・元に戻す。.glass と一緒に使う */
+.edit-toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  width: min(100%, 440px);
+  padding: 6px;
+  border-radius: 22px;
+}
+
+.edit-tool {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 7px 2px 6px;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ink);
+  transition: background 0.15s, transform 0.35s var(--spring), opacity 0.2s;
+}
+
+.edit-tool:active:not(:disabled) {
+  background: var(--fill);
+  transform: scale(0.94);
+}
+
+.edit-tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* 追加のシートの中身。長いときはシートの中だけスクロールする */
+.edit-sheet-list {
+  max-height: min(52dvh, 440px);
+  margin: 0 -4px;
+  padding: 2px 4px 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 家具の一覧（2 列） */
+.edit-furniture {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edit-furniture-item {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  text-align: left;
+}
+
+.edit-furniture-item .name {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.edit-furniture-item .size {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* 天板に作品を置ける家具の印 */
+.edit-furniture-item .tag {
+  justify-self: start;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* テーマの一覧（1 列）。使っているテーマは差し色の枠と「使用中」 */
+.edit-themes {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-theme {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 0.5px var(--line);
+  text-align: left;
+}
+
+.edit-theme .name {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.edit-theme .finish {
+  grid-column: 1;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.edit-theme .tag {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.edit-theme.current {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.edit-theme:disabled {
+  opacity: 0.5;
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .edit-rooms,
+  .edit-toolbar,
+  .edit-furniture-item,
+  .edit-theme {
+    corner-shape: squircle;
+  }
+}

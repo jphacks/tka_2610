@@ -68,8 +68,8 @@ export default function Settings() {
           </button>
           <Row
             icon={<MuseumIcon size={18} />}
-            label="博物館"
-            detail={museum.data ? `${museum.data.displayed_count} / ${museum.data.capacity} 展示中` : undefined}
+            label="おうち"
+            detail={museum.data ? `${museum.data.displayed_count} / ${museum.data.capacity} 点を飾っています` : undefined}
             onClick={() => setEditing(true)}
           />
         </div>

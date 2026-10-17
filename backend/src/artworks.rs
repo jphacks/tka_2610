@@ -10,21 +10,25 @@ use axum::{
 };
 use chrono::{DateTime, Datelike, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, PgExecutor};
 use tokio::fs;
 use uuid::Uuid;
 
 use crate::{
     error::{AppError, AppResult},
     glb::{self, Style},
-    media,
-    museum,
+    home::{self, ArtworkObject, DoorPolicy, Layout, LayoutObject},
+    home_api, media, museum,
     state::{media_url, AppState, MediaKind},
 };
 
+/// 飾る場所が無いときの文言 (409)
+const NO_SPACE: &str = "飾る場所がいっぱいです。模様替えで棚や机を足してください";
+
 pub const COLUMNS: &str = "id, title, child_name, age, made_on, memo, category, \
     image_file, thumb_file, model_file, model_kind, image_width, image_height, tint, \
-    favorite, slot_id, displayed_at, created_at, updated_at, catalog_no";
+    favorite, slot_id, displayed_at, created_at, updated_at, catalog_no, \
+    model_width, model_height, model_depth";
 
 #[derive(Debug, Clone, FromRow)]
 pub struct ArtworkRow {
@@ -48,6 +52,17 @@ pub struct ArtworkRow {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub catalog_no: i64,
+    /// 作品の実寸 (幅・高さ・奥行き, m)。GLB から測れなかったら NULL
+    pub model_width: Option<f64>,
+    pub model_height: Option<f64>,
+    pub model_depth: Option<f64>,
+}
+
+impl ArtworkRow {
+    /// 作品の実寸 (3 つ揃うときだけ)
+    pub fn art_size(&self) -> Option<home::ArtSize> {
+        home::ArtSize::from_model(self.model_width, self.model_height, self.model_depth, &self.model_kind)
+    }
 }
 
 #[derive(Serialize)]
@@ -77,13 +92,17 @@ pub struct ArtworkDto {
     pub thumb_url: String,
     pub model_url: String,
     pub model_kind: String,
+    /// 作品の実寸 (幅・高さ・奥行き, m)。登録時に GLB から測る。測れなかった作品は None
+    pub model_size: Option<[f64; 3]>,
     pub image_width: i32,
     pub image_height: i32,
     pub tint: String,
     pub favorite: bool,
     pub displayed: bool,
     pub slot_id: Option<String>,
+    /// 飾っている部屋 (hub / left / right / front)。配置 JSON から引く。飾っていなければ None
     pub room_id: Option<&'static str>,
+    /// 飾っている部屋の名前 (例: "左の部屋")
     pub room_name: Option<&'static str>,
     pub floor: Option<&'static str>,
     pub displayed_at: Option<DateTime<Utc>>,
@@ -99,8 +118,10 @@ pub fn date_long(date: NaiveDate) -> String {
     format!("{}年{}月{}日", date.year(), date.month(), date.day())
 }
 
-impl From<&ArtworkRow> for ArtworkDto {
-    fn from(row: &ArtworkRow) -> Self {
+impl ArtworkDto {
+    /// layout は飾っている部屋を引くための配置 (home_api::peek_layout など)。
+    /// 飾っていない作品だけのとき (登録直後など) は None でよい。配置に slot_id が見つからなければ部屋は None
+    pub fn new(row: &ArtworkRow, layout: Option<&Layout>) -> Self {
         let age_label = row.age.map(|a| format!("{a}歳")).unwrap_or_default();
         let author_label = match (row.child_name.is_empty(), age_label.is_empty()) {
             (false, false) => format!("{}（{}）", row.child_name, age_label),
@@ -108,8 +129,9 @@ impl From<&ArtworkRow> for ArtworkDto {
             (true, false) => age_label.clone(),
             (true, true) => String::new(),
         };
-        let slot = row.slot_id.as_deref().and_then(museum::slot);
-        let room = row.slot_id.as_deref().and_then(museum::room_of_slot);
+        // 飾っている作品はどれも 1F のどこかの部屋にある
+        let displayed = row.slot_id.is_some();
+        let room = row.slot_id.as_deref().zip(layout).and_then(|(slot, layout)| layout.room_of_id(slot));
 
         ArtworkDto {
             catalog_no: row.catalog_no,
@@ -130,16 +152,16 @@ impl From<&ArtworkRow> for ArtworkDto {
             thumb_url: media_url(MediaKind::Thumb, &row.thumb_file),
             model_url: media_url(MediaKind::Model, &row.model_file),
             model_kind: row.model_kind.clone(),
+            model_size: row.art_size().map(|a| a.size),
             image_width: row.image_width,
             image_height: row.image_height,
             tint: row.tint.clone(),
             favorite: row.favorite,
-            // 今の展示台の表に無い台 (以前の別館など) にある作品は、展示していない扱い
-            displayed: slot.is_some(),
+            displayed,
             slot_id: row.slot_id.clone(),
             room_id: room.map(|r| r.id),
             room_name: room.map(|r| r.name),
-            floor: slot.map(museum::floor_of),
+            floor: displayed.then_some(home::FLOOR_ID),
             displayed_at: row.displayed_at,
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -147,12 +169,105 @@ impl From<&ArtworkRow> for ArtworkDto {
     }
 }
 
-async fn fetch_row(state: &AppState, id: Uuid) -> AppResult<ArtworkRow> {
+async fn fetch_row<'e>(executor: impl PgExecutor<'e>, id: Uuid) -> AppResult<ArtworkRow> {
     let row = sqlx::query_as::<_, ArtworkRow>(&format!("SELECT {COLUMNS} FROM artworks WHERE id = $1"))
         .bind(id)
-        .fetch_one(&state.pool)
+        .fetch_one(executor)
         .await?;
     Ok(row)
+}
+
+// =============================
+// 作品の実寸 (配置の判定に使う)
+// =============================
+
+/// 作品の実寸の列
+#[derive(Debug, Clone, FromRow)]
+pub(crate) struct SizeRow {
+    pub id: Uuid,
+    pub model_width: Option<f64>,
+    pub model_height: Option<f64>,
+    pub model_depth: Option<f64>,
+    pub model_kind: String,
+}
+
+/// 作品の実寸を読む。登録されていない作品の行は返らない (行の数で、作品があるかの確認にも使う)
+pub(crate) async fn load_sizes<'e>(executor: impl PgExecutor<'e>, ids: &[Uuid]) -> AppResult<Vec<SizeRow>> {
+    Ok(sqlx::query_as::<_, SizeRow>(
+        "SELECT id, model_width, model_height, model_depth, model_kind FROM artworks WHERE id = ANY($1)",
+    )
+    .bind(ids)
+    .fetch_all(executor)
+    .await?)
+}
+
+/// 寸法の分かる作品だけを集める (分からない作品は、配置の判定で面の枠をそのまま使う)
+pub(crate) fn sizes_of(rows: &[SizeRow]) -> home::Sizes {
+    rows.iter()
+        .filter_map(|r| {
+            home::ArtSize::from_model(r.model_width, r.model_height, r.model_depth, &r.model_kind).map(|size| (r.id, size))
+        })
+        .collect()
+}
+
+/// GLB の実寸を測る。測れなければ None (ログだけ出す。登録は止めない)
+pub(crate) fn measure_model(model: &[u8], label: &str) -> Option<[f64; 3]> {
+    match glb::measure_glb(model) {
+        Ok(size) => Some(size),
+        Err(error) => {
+            println!("[Artwork] {label} の大きさを測れませんでした ({error})");
+            None
+        }
+    }
+}
+
+/// 寸法がまだ無い作品にだけ寸法を入れる (ほかの PC の起動と重なっても上書きしない)
+pub(crate) async fn set_model_size<'e>(executor: impl PgExecutor<'e>, id: Uuid, [w, h, d]: [f64; 3]) -> AppResult<()> {
+    sqlx::query(
+        "UPDATE artworks SET model_width = $2, model_height = $3, model_depth = $4 \
+         WHERE id = $1 AND model_width IS NULL",
+    )
+    .bind(id)
+    .bind(w)
+    .bind(h)
+    .bind(d)
+    .execute(executor)
+    .await?;
+    Ok(())
+}
+
+/// 起動時に、寸法が NULL の作品の GLB を測って入れる (寸法の列を足す前に登録した作品など)。
+/// この PC に GLB が無い作品は飛ばす (アトリエの作品は seed が GLB を置き直したときに入れる)
+pub async fn backfill_model_sizes(state: &AppState) -> AppResult<()> {
+    let rows: Vec<(Uuid, String)> =
+        sqlx::query_as("SELECT id, model_file FROM artworks WHERE model_width IS NULL ORDER BY created_at")
+            .fetch_all(&state.pool)
+            .await?;
+
+    let (mut measured, mut missing, mut failed) = (0, 0, 0);
+    for (id, model_file) in rows {
+        let bytes = match fs::read(state.media_path(MediaKind::Model, &model_file)).await {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                missing += 1;
+                continue;
+            }
+            Err(error) => {
+                println!("[Artwork] {model_file} を読めません ({error})");
+                failed += 1;
+                continue;
+            }
+        };
+        match measure_model(&bytes, &model_file) {
+            Some(size) => {
+                set_model_size(&state.pool, id, size).await?;
+                measured += 1;
+            }
+            None => failed += 1,
+        }
+    }
+    println!("[Artwork] model sizes: measured {measured}, skipped {missing} (missing file), failed {failed}");
+    Ok(())
 }
 
 // =============================
@@ -216,6 +331,7 @@ pub async fn list_artworks(
     .fetch_all(&state.pool);
 
     let (rows, counts) = tokio::try_join!(rows_query, counts_query)?;
+    let layout = home_api::peek_layout(&state.pool).await?;
 
     let total: i64 = counts.iter().map(|(_, n)| n).sum();
     let mut categories = vec![CategoryCount { id: "all", label: "すべて", count: total }];
@@ -225,7 +341,7 @@ pub async fn list_artworks(
     }
 
     Ok(Json(ArtworkList {
-        items: rows.iter().map(ArtworkDto::from).collect(),
+        items: rows.iter().map(|r| ArtworkDto::new(r, layout.as_ref())).collect(),
         total,
         categories,
     }))
@@ -245,7 +361,8 @@ pub async fn get_artwork(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ArtworkDetail>> {
-    let row = fetch_row(&state, id).await?;
+    let row = fetch_row(&state.pool, id).await?;
+    let layout = home_api::peek_layout(&state.pool).await?;
 
     // 同じカテゴリ → 同じ子ども → 制作日が近い順
     let related = sqlx::query_as::<_, ArtworkRow>(&format!(
@@ -261,8 +378,8 @@ pub async fn get_artwork(
     .await?;
 
     Ok(Json(ArtworkDetail {
-        artwork: ArtworkDto::from(&row),
-        related: related.iter().map(ArtworkDto::from).collect(),
+        artwork: ArtworkDto::new(&row, layout.as_ref()),
+        related: related.iter().map(|r| ArtworkDto::new(r, layout.as_ref())).collect(),
     }))
 }
 
@@ -361,7 +478,7 @@ fn file_tag() -> String {
 }
 
 /// 生成したファイルを書き込む。失敗したら書いた分を消す
-async fn write_files(state: &AppState, files: &[(MediaKind, String, &[u8])]) -> AppResult<()> {
+pub(crate) async fn write_files(state: &AppState, files: &[(MediaKind, String, &[u8])]) -> AppResult<()> {
     for (i, (kind, name, bytes)) in files.iter().enumerate() {
         if let Err(error) = fs::write(state.media_path(*kind, name), bytes).await {
             remove_files(state, files[..i].iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -371,7 +488,7 @@ async fn write_files(state: &AppState, files: &[(MediaKind, String, &[u8])]) -> 
     Ok(())
 }
 
-async fn remove_files(state: &AppState, files: impl Iterator<Item = (MediaKind, String)>) {
+pub(crate) async fn remove_files(state: &AppState, files: impl Iterator<Item = (MediaKind, String)>) {
     for (kind, name) in files {
         let path = state.media_path(kind, &name);
         if let Err(error) = fs::remove_file(&path).await {
@@ -416,7 +533,8 @@ pub async fn create_artwork(
     let custom_model = form.model;
     let model_kind = if custom_model.is_some() { "custom" } else { style.as_str() };
 
-    let (processed, model) = tokio::task::spawn_blocking(move || {
+    let label = format!("「{title}」の GLB");
+    let (processed, model, model_size) = tokio::task::spawn_blocking(move || {
         let processed = media::process(&image)?;
         let model = match custom_model {
             Some(model) => model.to_vec(),
@@ -427,7 +545,8 @@ pub async fn create_artwork(
                 style,
             ),
         };
-        Ok::<_, String>((processed, model))
+        let model_size = measure_model(&model, &label);
+        Ok::<_, String>((processed, model, model_size))
     })
     .await?
     .map_err(AppError::bad_request)?;
@@ -447,8 +566,9 @@ pub async fn create_artwork(
 
     let inserted = sqlx::query_as::<_, ArtworkRow>(&format!(
         "INSERT INTO artworks (id, title, child_name, age, made_on, memo, category, \
-            image_file, thumb_file, model_file, model_kind, image_width, image_height, tint) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
+            image_file, thumb_file, model_file, model_kind, image_width, image_height, tint, \
+            model_width, model_height, model_depth) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) \
          RETURNING {COLUMNS}"
     ))
     .bind(id)
@@ -465,6 +585,9 @@ pub async fn create_artwork(
     .bind(processed.display_width as i32)
     .bind(processed.display_height as i32)
     .bind(&processed.tint)
+    .bind(model_size.map(|s| s[0]))
+    .bind(model_size.map(|s| s[1]))
+    .bind(model_size.map(|s| s[2]))
     .fetch_one(&state.pool)
     .await;
 
@@ -477,7 +600,8 @@ pub async fn create_artwork(
                 model.len() / 1024,
                 started.elapsed()
             );
-            Ok((StatusCode::CREATED, Json(ArtworkDto::from(&row))))
+            // 登録したばかりの作品は飾っていない
+            Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, None))))
         }
         Err(error) => {
             remove_files(&state, files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -496,7 +620,7 @@ pub async fn update_artwork(
     multipart: Multipart,
 ) -> AppResult<Json<ArtworkDto>> {
     let started = Instant::now();
-    let row = fetch_row(&state, id).await?;
+    let row = fetch_row(&state.pool, id).await?;
     let form = read_form(multipart).await?;
 
     let title = match form.title {
@@ -544,6 +668,8 @@ pub async fn update_artwork(
     struct Regenerated {
         processed: Option<media::ProcessedImage>,
         model: Option<Vec<u8>>,
+        /// 作り直したモデルの実寸 (測れなければ None)
+        model_size: Option<[f64; 3]>,
     }
 
     let regenerated = if new_image.is_some() || needs_new_model {
@@ -553,6 +679,7 @@ pub async fn update_artwork(
             None
         };
 
+        let label = format!("「{title}」の GLB");
         tokio::task::spawn_blocking(move || {
             let processed = match &new_image {
                 Some(bytes) => Some(media::process(bytes)?),
@@ -569,12 +696,13 @@ pub async fn update_artwork(
                 let (texture, w, h) = media::texture_from_display(&stored)?;
                 Some(glb::build_artwork_glb(&texture, w, h, style))
             };
-            Ok::<_, String>(Regenerated { processed, model })
+            let model_size = model.as_deref().and_then(|m| measure_model(m, &label));
+            Ok::<_, String>(Regenerated { processed, model, model_size })
         })
         .await?
         .map_err(AppError::bad_request)?
     } else {
-        Regenerated { processed: None, model: None }
+        Regenerated { processed: None, model: None, model_size: None }
     };
 
     let tag = file_tag();
@@ -606,13 +734,19 @@ pub async fn update_artwork(
     }
 
     let model_kind = if uploaded_custom || keep_custom { "custom" } else { style.as_str() };
+    // モデルを作り直したときだけ測り直す
+    let [model_width, model_height, model_depth] = match &regenerated.model {
+        Some(_) => regenerated.model_size.map_or([None; 3], |s| s.map(Some)),
+        None => [row.model_width, row.model_height, row.model_depth],
+    };
 
     write_files(&state, &new_files).await?;
 
     let updated = sqlx::query_as::<_, ArtworkRow>(&format!(
         "UPDATE artworks SET title = $2, child_name = $3, age = $4, made_on = $5, memo = $6, \
             category = $7, image_file = $8, thumb_file = $9, model_file = $10, model_kind = $11, \
-            image_width = $12, image_height = $13, tint = $14, updated_at = NOW() \
+            image_width = $12, image_height = $13, tint = $14, \
+            model_width = $15, model_height = $16, model_depth = $17, updated_at = NOW() \
          WHERE id = $1 RETURNING {COLUMNS}"
     ))
     .bind(id)
@@ -629,6 +763,9 @@ pub async fn update_artwork(
     .bind(image_width)
     .bind(image_height)
     .bind(&tint)
+    .bind(model_width)
+    .bind(model_height)
+    .bind(model_depth)
     .fetch_one(&state.pool)
     .await;
 
@@ -636,7 +773,8 @@ pub async fn update_artwork(
         Ok(updated) => {
             remove_files(&state, old_files.into_iter()).await;
             println!("[Artwork] updated \"{}\" in {:?}", updated.title, started.elapsed());
-            Ok(Json(ArtworkDto::from(&updated)))
+            let layout = home_api::peek_layout(&state.pool).await?;
+            Ok(Json(ArtworkDto::new(&updated, layout.as_ref())))
         }
         Err(error) => {
             remove_files(&state, new_files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -653,12 +791,22 @@ pub async fn delete_artwork(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    // 配置からも同じトランザクションで外す
+    let mut tx = state.pool.begin().await?;
+    let mut layout = home_api::lock_layout(&mut tx).await?;
+
     let (image_file, thumb_file, model_file) = sqlx::query_as::<_, (String, String, String)>(
         "DELETE FROM artworks WHERE id = $1 RETURNING image_file, thumb_file, model_file",
     )
     .bind(id)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *tx)
     .await?;
+
+    if layout.remove_artwork(id) {
+        // 外すだけで、動かす物は無い
+        home_api::save_layout(&mut tx, layout, DoorPolicy::Ignore).await?;
+    }
+    tx.commit().await?;
 
     remove_files(
         &state,
@@ -695,16 +843,29 @@ pub async fn set_favorite(
     .bind(body.favorite)
     .fetch_one(&state.pool)
     .await?;
-    Ok(Json(ArtworkDto::from(&row)))
+    let layout = home_api::peek_layout(&state.pool).await?;
+    Ok(Json(ArtworkDto::new(&row, layout.as_ref())))
 }
 
 // =============================
-// 展示 / 展示をやめる
+// 飾る / 飾るのをやめる (配置 JSON に反映される)
 // =============================
 
+/// POST /api/artworks/{id}/display の本文 (任意)。
+/// position を省くと空いている場所に自動で置く (room_id があればその部屋だけ、parent_id があればその家具を先に探す)
 #[derive(Deserialize, Default)]
 pub struct DisplayBody {
-    pub slot_id: Option<String>,
+    /// 部屋 (hub / left / right / front)。自動で置くときはこの部屋の家具だけを探す (空きが無ければ 409。ほかの部屋には置かない)。
+    /// 床に置くとき (position あり・parent_id なし) は置く部屋 (省くと hub)。家具の上に置くときは使わない (部屋は家具の部屋)
+    pub room_id: Option<String>,
+    /// 載せる家具の object id。省くと床 (position があるとき) か自動
+    pub parent_id: Option<String>,
+    /// 載せる面 ("top"・"shelf1" など)。省くと天板。parent_id と position があるときだけ使う
+    pub surface: Option<String>,
+    /// 配置 JSON と同じ意味の位置 (家具の上なら面の中心から、床なら部屋の中心から見た位置)
+    pub position: Option<[f64; 3]>,
+    /// 向き (ラジアン)。position があるときだけ使う
+    pub rotation_y: Option<f64>,
 }
 
 pub async fn display_artwork(
@@ -717,73 +878,111 @@ pub async fn display_artwork(
     } else {
         serde_json::from_slice(&body).map_err(|e| AppError::bad_request(e.to_string()))?
     };
+    let room = match request.room_id.as_deref() {
+        Some(room_id) => Some(
+            home::room_def(room_id).ok_or_else(|| AppError::bad_request(format!("部屋「{room_id}」はありません")))?,
+        ),
+        None => None,
+    };
 
-    let row = fetch_row(&state, id).await?;
-    if request.slot_id.is_none() && row.slot_id.as_deref().and_then(museum::slot).is_some() {
-        return Ok(Json(ArtworkDto::from(&row)));
+    let mut tx = state.pool.begin().await?;
+    let mut layout = home_api::lock_layout(&mut tx).await?;
+    let row = fetch_row(&mut *tx, id).await?;
+
+    let current = layout.artwork_for(id).cloned();
+    if let Some(current) = &current
+        && request.parent_id.is_none()
+        && request.position.is_none()
+        && room.is_none_or(|r| layout.room_of_id(&current.id).is_some_and(|c| c.id == r.id))
+    {
+        // すでに飾ってある (同じ要求を 2 回送っても置き場所は変わらない)。別の部屋を指定したときは、その部屋へ移す
+        return Ok(Json(ArtworkDto::new(&row, Some(&layout))));
     }
-
-    // 同時に展示されても UNIQUE 制約で衝突を検出し、別の台で再試行する
-    for _ in 0..5 {
-        let occupied: HashSet<String> = sqlx::query_scalar::<_, String>(
-            "SELECT slot_id FROM artworks WHERE slot_id IS NOT NULL AND id <> $1",
-        )
-        .bind(id)
-        .fetch_all(&state.pool)
-        .await?
-        .into_iter()
-        .collect();
-
-        let slot_id = match &request.slot_id {
-            Some(requested) => {
-                if museum::slot(requested).is_none() {
-                    return Err(AppError::bad_request(format!("展示台が存在しません: {requested}")));
-                }
-                if occupied.contains(requested) {
-                    return Err(AppError::conflict("その展示台には別の作品が展示されています"));
-                }
-                requested.clone()
-            }
-            None => museum::pick_slot(&row.category, &occupied)
-                .ok_or_else(|| AppError::conflict("展示スペースがいっぱいです。ほかの作品の展示をやめてから試してください"))?
-                .to_string(),
+    if let Some(parent_id) = &request.parent_id {
+        let support = layout
+            .furniture(parent_id)
+            .and_then(|f| home::asset(&f.asset_id))
+            .filter(|a| a.is_support());
+        let Some(support) = support else {
+            return Err(AppError::bad_request("その家具には作品を置けません"));
         };
-
-        let result = sqlx::query_as::<_, ArtworkRow>(&format!(
-            "UPDATE artworks SET slot_id = $2, displayed_at = NOW(), updated_at = NOW() \
-             WHERE id = $1 RETURNING {COLUMNS}"
-        ))
-        .bind(id)
-        .bind(&slot_id)
-        .fetch_one(&state.pool)
-        .await;
-
-        match result {
-            Ok(row) => {
-                println!("[Display] \"{}\" -> {}", row.title, slot_id);
-                return Ok(Json(ArtworkDto::from(&row)));
-            }
-            Err(sqlx::Error::Database(db)) if db.code().as_deref() == Some("23505") => continue,
-            Err(error) => return Err(error.into()),
+        if support.surface(request.surface.as_deref()).is_none() {
+            return Err(AppError::bad_request("その家具にはその置き場所がありません"));
         }
+    } else if request.surface.is_some() {
+        return Err(AppError::bad_request("surface は parent_id と一緒に指定してください"));
     }
 
-    Err(AppError::conflict("展示台の割り当てが混み合っています。もう一度お試しください"))
+    // 移動するときは object id をそのまま使う
+    layout.remove_artwork(id);
+    let object_id = current.map(|c| c.id).unwrap_or_else(|| home::new_object_id("art"));
+    let object = match request.position {
+        Some(position) => ArtworkObject {
+            id: object_id,
+            artwork_id: id,
+            room_id: request.parent_id.is_none().then(|| room.map_or(home::HUB_ID, |r| r.id).to_string()),
+            parent_id: request.parent_id,
+            // 天板 ("top") は省いた形にそろえる (save_layout の検証でも直る)
+            surface: request.surface.filter(|s| s != home::TOP_SURFACE),
+            position,
+            rotation_y: request.rotation_y.unwrap_or(0.0),
+        },
+        None => {
+            // 載っている作品は実寸、置く作品も実寸で空きを探す
+            let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
+            let sizes = sizes_of(&load_sizes(&mut *tx, &ids).await?);
+            let spot = home::pick_spot(
+                &layout,
+                &sizes,
+                row.art_size().as_ref(),
+                room.map(|r| r.id),
+                request.parent_id.as_deref(),
+            )
+            .ok_or_else(|| match room {
+                Some(r) => AppError::conflict(format!("{} に飾る場所がいっぱいです。模様替えで棚や机を足してください", r.name)),
+                None => AppError::conflict(NO_SPACE),
+            })?;
+            ArtworkObject {
+                id: object_id,
+                artwork_id: id,
+                parent_id: Some(spot.parent_id),
+                room_id: None,
+                surface: spot.surface,
+                position: spot.position,
+                rotation_y: 0.0,
+            }
+        }
+    };
+    let slot_id = object.id.clone();
+    layout.objects.push(LayoutObject::Artwork(object));
+
+    // 置けない位置 (はみ出し・重なり・出入口の前) はここで 400 になる。出入口の前を見るのは、いま置いた作品だけ
+    let moved = HashSet::from([slot_id.clone()]);
+    let saved = home_api::save_layout(&mut tx, layout, DoorPolicy::OnlyMoved(&moved)).await?;
+    let row = fetch_row(&mut *tx, id).await?;
+    tx.commit().await?;
+
+    println!("[Display] \"{}\" -> {}", row.title, slot_id);
+    Ok(Json(ArtworkDto::new(&row, Some(&saved.layout))))
 }
 
 pub async fn undisplay_artwork(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ArtworkDto>> {
-    let row = sqlx::query_as::<_, ArtworkRow>(&format!(
-        "UPDATE artworks SET slot_id = NULL, displayed_at = NULL, updated_at = NOW() \
-         WHERE id = $1 RETURNING {COLUMNS}"
-    ))
-    .bind(id)
-    .fetch_one(&state.pool)
-    .await?;
+    let mut tx = state.pool.begin().await?;
+    let mut layout = home_api::lock_layout(&mut tx).await?;
+    let row = fetch_row(&mut *tx, id).await?;
+
+    if layout.remove_artwork(id) || row.slot_id.is_some() {
+        // 外すだけで、動かす物は無い
+        home_api::save_layout(&mut tx, layout, DoorPolicy::Ignore).await?;
+    }
+    let row = fetch_row(&mut *tx, id).await?;
+    tx.commit().await?;
+
     println!("[Display] \"{}\" removed", row.title);
-    Ok(Json(ArtworkDto::from(&row)))
+    Ok(Json(ArtworkDto::new(&row, None)))
 }
 
 #[cfg(test)]

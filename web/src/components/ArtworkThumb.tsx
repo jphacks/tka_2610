@@ -1,4 +1,4 @@
-// 作品のサムネイル（一覧・ホーム・関連作品で共通）と、読み込み中の仮表示。
+// 作品のサムネイル（一覧・関連作品・模様替えの「追加」のシートで共通）と、読み込み中の仮表示。
 import type { CSSProperties } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchArtwork, type Artwork } from '../api'
@@ -10,14 +10,31 @@ export function ArtworkThumb({
   artwork,
   showBadge = false,
   index = 0,
+  onSelect,
 }: {
   artwork: Artwork
   /** 展示中の作品に緑の点を付ける */
   showBadge?: boolean
   /** 並び順。表示アニメーションを少しずつずらすのに使う */
   index?: number
+  /** 渡すと、詳細画面へのリンクではなく、押すとこれを呼ぶボタンになる（模様替えの「追加」のシート） */
+  onSelect?: () => void
 }) {
   const client = useQueryClient()
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        className="thumb-card thumb-button pressable"
+        style={{ '--i': Math.min(index, 12) } as CSSProperties}
+        onClick={onSelect}
+      >
+        <Img src={artwork.thumb_url} tint={artwork.tint} alt={artwork.title} />
+        <p className="thumb-title">{artwork.title}</p>
+        <p className="thumb-meta">{artwork.date_short}</p>
+      </button>
+    )
+  }
   return (
     <TLink
       to={`/artworks/${artwork.id}`}

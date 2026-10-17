@@ -1,5 +1,5 @@
 // ⑥ 作品の詳細（/artworks/:id）。一覧などから push で開く。
-// 額縁に入った作品とキャプション。3D で見る・展示する・編集・削除ができる。
+// 額縁に入った作品とキャプション。3D で見る・おうちに飾る・編集・削除ができる。
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useArtwork, useDeleteArtwork, useDisplay, useFavorite } from '../api'
@@ -70,7 +70,8 @@ export default function ArtworkDetail() {
     display.mutate(
       { id: artwork.id, display: !artwork.displayed },
       {
-        onSuccess: (a) => toast(a.displayed ? `${a.room_name}に展示しました` : '展示をやめました'),
+        onSuccess: (a) => toast(a.displayed ? `${a.room_name ?? 'おうち'}に飾りました` : '飾るのをやめました'),
+        // 飾る場所がいっぱいのとき（409）なども、Rust が返す日本語のメッセージをそのまま出す
         onError: (e) => toast(e.message),
       },
     )
@@ -133,15 +134,15 @@ export default function ArtworkDetail() {
               <dd className="num">{artwork.date_long}</dd>
             </div>
             <div>
-              <dt>展示</dt>
+              <dt>飾る場所</dt>
               <dd>
                 {artwork.displayed ? (
                   <>
                     <span className="on-view" />
-                    {artwork.room_name}・{artwork.floor}
+                    {artwork.room_name}
                   </>
                 ) : (
-                  <span style={{ color: 'var(--ink-2)' }}>収蔵庫（未展示）</span>
+                  <span style={{ color: 'var(--ink-2)' }}>まだ飾っていません</span>
                 )}
               </dd>
             </div>
@@ -157,11 +158,11 @@ export default function ArtworkDetail() {
             </button>
             {artwork.displayed ? (
               <button className="btn btn-outline" onClick={() => nav.push(`/museum?focus=${artwork.id}`)}>
-                博物館で見る
+                おうちで見る
               </button>
             ) : (
               <button className="btn btn-outline" onClick={toggleDisplay} disabled={display.isPending}>
-                博物館に展示する
+                おうちに飾る
               </button>
             )}
           </div>
@@ -187,7 +188,7 @@ export default function ArtworkDetail() {
         items={[
           { label: '編集', icon: <DocIcon size={19} />, onSelect: () => nav.modal(`/artworks/${id}/edit`) },
           {
-            label: artwork?.displayed ? '展示をやめる' : '博物館に展示する',
+            label: artwork?.displayed ? '飾るのをやめる' : 'おうちに飾る',
             icon: <MuseumIcon size={19} />,
             onSelect: toggleDisplay,
           },
@@ -197,7 +198,7 @@ export default function ArtworkDetail() {
 
       <Sheet open={confirmDelete && !!artwork} onClose={() => setConfirmDelete(false)} title={`「${artwork?.title ?? ''}」を削除しますか？`}>
         <p className="hint" style={{ textAlign: 'center', margin: '4px 8px 0' }}>
-          写真と3Dモデルも削除され、博物館からも外れます。この操作は取り消せません。
+          写真と3Dモデルも削除され、おうちからも外れます。この操作は取り消せません。
         </p>
         <div className="sheet-body">
           <button

@@ -9,7 +9,7 @@
   align-items: center;
   gap: 8px;
   height: calc(54px + var(--safe-top));
-  padding: var(--safe-top) 12px 0;
+  padding: var(--safe-top) 20px 0;
   border-bottom: 0.5px solid transparent;
   transition: background 0.25s, border-color 0.25s;
   view-transition-name: navbar;
@@ -17,7 +17,7 @@
 
 /* スクロールしたら、すりガラスの背景と下線を出す */
 .navbar.scrolled {
-  background: rgba(246, 243, 238, 0.82);
+  background: rgba(243, 249, 252, 0.82);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
   backdrop-filter: blur(20px) saturate(1.6);
   border-bottom-color: var(--line);
