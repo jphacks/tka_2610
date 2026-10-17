@@ -93,12 +93,12 @@
   transform: scale(0.9);
 }
 
-/* ホーム以外のタブの、右上の虹（右の脚が長い） */
+/* ホーム以外のタブの、右上のクレヨン風の虹（右の脚が長い） */
 .tab-rainbow {
   position: absolute;
-  top: 38px;
-  right: 10px;
-  width: 100px;
+  top: 36px;
+  right: 8px;
+  width: 108px;
   z-index: -1;
   pointer-events: none;
 }
@@ -106,5 +106,5 @@
 .tab-rainbow svg {
   display: block;
   width: 100%;
-  opacity: 0.9;
+  opacity: 0.92;
 }
