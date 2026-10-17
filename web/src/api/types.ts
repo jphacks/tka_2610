@@ -69,6 +69,8 @@ export interface Memory {
   bytes: number
   /** 動画と声の長さ（ミリ秒。分からなければ null） */
   duration_ms: number | null
+  /** 長さの表示（「0:12」。分からなければ null） */
+  duration_label: string | null
   width: number | null
   height: number | null
   /** ひとこと（80 文字まで） */

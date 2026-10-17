@@ -156,6 +156,8 @@ pub struct MemoryDto {
     pub bytes: i64,
     /// 動画と声の長さ (ミリ秒。Web が測って送った値。分からなければ None)
     pub duration_ms: Option<i32>,
+    /// 例: "0:12"・"1:05:00" (長さが分からなければ None)
+    pub duration_label: Option<String>,
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub caption: String,
@@ -175,12 +177,24 @@ impl From<MemoryRow> for MemoryDto {
             mime: row.mime,
             bytes: row.bytes,
             duration_ms: row.duration_ms,
+            duration_label: row.duration_ms.map(duration_label),
             width: row.width,
             height: row.height,
             caption: row.caption,
             date_label: date_long(row.created_at.with_timezone(&Local).date_naive()),
             created_at: row.created_at,
         }
+    }
+}
+
+/// 長さの表示 (秒は切り上げない。1 時間を超えたら時も付ける)
+pub fn duration_label(ms: i32) -> String {
+    let s = ms.max(0) / 1000;
+    let (h, m, s) = (s / 3600, s / 60 % 60, s % 60);
+    if h > 0 {
+        format!("{h}:{m:02}:{s:02}")
+    } else {
+        format!("{m}:{s:02}")
     }
 }
 
@@ -554,6 +568,14 @@ mod tests {
         assert!(parse_measure("-1", "長さ", 100).is_err());
         assert!(parse_measure("abc", "長さ", 100).is_err());
         assert!(parse_measure("101", "長さ", 100).is_err());
+    }
+
+    #[test]
+    fn labels_durations() {
+        assert_eq!(duration_label(0), "0:00");
+        assert_eq!(duration_label(12_900), "0:12");
+        assert_eq!(duration_label(65_000), "1:05");
+        assert_eq!(duration_label(3_900_000), "1:05:00");
     }
 
     #[test]

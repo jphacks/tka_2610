@@ -16,12 +16,33 @@ export const MEMORY_LIMITS: Record<MemoryKind, number> = {
 /** おもいでが 1 つでもあるか */
 export const hasMemories = (c: MemoryCounts | undefined) => !!c && c.photo + c.video + c.audio > 0
 
-/** 選んだファイルの種類（ブラウザが教える Content-Type から。分からなければ null で、サーバーが拡張子で決める） */
+/** 拡張子から種類を決めるとき（Content-Type の無いファイル。サーバーの memories.rs の ACCEPTED と同じ並び） */
+const KIND_OF_EXT: Record<string, MemoryKind> = {
+  jpg: 'photo',
+  jpeg: 'photo',
+  png: 'photo',
+  webp: 'photo',
+  gif: 'photo',
+  mp4: 'video',
+  m4v: 'video',
+  mov: 'video',
+  webm: 'video',
+  m4a: 'audio',
+  aac: 'audio',
+  mp3: 'audio',
+  ogg: 'audio',
+  oga: 'audio',
+  opus: 'audio',
+  wav: 'audio',
+}
+
+/** 選んだファイルの種類（ブラウザが教える Content-Type から。無ければ拡張子から。分からなければ null で、サーバーが断る） */
 export function kindOfFile(file: Blob): MemoryKind | null {
   if (file.type.startsWith('image/')) return 'photo'
   if (file.type.startsWith('video/')) return 'video'
   if (file.type.startsWith('audio/')) return 'audio'
-  return null
+  const ext = file instanceof File ? (file.name.split('.').pop() ?? '').toLowerCase() : ''
+  return KIND_OF_EXT[ext] ?? null
 }
 
 export interface UploadMemoryInput {

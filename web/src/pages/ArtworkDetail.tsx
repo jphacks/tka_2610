@@ -1,9 +1,10 @@
 // ⑥ 作品の詳細（/artworks/:id）。一覧などから push で開く。
 // 額縁に入った作品とキャプション。3D で見る・おうちに飾る・編集・削除ができる。
+// その下の「おもいで」（MemorySection）に、作品に付けた写真・動画・声の記録を並べ、足す・消すができる。
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useArtwork, useDeleteArtwork, useDisplay, useFavorite } from '../api'
-import { ActionMenu, ArtworkThumb, GlassButton, Screen, Sheet, useToast } from '../components'
+import { ActionMenu, ArtworkThumb, GlassButton, MemorySection, Screen, Sheet, useToast } from '../components'
 import {
   BackIcon,
   CloseIcon,
@@ -167,6 +168,8 @@ export default function ArtworkDetail() {
             )}
           </div>
         )}
+
+        {artwork && <MemorySection artworkId={artwork.id} memories={detail.data?.memories ?? []} />}
 
         {related.length > 0 && (
           <>
