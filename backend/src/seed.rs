@@ -20,8 +20,9 @@ use crate::{
 const CHILD_NAME: &str = "アトリエ";
 const CATEGORY: &str = "craft";
 
-/// サンプルの作品の作成日 (キットの日付)
-fn made_on() -> NaiveDate {
+/// 以前の版で、サンプルの作品 13 点にそろえて入れていた作成日 (キットの日付)。
+/// この日付のままの作品は、起動時に catalog.json の madeOn に直す (画面で作成日を変えた作品は触らない)
+fn old_made_on() -> NaiveDate {
     NaiveDate::from_ymd_opt(2026, 10, 14).expect("valid date")
 }
 
@@ -32,6 +33,8 @@ pub struct AtelierItem {
     pub asset_id: String,
     pub title_ja: String,
     pub memo: String,
+    /// 作成日。去年と今年の休みの日に、作品の季節に合わせて散らしてある
+    pub made_on: NaiveDate,
     /// static/atelier からの相対パス
     pub model: String,
     pub photo: String,
@@ -50,14 +53,15 @@ fn seed_file_names(id: Uuid) -> (String, String) {
 struct Summary {
     inserted: usize,
     repaired: usize,
+    redated: usize,
     placed: usize,
 }
 
 pub async fn ensure_atelier(state: &AppState, dir: &Path) {
     match run(state, dir).await {
         Ok(Some(s)) => println!(
-            "[Seed] atelier: inserted {}, repaired {} files, placed {}",
-            s.inserted, s.repaired, s.placed
+            "[Seed] atelier: inserted {}, repaired {} files, redated {}, placed {}",
+            s.inserted, s.repaired, s.redated, s.placed
         ),
         Ok(None) => {}
         Err(error) => println!("[Seed] atelier: 登録できませんでした ({error})"),
@@ -74,8 +78,8 @@ async fn run(state: &AppState, dir: &Path) -> Result<Option<Summary>, String> {
         serde_json::from_str(&text).map_err(|e| format!("catalog.json を読めません: {e}"))?;
 
     let ids: Vec<Uuid> = items.iter().map(|item| seed_id(&item.asset_id)).collect();
-    let existing: Vec<(Uuid, String, String, String)> = sqlx::query_as(
-        "SELECT id, image_file, thumb_file, model_file FROM artworks WHERE id = ANY($1)",
+    let existing: Vec<(Uuid, String, String, String, NaiveDate)> = sqlx::query_as(
+        "SELECT id, image_file, thumb_file, model_file, made_on FROM artworks WHERE id = ANY($1)",
     )
     .bind(&ids)
     .fetch_all(&state.pool)
@@ -84,10 +88,14 @@ async fn run(state: &AppState, dir: &Path) -> Result<Option<Summary>, String> {
 
     let mut inserted = Vec::new();
     let mut repaired = 0;
+    let mut redated = 0;
     for (item, &id) in items.iter().zip(&ids) {
         match existing.iter().find(|row| row.0 == id) {
-            Some((_, image_file, thumb_file, model_file)) => {
+            Some((_, image_file, thumb_file, model_file, made_on)) => {
                 repaired += repair_files(state, dir, item, id, image_file, thumb_file, model_file).await?;
+                if *made_on == old_made_on() && item.made_on != old_made_on() {
+                    redated += redate(state, id, item.made_on).await?;
+                }
             }
             None => {
                 if insert(state, dir, item, id).await? {
@@ -98,7 +106,20 @@ async fn run(state: &AppState, dir: &Path) -> Result<Option<Summary>, String> {
     }
 
     let placed = if inserted.is_empty() { 0 } else { place(state, &inserted).await? };
-    Ok(Some(Summary { inserted: inserted.len(), repaired, placed }))
+    Ok(Some(Summary { inserted: inserted.len(), repaired, redated, placed }))
+}
+
+/// 以前の版の作成日 (old_made_on) のままの作品を、catalog.json の作成日に直す。
+/// ほかの PC が先に直していたり、画面で作成日を変えていたりしたら何もしない (0 を返す)
+async fn redate(state: &AppState, id: Uuid, made_on: NaiveDate) -> Result<usize, String> {
+    let done = sqlx::query("UPDATE artworks SET made_on = $2, updated_at = NOW() WHERE id = $1 AND made_on = $3")
+        .bind(id)
+        .bind(made_on)
+        .bind(old_made_on())
+        .execute(&state.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(done.rows_affected() as usize)
 }
 
 async fn read_static(dir: &Path, relative: &str) -> Result<Vec<u8>, String> {
@@ -145,7 +166,7 @@ async fn insert(state: &AppState, dir: &Path, item: &AtelierItem, id: Uuid) -> R
     .bind(id)
     .bind(&item.title_ja)
     .bind(CHILD_NAME)
-    .bind(made_on())
+    .bind(item.made_on)
     .bind(&item.memo)
     .bind(CATEGORY)
     .bind(&image_file)
@@ -244,6 +265,7 @@ async fn place(state: &AppState, ids: &[Uuid]) -> Result<usize, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Datelike;
 
     #[test]
     fn seed_ids_are_deterministic() {
@@ -281,5 +303,26 @@ mod tests {
             assert!(dir.join(&item.model).is_file(), "{} がありません", item.model);
             assert!(dir.join(&item.photo).is_file(), "{} がありません", item.photo);
         }
+    }
+
+    #[test]
+    fn made_on_spreads_over_last_year_and_this_year() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("static").join("atelier");
+        let Ok(text) = std::fs::read_to_string(dir.join("catalog.json")) else {
+            return;
+        };
+        let items: Vec<AtelierItem> = serde_json::from_str(&text).unwrap();
+        let date = |y, m, d| NaiveDate::from_ymd_opt(y, m, d).unwrap();
+        // 去年 (2025 年) と今年 (2026 年) の両方にあり、どれも以前の固定の日付 (2026-10-14) より前 (未来の日付にならない)
+        for item in &items {
+            assert!((date(2025, 1, 1)..old_made_on()).contains(&item.made_on), "{}: {}", item.asset_id, item.made_on);
+        }
+        let in_year = |y| items.iter().filter(|i| i.made_on.year() == y).count();
+        assert!(in_year(2025) >= 5 && in_year(2026) >= 5, "2025: {}, 2026: {}", in_year(2025), in_year(2026));
+        // 同じ日に 2 つ作ったことにはしない
+        let mut dates: Vec<NaiveDate> = items.iter().map(|i| i.made_on).collect();
+        dates.sort();
+        dates.dedup();
+        assert_eq!(dates.len(), items.len());
     }
 }
