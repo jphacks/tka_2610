@@ -13,7 +13,7 @@
 
 | パス | 内容 |
 |---|---|
-| `catalog.json` | 作品の一覧（`assetId`, `titleJa`, `title`, `description`, `memo`, `category`, `dimensionsMeters`, `model`, `photo`） |
+| `catalog.json` | 作品の一覧（`assetId`, `titleJa`, `title`, `description`, `memo`, `madeOn`, `category`, `dimensionsMeters`, `model`, `photo`） |
 | `models/<assetId>.glb` | 作品の 3D モデル。テクスチャを 1024px 以下に縮めたもの（下の手順） |
 | `photos/<assetId>_hero.jpg` | キットの `preview/<assetId>_hero.jpg`。登録に必要な写真として使う |
 
@@ -32,6 +32,8 @@ npx -y @gltf-transform/cli resize --width 1024 --height 1024 <キットの model
 ## 登録のされ方（`seed.rs`）
 
 - 作品の id は `assetId` から決まる UUID（v5）です。何度起動しても同じ id になります。
-- まだ無い作品だけを登録します（種類は工作、つくった人は「アトリエ」、作成日は 2026-10-14）。新しく登録した作品は、空いている棚や机の上に自動で飾ります。
+- まだ無い作品だけを登録します（種類は工作、つくった人は「アトリエ」、作成日は `catalog.json` の `madeOn`）。新しく登録した作品は、空いている棚や机の上に自動で飾ります。
+- 作成日（`madeOn`）は、去年（2025 年）と今年（2026 年）の休みの日（土日・祝日）に、作品の季節に合わせて散らしてあります（ちょうちょは春、海や帆船は夏休み、太陽系は冬休み、カメラは敬老の日など）。`madeOn` はこのリポジトリで書き足した値です。
+- 以前の版は 13 点とも作成日を 2026-10-14 にしていました。その日付のままの作品は、起動時に `madeOn` の日付に直します（ログの `redated`）。画面で作成日を変えた作品は触りません。
 - データベースに作品があるのに、この PC に画像やモデルのファイルが無いときは、ここから作り直します（同じデータベースを使う 2 台目の PC 用）。
 - 登録した作品を消しても、次に起動すると登録し直されます。要らないときはこのフォルダを消してください。
