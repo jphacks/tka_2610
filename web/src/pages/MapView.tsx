@@ -25,7 +25,7 @@ export default function MapView() {
 
   /** ラベルを押した：はじめは寄るだけ。寄っている部屋をもう一度押したら、その部屋の「おうちの中」へ */
   const onRoom = (id: string) => {
-    if (focusRoom === id) nav.push(`/museum?room=${id}`)
+    if (focusRoom === id) nav.push(museum.data ? `/museum?room=${museum.data.room.id}` : '/museum')
     else setFocusRoom(id)
   }
 
@@ -71,7 +71,7 @@ export default function MapView() {
         </div>
         <div className="list-group" style={{ marginTop: 0 }}>
           {rooms.map((room) => (
-            <button key={room.id} className="list-item room-row" onClick={() => nav.push(`/museum?room=${room.id}`)}>
+            <button key={room.id} className="list-item room-row" onClick={() => nav.push(museum.data ? `/museum?room=${museum.data.room.id}` : '/museum')}>
               {room.thumbs[0] ? (
                 <Img src={room.thumbs[0]} tint={room.tint} alt="" />
               ) : (

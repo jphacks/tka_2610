@@ -67,10 +67,10 @@ export default function Home() {
                 </p>
               )}
               <div className="home-actions">
-                <GlassButton label="歩く" className="home-action" onClick={() => nav.push('/museum/walk')}>
+                <GlassButton label="歩く" className="home-action" onClick={() => nav.push(data ? `/museum/walk?room=${data.room.id}` : '/museum/walk')}>
                   <WalkIcon size={21} />
                 </GlassButton>
-                <GlassButton label="模様替え" className="home-action" onClick={() => nav.push('/home/edit')}>
+                <GlassButton label="模様替え" className="home-action" onClick={() => nav.push(data ? `/home/edit?room=${data.room.id}` : '/home/edit')}>
                   <SofaIcon size={21} />
                 </GlassButton>
               </div>

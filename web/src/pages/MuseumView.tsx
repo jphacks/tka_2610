@@ -1,5 +1,5 @@
-// ⑤ おうちの中（/museum）。push で開く。
-// 手前の壁をカットした家をドラッグでぐるりと見回し（どの向きからでも）、作品をタップすると詳細へ。?focus=作品ID / ?room=部屋ID でカメラを寄せる。
+// ⑤ おうちの中（/museum?room=おへやの id）。push で開く。おへや（年齢ごとの部屋）は ?room= で選ぶ（省くと今の年齢のおへや）。
+// 手前の壁をカットした家をドラッグでぐるりと見回し（どの向きからでも）、作品をタップすると詳細へ。?focus=作品ID でカメラを寄せる。
 // 「⋯」のメニューから、⑪ 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ）と ⑫ 模様替えへ進める。
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -11,16 +11,16 @@ import { MuseumScene, StageShell, hasHouseModel } from '../three'
 import './MuseumView.css'
 
 export default function MuseumView() {
-  const museum = useMuseum()
-  const nav = useNav()
   const [params] = useSearchParams()
+  const museum = useMuseum({ roomId: params.get('room') })
+  const nav = useNav()
   const [ready, setReady] = useState(false)
   const [menu, setMenu] = useState(false)
   const focus = params.get('focus')
-  const room = params.get('room')
+  const ageRoom = museum.data?.room ?? null
+  const inRoom = (path: string) => (ageRoom ? `${path}?room=${ageRoom.id}` : path)
 
   const focusedTitle = focus ? museum.data?.slots.find((s) => s.artwork?.id === focus)?.artwork?.title : null
-  const roomName = room ? museum.data?.rooms.find((r) => r.id === room)?.name : null
 
   return (
     <Screen>
@@ -30,10 +30,10 @@ export default function MuseumView() {
         overlay={
           <>
             <div className="stage-top">
-              <GlassButton label="戻る" onClick={() => nav.back('/')}>
+              <GlassButton label="戻る" onClick={() => nav.back(ageRoom ? `/rooms/${ageRoom.id}` : '/')}>
                 <BackIcon size={20} strokeWidth={2.2} />
               </GlassButton>
-              <span className="stage-title glass">{museum.data?.name ?? 'はるのミュージアム'}</span>
+              <span className="stage-title glass">{ageRoom?.name ?? museum.data?.name ?? 'おへや'}</span>
               <GlassButton label="メニュー" onClick={() => setMenu(true)}>
                 <MoreIcon size={20} />
               </GlassButton>
@@ -43,7 +43,7 @@ export default function MuseumView() {
                 <p>
                   {focusedTitle
                     ? `「${focusedTitle}」を飾りました`
-                    : roomName ?? '子どもの頃の作品たちが、今もここに。'}
+                    : '子どもの頃の作品たちが、今もここに。'}
                 </p>
                 {ready && <small>ドラッグで見回す ・ 作品をタップで詳しく</small>}
               </div>
@@ -66,7 +66,6 @@ export default function MuseumView() {
             <MuseumScene
               museum={museum.data}
               focusId={focus}
-              roomId={room}
               onSelect={(id) => nav.push(`/artworks/${id}`)}
               onReady={() => setReady(true)}
             />
@@ -81,8 +80,8 @@ export default function MuseumView() {
         open={menu}
         onClose={() => setMenu(false)}
         items={[
-          { label: '鑑賞モード', icon: <WalkIcon size={19} />, onSelect: () => nav.push('/museum/walk') },
-          { label: '模様替え', icon: <SofaIcon size={19} />, onSelect: () => nav.push('/home/edit') },
+          { label: '鑑賞モード', icon: <WalkIcon size={19} />, onSelect: () => nav.push(inRoom('/museum/walk')) },
+          { label: '模様替え', icon: <SofaIcon size={19} />, onSelect: () => nav.push(inRoom('/home/edit')) },
           { label: 'マップ', icon: <MuseumIcon size={19} />, onSelect: () => nav.push('/map') },
           { label: '作品一覧', icon: <GalleryIcon size={19} />, onSelect: () => nav.tab('/collection') },
           { label: 'ホーム', icon: <HomeIcon size={19} />, onSelect: () => nav.tab('/') },

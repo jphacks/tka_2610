@@ -15,21 +15,24 @@ export function forgetPreloadedMuseum() {
   preloadedMuseum = null
 }
 
+/** /api/museum の URL（roomId を渡すとそのおへや） */
+export const museumUrl = (roomId?: string | null) => (roomId ? `/api/museum?room=${encodeURIComponent(roomId)}` : '/api/museum')
+
 /**
- * おうちの全体像。refetchInterval（ミリ秒）を渡すと、その間隔で取り直す
- * （鑑賞モードで、ほかの端末で飾った・外した作品をすぐ反映するため。Unity 版の 3 秒ごとの確認と同じ）
+ * おへや roomId のおうちの全体像（省くと今の年齢のおへや）。refetchInterval（ミリ秒）を渡すと、その間隔で取り直す
+ * （鑑賞モードで、ほかの端末で飾った・外した作品をすぐ反映するため）
  */
-export function useMuseum({ refetchInterval }: { refetchInterval?: number } = {}) {
+export function useMuseum({ roomId, refetchInterval }: { roomId?: string | null; refetchInterval?: number } = {}) {
   return useQuery({
-    queryKey: keys.museum,
+    queryKey: keys.museumOf(roomId),
     refetchInterval,
     queryFn: () => {
-      if (preloadedMuseum) {
+      if (preloadedMuseum && !roomId) {
         const p = preloadedMuseum
         preloadedMuseum = null
         return p
       }
-      return request<Museum>('/api/museum')
+      return request<Museum>(museumUrl(roomId))
     },
   })
 }

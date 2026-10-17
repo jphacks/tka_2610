@@ -1,5 +1,5 @@
-// ⑪ 鑑賞モード（/museum/walk）。② ホームの「歩く」・⑤ おうちの中の「⋯」などから push で開く。PC とスマホ（タッチ）の両方で使える。
-// 家の中を一人称で歩き、飾っている作品を見る。
+// ⑪ 鑑賞モード（/museum/walk?room=おへやの id）。おへやの「歩く」・⑤ おうちの中の「⋯」などから push で開く。PC とスマホ（タッチ）の両方で使える。
+// おへや（年齢ごとの部屋）の中を一人称で歩き、飾っている作品を見る。おへやは ?room= で選ぶ（省くと今の年齢のおへや）。
 //   PC：クリックで歩き始め、WASD で歩き、マウスで見回す。照準を作品に合わせて E かクリックで作品カードを開く。Esc でやめる
 //   スマホ：「歩き始める」を押し、左の親指（仮想スティック）で歩き、右の指でなぞって見回す。照準を作品に合わせて「見る」
 //           （か右側をタップ）で作品カードを開く。「やめる」で止まる。スティックの見た目はこの画面が DOM で描く（WalkStick）
@@ -9,6 +9,7 @@
 // 飾る作品の変更（ほかの端末で飾った・外した）は 3 秒ごとに取り直して反映する（Unity 版と同じ間隔）。
 // 3D の中身は WalkScene（three/ の遅延読み込みの中）。この画面は、読み込み中・操作の説明・照準・仮想スティック・作品カード・エラーの表示を受け持つ。
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useArtwork, useMuseum } from '../api'
 import { ErrorBoundary, GlassButton, Img, Screen, Spinner } from '../components'
 import { BackIcon } from '../icons'
@@ -43,7 +44,9 @@ type StickListener = (stick: TouchStick | null) => void
 const REFRESH_MS = 3000
 
 export default function MuseumWalk() {
-  const museum = useMuseum({ refetchInterval: REFRESH_MS })
+  const [params] = useSearchParams()
+  const museum = useMuseum({ roomId: params.get('room'), refetchInterval: REFRESH_MS })
+  const ageRoomId = museum.data?.room.id ?? params.get('room')
   const nav = useNav()
   const [status, setStatus] = useState<WalkStatus>({ phase: 'loading', walking: false, aimedArtworkId: null })
   const [selected, setSelected] = useState<string | null>(null)
@@ -71,7 +74,7 @@ export default function MuseumWalk() {
       onClick={() => {
         // 次に開いたときは、はじめの位置から歩き始める
         clearWalkPose()
-        nav.back('/museum')
+        nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/')
       }}
     >
       <BackIcon size={20} strokeWidth={2.2} />

@@ -12,8 +12,11 @@ export interface Artwork {
   catalog_label: string
   title: string
   child_name: string
+  /** 登録時に入れた年齢（任意）。表示用 */
   age: number | null
   age_label: string
+  /** 作ったときの年齢（子どもの誕生日と作成日から。誕生日が無ければ age、それも無ければ 0）。作品はこの年齢のおへやに飾る */
+  age_at_made: number
   author_label: string
   made_on: string
   date_short: string
@@ -33,7 +36,9 @@ export interface Artwork {
   favorite: boolean
   displayed: boolean
   slot_id: string | null
+  /** 飾っているおへやの id（AgeRoom.id）。飾っていなければ null */
   room_id: string | null
+  /** 飾っているおへやの名前（「4さいのおへや 2」など） */
   room_name: string | null
   floor: string | null
   created_at: string
@@ -153,7 +158,68 @@ export interface Layout {
 }
 
 /** GET / PUT /api/home/layout の応答。Rust: home_api.rs */
+/** 年齢ごとのおへや 1 つ。Rust: home_api.rs の RoomInfo */
+export interface AgeRoom {
+  id: string
+  /** 作品を作ったときの年齢 */
+  age: number
+  /** その年齢の中での階（0 が 1 階） */
+  floor: number
+  /** 「4さいのおへや」「4さいのおへや 2」 */
+  name: string
+}
+
+/** おへやのリストの 1 つ。Rust: ages_api.rs の RoomSummary */
+export interface AgeRoomSummary extends AgeRoom {
+  count: number
+  capacity: number
+  thumbs: string[]
+  tint: string | null
+}
+
+/** 年齢 1 つ。Rust: ages_api.rs の AgeView */
+export interface AgeView {
+  age: number
+  /** 「4さい」 */
+  label: string
+  artwork_count: number
+  displayed_count: number
+  /** 1 階から */
+  rooms: AgeRoomSummary[]
+}
+
+/** GET /api/ages。Rust: ages_api.rs の AgesOverview */
+export interface Ages {
+  name: string
+  child_birthday: string | null
+  current_age: number | null
+  total_artworks: number
+  /** 年齢の小さい順 */
+  ages: AgeView[]
+}
+
+/** 積み上げの建物の 1 階分。Rust: ages_api.rs の StackRoom */
+export interface StackRoom {
+  room: AgeRoom
+  count: number
+  capacity: number
+  layout: Layout
+  slots: SlotView[]
+}
+
+/** GET /api/ages/{age}。Rust: ages_api.rs の AgeStack */
+export interface AgeStack {
+  age: number
+  label: string
+  house: House
+  catalog: HomeCatalog
+  /** 1 階から */
+  rooms: StackRoom[]
+}
+
 export interface SavedLayout {
+  /** 配置のおへや */
+  room: AgeRoom
   layout: Layout
   updated_at: string
 }
@@ -325,6 +391,8 @@ export interface FloorView {
 
 /** GET /api/museum。Rust: MuseumOverview */
 export interface Museum {
+  /** このおへや（?room= のおへや。省いたら今の年齢のおへや）。layout・slots・capacity はこのおへやのもの */
+  room: AgeRoom
   today_label: string
   name: string
   owner_name: string
@@ -356,4 +424,6 @@ export interface Museum {
 export interface Settings {
   museum_name: string
   owner_name: string
+  /** 子どもの誕生日（"2021-06-01"）。作品を作ったときの年齢（おへや）を決める。送るときに省くと今のまま */
+  child_birthday?: string | null
 }

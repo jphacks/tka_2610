@@ -4,7 +4,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { jsonInit, keys, request } from './client'
 import { forgetPreloadedMuseum } from './museum'
-import type { Artwork, ArtworkDetail, ArtworkList, ListParams, RoomId } from './types'
+import type { Artwork, ArtworkDetail, ArtworkList, ListParams } from './types'
 
 // ---------- 取得 ----------
 
@@ -64,8 +64,9 @@ function useInvalidate() {
     return Promise.all([
       client.invalidateQueries({ queryKey: ['artworks'] }),
       client.invalidateQueries({ queryKey: keys.museum }),
-      // 飾る・外す・削除で、配置 JSON も変わる
+      // 飾る・外す・削除で、配置 JSON とおへやの数も変わる
       client.invalidateQueries({ queryKey: keys.layout }),
+      client.invalidateQueries({ queryKey: keys.ages }),
       ...extra.map((queryKey) => client.invalidateQueries({ queryKey })),
     ])
   }
@@ -140,14 +141,14 @@ export function useFavorite() {
 
 /**
  * おうちに飾る（display: true）・飾るのをやめる（false）。
- * roomId を渡すと、その部屋の空いている場所に置く（本文 { room_id }。空きが無ければ 409 で、ほかの部屋には置かない）。
- * 省くと、全部の部屋から（リビングを先に）サーバーが選ぶ
+ * roomId（おへやの id）を渡すと、そのおへやの空いている場所に置く（本文 { room_id }。空きが無ければ 409 で、ほかのおへやには置かない。
+ * 作品の年齢と違うおへやは 400）。省くと、作品を作ったときの年齢のおへやを下の階からサーバーが選ぶ
  */
 export function useDisplay() {
   const invalidate = useInvalidate()
   const store = useStoreArtwork()
   return useMutation({
-    mutationFn: ({ id, display, roomId }: { id: string; display: boolean; roomId?: RoomId }) =>
+    mutationFn: ({ id, display, roomId }: { id: string; display: boolean; roomId?: string }) =>
       request<Artwork>(
         `/api/artworks/${id}/display`,
         display && roomId ? jsonInit('POST', { room_id: roomId }) : { method: display ? 'POST' : 'DELETE' },

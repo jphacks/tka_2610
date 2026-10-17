@@ -1,0 +1,68 @@
+/* おへや（Room）。画面いっぱいの 3D のおへやと、その上に浮かぶ 2 段の UI（上：戻るとおへやの名前、下：飾っている数と丸いボタン） */
+
+/* 3D をなぞっても、ページがスクロールしたり、引っぱって再読み込みしたりしないようにする */
+.room-screen {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.room-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.room-top {
+  gap: 12px;
+}
+
+/* おへやの名前。押しても何もしないので、なぞる操作はその下の 3D に通す。長いときは「…」で切る */
+.room-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* 下段：下部タブは無いので、画面の下から 20px */
+.room-dock {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(20px + var(--safe-bottom));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.room-status {
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 44px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+
+.room-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+/* 指で押しやすいよう、GlassButton（40px）を少し大きくする */
+.room-action {
+  width: 44px;
+  height: 44px;
+}
