@@ -4,7 +4,6 @@
 export { preloadModel } from './models'
 export { HomeEditScene } from './HomeEditScene'
 export { HomeScene } from './HomeScene'
-export { MapScene } from './MapScene'
 export { MuseumScene } from './MuseumScene'
 export { PreviewScene } from './PreviewScene'
 export { StackScene } from './StackScene'

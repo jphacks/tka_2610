@@ -48,7 +48,14 @@ export function useUpdateSettings() {
     onSuccess: (settings) => {
       forgetPreloadedMuseum()
       client.setQueryData(keys.settings, settings)
-      return client.invalidateQueries({ queryKey: keys.museum })
+      // 誕生日が変わると、作品の年齢とおへやが変わる
+      return Promise.all([
+        client.invalidateQueries({ queryKey: keys.museum }),
+        client.invalidateQueries({ queryKey: keys.ages }),
+        client.invalidateQueries({ queryKey: keys.layout }),
+        client.invalidateQueries({ queryKey: ['artworks'] }),
+        client.invalidateQueries({ queryKey: ['artwork'] }),
+      ])
     },
   })
 }
