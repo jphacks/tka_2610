@@ -1,4 +1,4 @@
-// 一人称の操作（PC。Unity 版の MuseumWalker と同じ操作）。タッチの端末では、代わりに TouchControls.tsx を使う（WalkScene が選ぶ）。
+// 一人称の操作（PC）。タッチの端末では、代わりに TouchControls.tsx を使う（WalkScene が選ぶ）。
 //   クリック … マウスを画面に固定して歩き始める（Pointer Lock）
 //   W A S D / 矢印キー … 前後左右に歩く　　Shift … 速く歩く　　マウス … 見回す
 //   Esc … マウスの固定を外して止まる

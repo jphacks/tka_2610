@@ -26,3 +26,7 @@ Thumbs.db
 
 # Backend generated media
 /backend/data/
+
+# Python のキャッシュ（tools/ のスクリプト用）
+__pycache__/
+*.pyc

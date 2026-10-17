@@ -130,7 +130,7 @@ export function MuseumModel({
  * 作品のモデルを置き場所に収める。底面の中心を原点に置く。
  * scale を渡したときはその倍率で置く（家の中の作品。実寸と置き場所の枠から決めた値。placement.ts の displayScale、Rust の display_scale）。
  * 渡さないときは範囲 fit（幅・高さ・奥行き, m）に収める：回しても範囲からはみ出さないよう、水平方向は対角線の長さで合わせる
- * （Unity の MuseumDisplaySlot.PlacePrefab と同じ規則。3D プレビューと、実寸が分からない作品）。
+ * （3D プレビューと、実寸が分からない作品）。
  * noUpscale のときは縮めるだけで拡大しない（実寸で作った工作の GLB を、本物より大きく見せないため。scale を渡したときは使わない）。
  * shadows のときは影を落とし・受ける（家の中に置くとき）。
  */
