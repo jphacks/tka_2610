@@ -1,0 +1,58 @@
+# =========================
+# Unity
+# =========================
+
+# Unity generated/cache
+/unity/[Ll]ibrary/
+/unity/[Tt]emp/
+/unity/[Oo]bj/
+/unity/[Ll]ogs/
+/unity/[Uu]ser[Ss]ettings/
+/unity/[Mm]emoryCaptures/
+/unity/[Rr]ecordings/
+
+# Builds
+/unity/[Bb]uild/
+/unity/[Bb]uilds/
+
+# IDE / Unity generated project files
+/unity/*.csproj
+/unity/*.sln
+/unity/*.slnx
+/unity/*.user
+/unity/*.userprefs
+/unity/*.pidb
+/unity/*.booproj
+/unity/*.svd
+/unity/*.opendb
+/unity/*.VC.db
+/unity/.vsconfig
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+
+# =========================
+# Environment / secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Rust
+# =========================
+
+/backend/target/
+
+# Backend generated media
+/backend/data/

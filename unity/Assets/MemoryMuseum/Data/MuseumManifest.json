@@ -1,0 +1,5357 @@
+{
+  "formatVersion": 1,
+  "units": "metres",
+  "axis": "Y-up",
+  "title": "Lumen | Memory Museum",
+  "mainBounds": {
+    "width": 26.8,
+    "depth": 29.2,
+    "height": 10.3
+  },
+  "upperFloor": 4.22,
+  "materials": [
+    {
+      "name": "Oak",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.48,
+      "metallic": 0,
+      "texture": "Oak_Planks.png",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Walnut",
+      "color": [
+        0.29,
+        0.17,
+        0.086
+      ],
+      "roughness": 0.46,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Plaster",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "texture": "Warm_Plaster.png",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Limestone",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.67,
+      "metallic": 0,
+      "texture": "Limestone_Tiles.png",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Ivory",
+      "color": [
+        0.88,
+        0.84,
+        0.74
+      ],
+      "roughness": 0.52,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "WarmWhite",
+      "color": [
+        0.95,
+        0.925,
+        0.84
+      ],
+      "roughness": 0.48,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Sage",
+      "color": [
+        0.39,
+        0.47,
+        0.39
+      ],
+      "roughness": 0.76,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "DeepTeal",
+      "color": [
+        0.055,
+        0.155,
+        0.16
+      ],
+      "roughness": 0.56,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Brass",
+      "color": [
+        0.64,
+        0.44,
+        0.19
+      ],
+      "roughness": 0.28,
+      "metallic": 0.75,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "DarkMetal",
+      "color": [
+        0.07,
+        0.085,
+        0.085
+      ],
+      "roughness": 0.38,
+      "metallic": 0.65,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Glass",
+      "color": [
+        0.7,
+        0.86,
+        0.9
+      ],
+      "roughness": 0.09,
+      "metallic": 0.05,
+      "texture": "",
+      "alpha": 0.14,
+      "emission": 0
+    },
+    {
+      "name": "SkylightGlass",
+      "color": [
+        0.68,
+        0.82,
+        0.87
+      ],
+      "roughness": 0.14,
+      "metallic": 0.05,
+      "texture": "",
+      "alpha": 0.12,
+      "emission": 0
+    },
+    {
+      "name": "Soil",
+      "color": [
+        0.085,
+        0.057,
+        0.034
+      ],
+      "roughness": 0.96,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Terra",
+      "color": [
+        0.44,
+        0.255,
+        0.15
+      ],
+      "roughness": 0.83,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Bark",
+      "color": [
+        0.21,
+        0.16,
+        0.095
+      ],
+      "roughness": 0.94,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "LeafA",
+      "color": [
+        0.13,
+        0.25,
+        0.1
+      ],
+      "roughness": 0.53,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "LeafB",
+      "color": [
+        0.23,
+        0.36,
+        0.145
+      ],
+      "roughness": 0.48,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "LeafC",
+      "color": [
+        0.34,
+        0.43,
+        0.19
+      ],
+      "roughness": 0.53,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "LeafLight",
+      "color": [
+        0.4,
+        0.48,
+        0.28
+      ],
+      "roughness": 0.55,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Linen",
+      "color": [
+        0.76,
+        0.74,
+        0.63
+      ],
+      "roughness": 0.93,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "ShellCream",
+      "color": [
+        0.91,
+        0.79,
+        0.61
+      ],
+      "roughness": 0.42,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "ShellBlush",
+      "color": [
+        0.83,
+        0.63,
+        0.48
+      ],
+      "roughness": 0.5,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "ShellLight",
+      "color": [
+        0.99,
+        0.91,
+        0.76
+      ],
+      "roughness": 0.45,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Ceramic",
+      "color": [
+        0.74,
+        0.79,
+        0.7
+      ],
+      "roughness": 0.19,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Porcelain",
+      "color": [
+        0.92,
+        0.935,
+        0.91
+      ],
+      "roughness": 0.18,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Leather",
+      "color": [
+        0.095,
+        0.082,
+        0.07
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Silver",
+      "color": [
+        0.64,
+        0.67,
+        0.65
+      ],
+      "roughness": 0.25,
+      "metallic": 0.85,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Lens",
+      "color": [
+        0.015,
+        0.035,
+        0.04
+      ],
+      "roughness": 0.09,
+      "metallic": 0.45,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Crystal",
+      "color": [
+        0.25,
+        0.46,
+        0.42
+      ],
+      "roughness": 0.23,
+      "metallic": 0.22,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Paper",
+      "color": [
+        0.9,
+        0.85,
+        0.72
+      ],
+      "roughness": 0.9,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Clay",
+      "color": [
+        0.62,
+        0.47,
+        0.31
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Caption",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "texture": "Archive_Labels.png",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Art",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.9,
+      "metallic": 0,
+      "texture": "Botanical_Studies.png",
+      "alpha": 1,
+      "emission": 0
+    },
+    {
+      "name": "Glow",
+      "color": [
+        0.95,
+        0.79,
+        0.49
+      ],
+      "roughness": 0.25,
+      "metallic": 0,
+      "texture": "",
+      "alpha": 1,
+      "emission": 3.0
+    }
+  ],
+  "colliders": [
+    {
+      "type": "box",
+      "name": "Foundation",
+      "group": "Ground",
+      "center": [
+        0,
+        -0.21,
+        0
+      ],
+      "size": [
+        26.8,
+        0.42,
+        29.2
+      ]
+    },
+    {
+      "type": "box",
+      "name": "UpperFloor",
+      "group": "Mezzanine",
+      "center": [
+        -9.6,
+        4.02,
+        0
+      ],
+      "size": [
+        6.6,
+        0.36,
+        28.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "UpperFloor",
+      "group": "Mezzanine",
+      "center": [
+        9.6,
+        4.02,
+        0
+      ],
+      "size": [
+        6.6,
+        0.36,
+        28.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "UpperBridge",
+      "group": "Mezzanine",
+      "center": [
+        0,
+        4.02,
+        -12.5
+      ],
+      "size": [
+        12.7,
+        0.36,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "UpperBridge",
+      "group": "Mezzanine",
+      "center": [
+        0,
+        4.02,
+        12.5
+      ],
+      "size": [
+        12.7,
+        0.36,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Mezzanine",
+      "center": [
+        -6.28,
+        4.745,
+        0.0
+      ],
+      "size": [
+        0.14,
+        1.05,
+        21.740000000000002
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Mezzanine",
+      "center": [
+        6.28,
+        4.745,
+        0.0
+      ],
+      "size": [
+        0.14,
+        1.05,
+        21.740000000000002
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Mezzanine",
+      "center": [
+        0.0,
+        4.745,
+        -10.8
+      ],
+      "size": [
+        12.74,
+        1.05,
+        0.14
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Mezzanine",
+      "center": [
+        -4.2,
+        4.745,
+        10.8
+      ],
+      "size": [
+        4.339999999999999,
+        1.05,
+        0.14
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Mezzanine",
+      "center": [
+        4.2,
+        4.745,
+        10.8
+      ],
+      "size": [
+        4.339999999999999,
+        1.05,
+        0.14
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        1.91,
+        -11.399999999999999
+      ],
+      "size": [
+        0.24,
+        3.82,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        2.95,
+        -7.2
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        1.91,
+        -3.6000000000000005
+      ],
+      "size": [
+        0.24,
+        3.82,
+        4.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        2.95,
+        0
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        1.91,
+        3.6000000000000005
+      ],
+      "size": [
+        0.24,
+        3.82,
+        4.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        2.95,
+        7.2
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -6.45,
+        1.91,
+        11.399999999999999
+      ],
+      "size": [
+        0.24,
+        3.82,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -11.8,
+        1.915,
+        2.0
+      ],
+      "size": [
+        2.4000000000000004,
+        3.83,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_West",
+      "center": [
+        -9.6,
+        2.99,
+        2.0
+      ],
+      "size": [
+        2.0,
+        1.6800000000000002,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_West",
+      "center": [
+        -7.6,
+        1.915,
+        2.0
+      ],
+      "size": [
+        2.0,
+        3.83,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        1.91,
+        -11.399999999999999
+      ],
+      "size": [
+        0.24,
+        3.82,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        2.95,
+        -7.2
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        1.91,
+        -3.6000000000000005
+      ],
+      "size": [
+        0.24,
+        3.82,
+        4.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        2.95,
+        0
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        1.91,
+        3.6000000000000005
+      ],
+      "size": [
+        0.24,
+        3.82,
+        4.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        2.95,
+        7.2
+      ],
+      "size": [
+        0.24,
+        1.7399999999999998,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        6.45,
+        1.91,
+        11.399999999999999
+      ],
+      "size": [
+        0.24,
+        3.82,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        7.6,
+        1.915,
+        2.0
+      ],
+      "size": [
+        2.0,
+        3.83,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Arcade_East",
+      "center": [
+        9.6,
+        2.99,
+        2.0
+      ],
+      "size": [
+        2.0,
+        1.6800000000000002,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Arcade_East",
+      "center": [
+        11.8,
+        1.915,
+        2.0
+      ],
+      "size": [
+        2.4000000000000004,
+        3.83,
+        0.18
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        -12.25
+      ],
+      "size": [
+        0.32,
+        4.0,
+        4.299999999999999
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        0.225,
+        -8.3
+      ],
+      "size": [
+        0.32,
+        0.45,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        3.05,
+        -8.3
+      ],
+      "size": [
+        0.32,
+        1.9,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        -2.45
+      ],
+      "size": [
+        0.32,
+        4.0,
+        8.100000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        3.05,
+        3.0
+      ],
+      "size": [
+        0.32,
+        1.9,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        6.375
+      ],
+      "size": [
+        0.32,
+        4.0,
+        3.9499999999999993
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        0.225,
+        10.1
+      ],
+      "size": [
+        0.32,
+        0.45,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        3.05,
+        10.1
+      ],
+      "size": [
+        0.32,
+        1.9,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        13.125
+      ],
+      "size": [
+        0.32,
+        4.0,
+        2.5500000000000007
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        -8.3
+      ],
+      "size": [
+        0.35,
+        3.9,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_West",
+      "center": [
+        -13.15,
+        2.0,
+        10.1
+      ],
+      "size": [
+        0.35,
+        3.9,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        -12.55
+      ],
+      "size": [
+        0.32,
+        4.5,
+        3.700000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        4.4750000000000005,
+        -9
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        7.574999999999999,
+        -9
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        -9
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        -4.5
+      ],
+      "size": [
+        0.32,
+        4.5,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        4.4750000000000005,
+        0
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        7.574999999999999,
+        0
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        0
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        4.5
+      ],
+      "size": [
+        0.32,
+        4.5,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        4.4750000000000005,
+        9
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        7.574999999999999,
+        9
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        9
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_West_Upper",
+      "center": [
+        -13.15,
+        6.45,
+        12.55
+      ],
+      "size": [
+        0.32,
+        4.5,
+        3.700000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        -12.25
+      ],
+      "size": [
+        0.32,
+        4.0,
+        4.299999999999999
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        0.225,
+        -8.3
+      ],
+      "size": [
+        0.32,
+        0.45,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        3.05,
+        -8.3
+      ],
+      "size": [
+        0.32,
+        1.9,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        -2.45
+      ],
+      "size": [
+        0.32,
+        4.0,
+        8.100000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        3.05,
+        3.0
+      ],
+      "size": [
+        0.32,
+        1.9,
+        2.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        6.375
+      ],
+      "size": [
+        0.32,
+        4.0,
+        3.9499999999999993
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        0.225,
+        10.1
+      ],
+      "size": [
+        0.32,
+        0.45,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        3.05,
+        10.1
+      ],
+      "size": [
+        0.32,
+        1.9,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        13.125
+      ],
+      "size": [
+        0.32,
+        4.0,
+        2.5500000000000007
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        -8.3
+      ],
+      "size": [
+        0.35,
+        3.9,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_East",
+      "center": [
+        13.15,
+        2.0,
+        10.1
+      ],
+      "size": [
+        0.35,
+        3.9,
+        3.5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        -12.55
+      ],
+      "size": [
+        0.32,
+        4.5,
+        3.700000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        4.4750000000000005,
+        -9
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        7.574999999999999,
+        -9
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        -9
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        -4.5
+      ],
+      "size": [
+        0.32,
+        4.5,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        4.4750000000000005,
+        0
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        7.574999999999999,
+        0
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        0
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        4.5
+      ],
+      "size": [
+        0.32,
+        4.5,
+        5.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        4.4750000000000005,
+        9
+      ],
+      "size": [
+        0.32,
+        0.55,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        7.574999999999999,
+        9
+      ],
+      "size": [
+        0.32,
+        2.249999999999999,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        9
+      ],
+      "size": [
+        0.32,
+        3.4,
+        3.4
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_East_Upper",
+      "center": [
+        13.15,
+        6.45,
+        12.55
+      ],
+      "size": [
+        0.32,
+        4.5,
+        3.700000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BackWallGround",
+      "group": "Exterior_Back",
+      "center": [
+        0,
+        2.0,
+        14.35
+      ],
+      "size": [
+        26.6,
+        4.0,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        -12.05,
+        6.45,
+        14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        -9.2,
+        4.45,
+        14.35
+      ],
+      "size": [
+        3.2,
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        -9.2,
+        7.55,
+        14.35
+      ],
+      "size": [
+        3.2,
+        2.299999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        -9.2,
+        6.35,
+        14.35
+      ],
+      "size": [
+        3.2,
+        3.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        -5.0,
+        6.45,
+        14.35
+      ],
+      "size": [
+        5.199999999999999,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        0,
+        4.3500000000000005,
+        14.35
+      ],
+      "size": [
+        4.8,
+        0.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        0,
+        7.449999999999999,
+        14.35
+      ],
+      "size": [
+        4.8,
+        2.499999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        0,
+        6.55,
+        14.35
+      ],
+      "size": [
+        4.8,
+        4.1,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        5.0,
+        6.45,
+        14.35
+      ],
+      "size": [
+        5.199999999999999,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        9.2,
+        4.45,
+        14.35
+      ],
+      "size": [
+        3.2,
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        9.2,
+        7.55,
+        14.35
+      ],
+      "size": [
+        3.2,
+        2.299999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        9.2,
+        6.35,
+        14.35
+      ],
+      "size": [
+        3.2,
+        3.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Back_Upper",
+      "center": [
+        12.05,
+        6.45,
+        14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front",
+      "center": [
+        -12.05,
+        2.0,
+        -14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.0,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Front",
+      "center": [
+        -9.2,
+        0.3,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        0.6,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front",
+      "center": [
+        -9.2,
+        3.05,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        1.9,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front",
+      "center": [
+        -4.6499999999999995,
+        2.0,
+        -14.35
+      ],
+      "size": [
+        5.8999999999999995,
+        4.0,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front",
+      "center": [
+        0,
+        3.025,
+        -14.35
+      ],
+      "size": [
+        3.4,
+        1.9500000000000002,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front",
+      "center": [
+        4.6499999999999995,
+        2.0,
+        -14.35
+      ],
+      "size": [
+        5.8999999999999995,
+        4.0,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Front",
+      "center": [
+        9.2,
+        0.3,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        0.6,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front",
+      "center": [
+        9.2,
+        3.05,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        1.9,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front",
+      "center": [
+        12.05,
+        2.0,
+        -14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.0,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "FrontWindowBarrier",
+      "group": "Exterior_Front",
+      "center": [
+        -9.2,
+        2,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        3.8,
+        0.35
+      ]
+    },
+    {
+      "type": "box",
+      "name": "FrontWindowBarrier",
+      "group": "Exterior_Front",
+      "center": [
+        9.2,
+        2,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        3.8,
+        0.35
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        -12.05,
+        6.45,
+        -14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        -9.2,
+        4.45,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        -9.2,
+        7.55,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        2.299999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        -9.2,
+        6.35,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        3.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        -4.6,
+        6.45,
+        -14.35
+      ],
+      "size": [
+        6.0,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        0,
+        4.45,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        0,
+        7.55,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        2.299999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        0,
+        6.35,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        3.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        4.6,
+        6.45,
+        -14.35
+      ],
+      "size": [
+        6.0,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        9.2,
+        4.45,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        0.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        9.2,
+        7.55,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        2.299999999999999,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        9.2,
+        6.35,
+        -14.35
+      ],
+      "size": [
+        3.2,
+        3.3,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Exterior_Front_Upper",
+      "center": [
+        12.05,
+        6.45,
+        -14.35
+      ],
+      "size": [
+        2.5000000000000018,
+        4.5,
+        0.34
+      ]
+    },
+    {
+      "type": "box",
+      "name": "EntryTerrace",
+      "group": "Vestibule",
+      "center": [
+        0,
+        -0.14,
+        -16.15
+      ],
+      "size": [
+        5.6,
+        0.28,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "EntrySide",
+      "group": "Vestibule",
+      "center": [
+        -2.85,
+        1.3,
+        -16.15
+      ],
+      "size": [
+        0.2,
+        2.6,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "EntrySide",
+      "group": "Vestibule",
+      "center": [
+        2.85,
+        1.3,
+        -16.15
+      ],
+      "size": [
+        0.2,
+        2.6,
+        3.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "EntryEnd",
+      "group": "Vestibule",
+      "center": [
+        0,
+        1.3,
+        -18
+      ],
+      "size": [
+        5.9,
+        2.6,
+        0.2
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairRamp",
+      "group": "Stairs",
+      "vertices": [
+        -2.04,
+        -0.1,
+        2.8,
+        2.04,
+        -0.1,
+        2.8,
+        -2.04,
+        -0.1,
+        6.2,
+        2.04,
+        -0.1,
+        6.2,
+        -2.04,
+        0.0,
+        2.8,
+        2.04,
+        0.0,
+        2.8,
+        -2.04,
+        2.1,
+        6.2,
+        2.04,
+        2.1,
+        6.2
+      ],
+      "triangles": [
+        1,
+        2,
+        0,
+        3,
+        2,
+        1,
+        6,
+        5,
+        4,
+        6,
+        7,
+        5,
+        4,
+        1,
+        0,
+        4,
+        5,
+        1,
+        3,
+        6,
+        2,
+        7,
+        6,
+        3,
+        2,
+        4,
+        0,
+        6,
+        4,
+        2,
+        5,
+        3,
+        1,
+        5,
+        7,
+        3
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairGuard",
+      "group": "Stairs",
+      "vertices": [
+        -2.23,
+        0.0,
+        2.8,
+        -2.07,
+        0.0,
+        2.8,
+        -2.07,
+        1.1,
+        2.8,
+        -2.23,
+        1.1,
+        2.8,
+        -2.23,
+        2.1,
+        6.2,
+        -2.07,
+        2.1,
+        6.2,
+        -2.07,
+        3.2,
+        6.2,
+        -2.23,
+        3.2,
+        6.2
+      ],
+      "triangles": [
+        0,
+        2,
+        1,
+        0,
+        3,
+        2,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7,
+        0,
+        1,
+        5,
+        0,
+        5,
+        4,
+        3,
+        7,
+        6,
+        3,
+        6,
+        2,
+        0,
+        4,
+        7,
+        0,
+        7,
+        3,
+        1,
+        2,
+        6,
+        1,
+        6,
+        5
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairGuard",
+      "group": "Stairs",
+      "vertices": [
+        2.07,
+        0.0,
+        2.8,
+        2.23,
+        0.0,
+        2.8,
+        2.23,
+        1.1,
+        2.8,
+        2.07,
+        1.1,
+        2.8,
+        2.07,
+        2.1,
+        6.2,
+        2.23,
+        2.1,
+        6.2,
+        2.23,
+        3.2,
+        6.2,
+        2.07,
+        3.2,
+        6.2
+      ],
+      "triangles": [
+        0,
+        2,
+        1,
+        0,
+        3,
+        2,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7,
+        0,
+        1,
+        5,
+        0,
+        5,
+        4,
+        3,
+        7,
+        6,
+        3,
+        6,
+        2,
+        0,
+        4,
+        7,
+        0,
+        7,
+        3,
+        1,
+        2,
+        6,
+        1,
+        6,
+        5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "StairLanding",
+      "group": "Stairs",
+      "center": [
+        0,
+        2.02,
+        6.8
+      ],
+      "size": [
+        4.06,
+        0.16,
+        1.2
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Stairs",
+      "center": [
+        -2.14,
+        2.6100000000000003,
+        6.800000000000001
+      ],
+      "size": [
+        0.14,
+        1.02,
+        1.3400000000000003
+      ]
+    },
+    {
+      "type": "box",
+      "name": "BalconyGuard",
+      "group": "Stairs",
+      "center": [
+        2.14,
+        2.6100000000000003,
+        6.800000000000001
+      ],
+      "size": [
+        0.14,
+        1.02,
+        1.3400000000000003
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairRamp",
+      "group": "Stairs",
+      "vertices": [
+        -2.04,
+        2.0,
+        7.4,
+        2.04,
+        2.0,
+        7.4,
+        -2.04,
+        2.0,
+        10.8,
+        2.04,
+        2.0,
+        10.8,
+        -2.04,
+        2.1,
+        7.4,
+        2.04,
+        2.1,
+        7.4,
+        -2.04,
+        4.2,
+        10.8,
+        2.04,
+        4.2,
+        10.8
+      ],
+      "triangles": [
+        1,
+        2,
+        0,
+        3,
+        2,
+        1,
+        6,
+        5,
+        4,
+        6,
+        7,
+        5,
+        4,
+        1,
+        0,
+        4,
+        5,
+        1,
+        3,
+        6,
+        2,
+        7,
+        6,
+        3,
+        2,
+        4,
+        0,
+        6,
+        4,
+        2,
+        5,
+        3,
+        1,
+        5,
+        7,
+        3
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairGuard",
+      "group": "Stairs",
+      "vertices": [
+        -2.23,
+        2.1,
+        7.4,
+        -2.07,
+        2.1,
+        7.4,
+        -2.07,
+        3.2,
+        7.4,
+        -2.23,
+        3.2,
+        7.4,
+        -2.23,
+        4.2,
+        10.8,
+        -2.07,
+        4.2,
+        10.8,
+        -2.07,
+        5.300000000000001,
+        10.8,
+        -2.23,
+        5.300000000000001,
+        10.8
+      ],
+      "triangles": [
+        0,
+        2,
+        1,
+        0,
+        3,
+        2,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7,
+        0,
+        1,
+        5,
+        0,
+        5,
+        4,
+        3,
+        7,
+        6,
+        3,
+        6,
+        2,
+        0,
+        4,
+        7,
+        0,
+        7,
+        3,
+        1,
+        2,
+        6,
+        1,
+        6,
+        5
+      ]
+    },
+    {
+      "type": "mesh",
+      "name": "StairGuard",
+      "group": "Stairs",
+      "vertices": [
+        2.07,
+        2.1,
+        7.4,
+        2.23,
+        2.1,
+        7.4,
+        2.23,
+        3.2,
+        7.4,
+        2.07,
+        3.2,
+        7.4,
+        2.07,
+        4.2,
+        10.8,
+        2.23,
+        4.2,
+        10.8,
+        2.23,
+        5.300000000000001,
+        10.8,
+        2.07,
+        5.300000000000001,
+        10.8
+      ],
+      "triangles": [
+        0,
+        2,
+        1,
+        0,
+        3,
+        2,
+        4,
+        5,
+        6,
+        4,
+        6,
+        7,
+        0,
+        1,
+        5,
+        0,
+        5,
+        4,
+        3,
+        7,
+        6,
+        3,
+        6,
+        2,
+        0,
+        4,
+        7,
+        0,
+        7,
+        3,
+        1,
+        2,
+        6,
+        1,
+        6,
+        5
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -5.35,
+        0.47250000000000003,
+        -10.8
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -5.35,
+        0.47250000000000003,
+        2.1
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -5.35,
+        0.47250000000000003,
+        11.8
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        -7.0,
+        4.6295,
+        -10.1
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        -7.0,
+        4.6295,
+        1.8
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        -7.0,
+        4.6295,
+        10.4
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -11.7,
+        0.405,
+        -12.6
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -11.7,
+        0.405,
+        12.5
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing_Upper",
+      "center": [
+        -10.3,
+        4.51,
+        -5.0
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing_Upper",
+      "center": [
+        -10.3,
+        4.51,
+        5.6
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        5.35,
+        0.47250000000000003,
+        -10.8
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        5.35,
+        0.47250000000000003,
+        2.1
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        5.35,
+        0.47250000000000003,
+        11.8
+      ],
+      "size": [
+        0.7140000000000001,
+        0.9450000000000001,
+        0.7140000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        7.0,
+        4.6295,
+        -10.1
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        7.0,
+        4.6295,
+        1.8
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        7.0,
+        4.6295,
+        10.4
+      ],
+      "size": [
+        0.6188,
+        0.8190000000000001,
+        0.6188
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        11.7,
+        0.405,
+        -12.6
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        11.7,
+        0.405,
+        12.5
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing_Upper",
+      "center": [
+        10.3,
+        4.51,
+        -5.0
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing_Upper",
+      "center": [
+        10.3,
+        4.51,
+        5.6
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        -4.3,
+        4.625,
+        13.1
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing_Upper",
+      "center": [
+        4.3,
+        4.625,
+        13.1
+      ],
+      "size": [
+        0.6120000000000001,
+        0.81,
+        0.6120000000000001
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WelcomeDesk",
+      "group": "Furnishing",
+      "center": [
+        -9.6,
+        0.56,
+        -11.7
+      ],
+      "size": [
+        2.7,
+        1.12,
+        0.96
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing",
+      "center": [
+        -4.8,
+        0.29,
+        -3.6
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        -4.92,
+        0.36000000000000004,
+        8.8
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Bench",
+      "group": "Furnishing",
+      "center": [
+        4.8,
+        0.29,
+        -3.6
+      ],
+      "size": [
+        1.8,
+        0.58,
+        0.67
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Furnishing",
+      "center": [
+        4.92,
+        0.36000000000000004,
+        8.8
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_001_Case",
+      "group": "DISPLAY_SLOT_001",
+      "center": [
+        0.0,
+        1.6600000000000001,
+        -6.1
+      ],
+      "size": [
+        1.3206,
+        1.12,
+        1.1532
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_001_Base",
+      "group": "DISPLAY_SLOT_001",
+      "center": [
+        0.0,
+        0.54,
+        -6.1
+      ],
+      "size": [
+        1.42,
+        1.08,
+        1.24
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_002_Case",
+      "group": "DISPLAY_SLOT_002",
+      "center": [
+        -3.95,
+        1.6600000000000001,
+        -0.7
+      ],
+      "size": [
+        1.0416,
+        1.12,
+        0.93
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_002_Base",
+      "group": "DISPLAY_SLOT_002",
+      "center": [
+        -3.95,
+        0.54,
+        -0.7
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_003_Base",
+      "group": "DISPLAY_SLOT_003",
+      "center": [
+        3.95,
+        0.54,
+        -0.7
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_004_Base",
+      "group": "DISPLAY_SLOT_004",
+      "center": [
+        -4.0,
+        0.54,
+        -10.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_005_Base",
+      "group": "DISPLAY_SLOT_005",
+      "center": [
+        4.0,
+        0.54,
+        -10.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_006_Case",
+      "group": "DISPLAY_SLOT_006",
+      "center": [
+        -9.65,
+        1.6600000000000001,
+        -7.5
+      ],
+      "size": [
+        1.0416,
+        1.12,
+        0.93
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_006_Base",
+      "group": "DISPLAY_SLOT_006",
+      "center": [
+        -9.65,
+        0.54,
+        -7.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_007_Base",
+      "group": "DISPLAY_SLOT_007",
+      "center": [
+        -9.65,
+        0.54,
+        -2.1
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_008_Case",
+      "group": "DISPLAY_SLOT_008",
+      "center": [
+        -9.65,
+        1.6600000000000001,
+        6.0
+      ],
+      "size": [
+        1.0416,
+        1.12,
+        0.93
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_008_Base",
+      "group": "DISPLAY_SLOT_008",
+      "center": [
+        -9.65,
+        0.54,
+        6.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_009_Base",
+      "group": "DISPLAY_SLOT_009",
+      "center": [
+        -9.65,
+        0.54,
+        11.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_010_Case",
+      "group": "DISPLAY_SLOT_010",
+      "center": [
+        9.65,
+        1.6600000000000001,
+        -7.5
+      ],
+      "size": [
+        1.0416,
+        1.12,
+        0.93
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_010_Base",
+      "group": "DISPLAY_SLOT_010",
+      "center": [
+        9.65,
+        0.54,
+        -7.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_011_Base",
+      "group": "DISPLAY_SLOT_011",
+      "center": [
+        9.65,
+        0.54,
+        -2.1
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_012_Case",
+      "group": "DISPLAY_SLOT_012",
+      "center": [
+        9.65,
+        1.6600000000000001,
+        6.0
+      ],
+      "size": [
+        1.0416,
+        1.12,
+        0.93
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_012_Base",
+      "group": "DISPLAY_SLOT_012",
+      "center": [
+        9.65,
+        0.54,
+        6.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_013_Base",
+      "group": "DISPLAY_SLOT_013",
+      "center": [
+        9.65,
+        0.54,
+        11.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_014_Base",
+      "group": "DISPLAY_SLOT_014",
+      "center": [
+        -3.8,
+        0.54,
+        12.25
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_015_Base",
+      "group": "DISPLAY_SLOT_015",
+      "center": [
+        3.8,
+        0.54,
+        12.25
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_016_Base",
+      "group": "DISPLAY_SLOT_016",
+      "center": [
+        -9.35,
+        4.76,
+        -8.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_017_Base",
+      "group": "DISPLAY_SLOT_017",
+      "center": [
+        -9.35,
+        4.76,
+        -0.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_018_Base",
+      "group": "DISPLAY_SLOT_018",
+      "center": [
+        -9.35,
+        4.76,
+        7.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_019_Base",
+      "group": "DISPLAY_SLOT_019",
+      "center": [
+        9.35,
+        4.76,
+        -8.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_020_Base",
+      "group": "DISPLAY_SLOT_020",
+      "center": [
+        9.35,
+        4.76,
+        -0.5
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_021_Base",
+      "group": "DISPLAY_SLOT_021",
+      "center": [
+        9.35,
+        4.76,
+        7.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_022_Base",
+      "group": "DISPLAY_SLOT_022",
+      "center": [
+        -4.0,
+        4.76,
+        12.4
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_023_Base",
+      "group": "DISPLAY_SLOT_023",
+      "center": [
+        4.0,
+        4.76,
+        12.4
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_024_Base",
+      "group": "DISPLAY_SLOT_024",
+      "center": [
+        0.0,
+        4.76,
+        -12.45
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ExpansionGate",
+      "group": "Gate_West",
+      "center": [
+        -13.16,
+        1.6,
+        3.0
+      ],
+      "size": [
+        0.16,
+        3.2,
+        2.72
+      ]
+    },
+    {
+      "type": "box",
+      "name": "AnnexFloor",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        -0.15,
+        3
+      ],
+      "size": [
+        7.3,
+        0.3,
+        8.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -20.45,
+        2.05,
+        -0.09999999999999998
+      ],
+      "size": [
+        0.26,
+        4.1,
+        2.4000000000000004
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_West",
+      "center": [
+        -20.45,
+        0.2,
+        3
+      ],
+      "size": [
+        0.26,
+        0.4,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_West",
+      "center": [
+        -20.45,
+        3.0,
+        3
+      ],
+      "size": [
+        0.26,
+        2.1999999999999997,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_West",
+      "center": [
+        -20.45,
+        2.1,
+        3
+      ],
+      "size": [
+        0.26,
+        3.4,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -20.45,
+        2.05,
+        6.1
+      ],
+      "size": [
+        0.26,
+        4.1,
+        2.3999999999999995
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -19.5,
+        2.05,
+        -1.3
+      ],
+      "size": [
+        1.8999999999999986,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        0.3,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        0.6,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        3.0999999999999996,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        1.9999999999999996,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        2.225,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        3.25,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -14.125,
+        2.05,
+        -1.3
+      ],
+      "size": [
+        1.8500000000000014,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -19.5,
+        2.05,
+        7.3
+      ],
+      "size": [
+        1.8999999999999986,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        0.3,
+        7.3
+      ],
+      "size": [
+        3.5,
+        0.6,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        3.0999999999999996,
+        7.3
+      ],
+      "size": [
+        3.5,
+        1.9999999999999996,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_West",
+      "center": [
+        -16.8,
+        2.225,
+        7.3
+      ],
+      "size": [
+        3.5,
+        3.25,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_West",
+      "center": [
+        -14.125,
+        2.05,
+        7.3
+      ],
+      "size": [
+        1.8500000000000014,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Annex_West",
+      "center": [
+        -19.55,
+        0.36000000000000004,
+        -0.6
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Annex_West",
+      "center": [
+        -19.55,
+        0.36000000000000004,
+        6.6
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_025_Base",
+      "group": "DISPLAY_SLOT_025",
+      "center": [
+        -17.1,
+        0.54,
+        0.2
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_026_Base",
+      "group": "DISPLAY_SLOT_026",
+      "center": [
+        -17.1,
+        0.54,
+        3.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_027_Base",
+      "group": "DISPLAY_SLOT_027",
+      "center": [
+        -17.1,
+        0.54,
+        5.8
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ExpansionGate",
+      "group": "Gate_East",
+      "center": [
+        13.16,
+        1.6,
+        3.0
+      ],
+      "size": [
+        0.16,
+        3.2,
+        2.72
+      ]
+    },
+    {
+      "type": "box",
+      "name": "AnnexFloor",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        -0.15,
+        3
+      ],
+      "size": [
+        7.3,
+        0.3,
+        8.6
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        20.45,
+        2.05,
+        -0.09999999999999998
+      ],
+      "size": [
+        0.26,
+        4.1,
+        2.4000000000000004
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_East",
+      "center": [
+        20.45,
+        0.2,
+        3
+      ],
+      "size": [
+        0.26,
+        0.4,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_East",
+      "center": [
+        20.45,
+        3.0,
+        3
+      ],
+      "size": [
+        0.26,
+        2.1999999999999997,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_East",
+      "center": [
+        20.45,
+        2.1,
+        3
+      ],
+      "size": [
+        0.26,
+        3.4,
+        3.8
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        20.45,
+        2.05,
+        6.1
+      ],
+      "size": [
+        0.26,
+        4.1,
+        2.3999999999999995
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        14.125,
+        2.05,
+        -1.3
+      ],
+      "size": [
+        1.8500000000000014,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        0.3,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        0.6,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        3.0999999999999996,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        1.9999999999999996,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        2.225,
+        -1.3
+      ],
+      "size": [
+        3.5,
+        3.25,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        19.5,
+        2.05,
+        -1.3
+      ],
+      "size": [
+        1.8999999999999986,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        14.125,
+        2.05,
+        7.3
+      ],
+      "size": [
+        1.8500000000000014,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowSillWall",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        0.3,
+        7.3
+      ],
+      "size": [
+        3.5,
+        0.6,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "ArchHeader",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        3.0999999999999996,
+        7.3
+      ],
+      "size": [
+        3.5,
+        1.9999999999999996,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WindowBarrier",
+      "group": "Annex_East",
+      "center": [
+        16.8,
+        2.225,
+        7.3
+      ],
+      "size": [
+        3.5,
+        3.25,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "WallPier",
+      "group": "Annex_East",
+      "center": [
+        19.5,
+        2.05,
+        7.3
+      ],
+      "size": [
+        1.8999999999999986,
+        4.1,
+        0.26
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Annex_East",
+      "center": [
+        19.55,
+        0.36000000000000004,
+        -0.6
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "Planter",
+      "group": "Annex_East",
+      "center": [
+        19.55,
+        0.36000000000000004,
+        6.6
+      ],
+      "size": [
+        0.544,
+        0.7200000000000001,
+        0.544
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_028_Base",
+      "group": "DISPLAY_SLOT_028",
+      "center": [
+        17.1,
+        0.54,
+        0.2
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_029_Base",
+      "group": "DISPLAY_SLOT_029",
+      "center": [
+        17.1,
+        0.54,
+        3.0
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    },
+    {
+      "type": "box",
+      "name": "SLOT_030_Base",
+      "group": "DISPLAY_SLOT_030",
+      "center": [
+        17.1,
+        0.54,
+        5.8
+      ],
+      "size": [
+        1.12,
+        1.08,
+        1.0
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "id": "SLOT_001",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_001",
+      "position": [
+        0,
+        1.085,
+        -6.1
+      ],
+      "size": [
+        1.0792,
+        0.9,
+        0.9424
+      ],
+      "sample": "Shell",
+      "labelIndex": 0,
+      "title": "The coast",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_002",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_002",
+      "position": [
+        -3.95,
+        1.085,
+        -0.7
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Camera",
+      "labelIndex": 1,
+      "title": "First camera",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 180
+    },
+    {
+      "id": "SLOT_003",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_003",
+      "position": [
+        3.95,
+        1.085,
+        -0.7
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Mug",
+      "labelIndex": 2,
+      "title": "Quiet mornings",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_004",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_004",
+      "position": [
+        -4.0,
+        1.085,
+        -10.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_005",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_005",
+      "position": [
+        4.0,
+        1.085,
+        -10.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_006",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_006",
+      "position": [
+        -9.65,
+        1.085,
+        -7.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Boat",
+      "labelIndex": 3,
+      "title": "Little voyages",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_007",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_007",
+      "position": [
+        -9.65,
+        1.085,
+        -2.1
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 6,
+      "title": "Tidal forms",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_008",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_008",
+      "position": [
+        -9.65,
+        1.085,
+        6.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Notebook",
+      "labelIndex": 5,
+      "title": "Field notes",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_009",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_009",
+      "position": [
+        -9.65,
+        1.085,
+        11.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 4,
+      "title": "Childhood",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_010",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_010",
+      "position": [
+        9.65,
+        1.085,
+        -7.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Vase",
+      "labelIndex": 6,
+      "title": "Tidal forms",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_011",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_011",
+      "position": [
+        9.65,
+        1.085,
+        -2.1
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 5,
+      "title": "Field notes",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_012",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_012",
+      "position": [
+        9.65,
+        1.085,
+        6.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Teddy",
+      "labelIndex": 4,
+      "title": "Childhood",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_013",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_013",
+      "position": [
+        9.65,
+        1.085,
+        11.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 3,
+      "title": "Little voyages",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_014",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_014",
+      "position": [
+        -3.8,
+        1.085,
+        12.25
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_015",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_015",
+      "position": [
+        3.8,
+        1.085,
+        12.25
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_016",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_016",
+      "position": [
+        -9.35,
+        5.305,
+        -8.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Vase",
+      "labelIndex": 6,
+      "title": "Tidal forms",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_017",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_017",
+      "position": [
+        -9.35,
+        5.305,
+        -0.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_018",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_018",
+      "position": [
+        -9.35,
+        5.305,
+        7.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Crystal",
+      "labelIndex": 7,
+      "title": "River stones",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_019",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_019",
+      "position": [
+        9.35,
+        5.305,
+        -8.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Vase",
+      "labelIndex": 6,
+      "title": "Tidal forms",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_020",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_020",
+      "position": [
+        9.35,
+        5.305,
+        -0.5
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_021",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_021",
+      "position": [
+        9.35,
+        5.305,
+        7.0
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Crystal",
+      "labelIndex": 7,
+      "title": "River stones",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_022",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_022",
+      "position": [
+        -4,
+        5.305,
+        12.4
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_023",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_023",
+      "position": [
+        4,
+        5.305,
+        12.4
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_024",
+      "group": "Exhibits",
+      "geometryGroup": "DISPLAY_SLOT_024",
+      "position": [
+        0,
+        5.305,
+        -12.45
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "Notebook",
+      "labelIndex": 5,
+      "title": "Field notes",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_025",
+      "group": "Annex_West",
+      "geometryGroup": "DISPLAY_SLOT_025",
+      "position": [
+        -17.1,
+        1.085,
+        0.2
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_026",
+      "group": "Annex_West",
+      "geometryGroup": "DISPLAY_SLOT_026",
+      "position": [
+        -17.1,
+        1.085,
+        3
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_027",
+      "group": "Annex_West",
+      "geometryGroup": "DISPLAY_SLOT_027",
+      "position": [
+        -17.1,
+        1.085,
+        5.8
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_028",
+      "group": "Annex_East",
+      "geometryGroup": "DISPLAY_SLOT_028",
+      "position": [
+        17.1,
+        1.085,
+        0.2
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_029",
+      "group": "Annex_East",
+      "geometryGroup": "DISPLAY_SLOT_029",
+      "position": [
+        17.1,
+        1.085,
+        3
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    },
+    {
+      "id": "SLOT_030",
+      "group": "Annex_East",
+      "geometryGroup": "DISPLAY_SLOT_030",
+      "position": [
+        17.1,
+        1.085,
+        5.8
+      ],
+      "size": [
+        0.8512000000000001,
+        0.9,
+        0.76
+      ],
+      "sample": "",
+      "labelIndex": 8,
+      "title": "Your memory",
+      "location": "Personal archive",
+      "date": "2026-09-15",
+      "note": "Replace this sample with your own 3D keepsake.",
+      "rotation": 0
+    }
+  ],
+  "lights": [
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        3.3400000000000003,
+        -10
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        8.0,
+        -10
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        3.3400000000000003,
+        -3
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        8.0,
+        -3
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        3.3400000000000003,
+        4
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        8.0,
+        4
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        3.3400000000000003,
+        11
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        -9.5,
+        8.0,
+        11
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        3.3400000000000003,
+        -10
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        8.0,
+        -10
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        3.3400000000000003,
+        -3
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        8.0,
+        -3
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        3.3400000000000003,
+        4
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        8.0,
+        4
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        3.3400000000000003,
+        11
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "GallerySpot",
+      "position": [
+        9.5,
+        8.0,
+        11
+      ],
+      "kind": "spot",
+      "power": 3.0,
+      "range": 8,
+      "color": [
+        1,
+        0.88,
+        0.69
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        -6.59,
+        2.98,
+        -11.0
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        -6.59,
+        2.98,
+        -3.6
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        -6.59,
+        2.98,
+        3.6
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        -6.59,
+        2.98,
+        11.0
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        5.949999999999999,
+        2.98,
+        -11.0
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        5.949999999999999,
+        2.98,
+        -3.6
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        5.949999999999999,
+        2.98,
+        3.6
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "Sconce",
+      "position": [
+        5.949999999999999,
+        2.98,
+        11.0
+      ],
+      "kind": "point",
+      "power": 1.3,
+      "range": 5,
+      "color": [
+        1,
+        0.79,
+        0.55
+      ],
+      "group": "LightingFixtures"
+    },
+    {
+      "name": "AnnexLight",
+      "position": [
+        -16.8,
+        3.7,
+        3
+      ],
+      "kind": "spot",
+      "power": 5,
+      "range": 10,
+      "color": [
+        1,
+        0.88,
+        0.72
+      ],
+      "group": "Annex_West"
+    },
+    {
+      "name": "AnnexLight",
+      "position": [
+        16.8,
+        3.7,
+        3
+      ],
+      "kind": "spot",
+      "power": 5,
+      "range": 10,
+      "color": [
+        1,
+        0.88,
+        0.72
+      ],
+      "group": "Annex_East"
+    }
+  ],
+  "playerSpawn": [
+    0,
+    0.12,
+    -12.3
+  ],
+  "playerLook": [
+    0,
+    0,
+    0
+  ],
+  "expansionGroups": [
+    "Annex_West",
+    "Annex_East"
+  ],
+  "gateGroups": [
+    "Gate_West",
+    "Gate_East"
+  ],
+  "previewNote": "Rendered from the actual supplied meshes; not a generated concept image."
+}

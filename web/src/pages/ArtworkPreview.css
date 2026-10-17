@@ -1,0 +1,11 @@
+/* ④ 3D プレビュー（ArtworkPreview）。キャプションは styles/caption.css */
+
+.preview-stage {
+  height: 58vh;
+  min-height: 360px;
+}
+
+/* 全画面表示のときは画面いっぱいにする */
+:fullscreen .preview-stage {
+  height: 100vh;
+}

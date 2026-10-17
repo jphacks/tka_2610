@@ -1,0 +1,8 @@
+LUMEN MUSEUM / UNITY SCENE VALIDATION
+2026-09-25T20:05:58
+ERROR standing clearance at (0.00, 4.22, -11.80): COL_SLOT_024_Base_185
+Slots (including annexes): 30
+Mesh renderers: 308 / triangles including instances: 246940
+Walking support / clearance samples: 50
+Errors: 1
+This validates scene data and sampled Physics queries, not all gameplay paths, target-device performance or every rendering pipeline.

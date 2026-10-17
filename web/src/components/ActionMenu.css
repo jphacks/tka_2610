@@ -1,0 +1,54 @@
+/* 「⋯」から開くメニュー（ActionMenu）。後ろの幕は styles/layout.css の .scrim */
+
+.context-menu {
+  position: absolute;
+  top: calc(58px + var(--safe-top));
+  right: 12px;
+  z-index: 50;
+  width: 230px;
+  padding: 5px;
+  border-radius: 16px;
+  background: rgba(252, 250, 246, 0.8);
+  transform-origin: top right;
+  transform: scale(0.6);
+  opacity: 0;
+  transition: transform 0.4s var(--spring), opacity 0.2s;
+}
+
+.context-menu.in {
+  transform: none;
+  opacity: 1;
+}
+
+.context-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 13px;
+  border-radius: 11px;
+  text-align: left;
+  font-size: 15px;
+  transition: background 0.15s;
+}
+
+.context-menu button:hover,
+.context-menu button:active {
+  background: var(--fill);
+}
+
+.context-menu button + button {
+  box-shadow: 0 -0.5px 0 var(--line);
+}
+
+.context-menu .destructive {
+  color: var(--red);
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .context-menu {
+    corner-shape: squircle;
+  }
+}

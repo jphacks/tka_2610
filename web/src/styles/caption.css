@@ -1,0 +1,45 @@
+/* ---------- 作品のキャプション（美術館の解説パネル風。作品の詳細・3D プレビューで共通） ---------- */
+
+.caption {
+  padding: 26px 22px 0;
+}
+
+.caption .eyebrow {
+  display: flex;
+  gap: 10px;
+}
+
+/* タイトルと、その右のボタン（お気に入りなど） */
+.caption-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.caption h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.caption .author {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+
+/* メモ・エピソード。改行をそのまま出す */
+.memo {
+  margin: 20px 0 0;
+  font-family: var(--serif);
+  font-size: 15.5px;
+  line-height: 2;
+  letter-spacing: 0.04em;
+  white-space: pre-wrap;
+}

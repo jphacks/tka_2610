@@ -1,0 +1,15 @@
+/* 丸いガラスのボタン（GlassButton）。ガラスの質感は styles/glass.css の .glass */
+
+.glass-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: transform 0.35s var(--spring);
+}
+
+.glass-btn:active {
+  transform: scale(0.88);
+}

@@ -1,0 +1,41 @@
+/* =========================================================
+   おもいでミュージアム
+   美術館の図録のような紙とインクの配色。
+   ガラス素材 (Liquid Glass) は、3D や画像の上に浮かぶ操作部品だけに使う。
+   ========================================================= */
+
+:root {
+  --paper: #f6f3ee;
+  --paper-2: #ece6dd;
+  --surface: #fffdf9;
+  --ink: #1f1a17;
+  --ink-2: rgba(31, 26, 23, 0.6);
+  --ink-3: rgba(31, 26, 23, 0.36);
+  --line: rgba(31, 26, 23, 0.12);
+  --line-strong: rgba(31, 26, 23, 0.22);
+  --fill: rgba(31, 26, 23, 0.06);
+  --accent: #b5553d;
+  --accent-soft: rgba(181, 85, 61, 0.1);
+  --green: #4f7d52;
+  --red: #c4402f;
+
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --tabbar-space: 96px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --sans: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', system-ui, sans-serif;
+  --serif: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', serif;
+
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: #e7e1d8;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  font-feature-settings: 'palt' 1;
+}

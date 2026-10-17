@@ -1,0 +1,77 @@
+/* 作品の登録・編集フォームの、写真を選ぶ枠と「3Dモデル(.glb)」の開閉（ArtworkForm）。
+   入力欄そのものの見た目は styles/form.css */
+
+.photo-picker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 220px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-2);
+  overflow: hidden;
+  transition: transform 0.4s var(--spring), background 0.2s;
+}
+
+.photo-picker:active {
+  transform: scale(0.985);
+  background: var(--paper-2);
+}
+
+.photo-picker .inner {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.photo-picker .inner svg {
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.photo-picker .inner small {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+/* 写真を選んだあと */
+.photo-picker.filled {
+  background: var(--paper-2);
+  border: 0;
+}
+
+.photo-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.photo-change {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+}
+
+.disclosure {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* 角を iOS のような曲線に（対応ブラウザだけ） */
+@supports (corner-shape: squircle) {
+  .photo-picker {
+    corner-shape: squircle;
+    border-radius: 24px;
+  }
+}

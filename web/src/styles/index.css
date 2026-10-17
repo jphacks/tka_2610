@@ -1,0 +1,20 @@
+/* =========================================================
+   アプリ全体で共通のスタイル。main.tsx で最初に読み込む。
+
+   1 つの部品・画面でだけ使うスタイルは、その .tsx の隣の .css に書く
+   （例: components/NavBar.tsx → components/NavBar.css、pages/Home.tsx → pages/Home.css）。
+   2 か所以上で使うものだけを、ここ（styles/）に置く。
+
+   部品や画面の .css は、ここより後に読み込まれるので、ここの指定を上書きできる。
+   ========================================================= */
+
+@import './tokens.css'; /* 色・フォント・動きの速さ（CSS 変数） */
+@import './base.css'; /* リセット・フォーカス・文字の補助クラス */
+@import './glass.css'; /* ガラス素材 */
+@import './buttons.css'; /* ボタン */
+@import './layout.css'; /* 余白・見出し・3 列の並び・幕 */
+@import './common.css'; /* 作品の画像の枠・展示中の印・読み込み中・アバター・補足の文字 */
+@import './form.css'; /* 入力欄 */
+@import './list.css'; /* 設定アプリ風のリスト */
+@import './stage-overlay.css'; /* 3D や画像の上の操作列 */
+@import './caption.css'; /* 作品のキャプション */
