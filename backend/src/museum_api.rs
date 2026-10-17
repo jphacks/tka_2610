@@ -323,7 +323,7 @@ fn room_description(id: &str) -> &'static str {
 /// 家具の GLB と壁紙のテクスチャの配信先 (main.rs の /home-assets)
 const HOME_ASSETS: &str = "/home-assets";
 
-static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
+pub(crate) static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
     let catalog = &*home::CATALOG;
     let texture = |file: &str| format!("{HOME_ASSETS}/textures/{file}");
     CatalogView {
@@ -399,7 +399,7 @@ pub struct MuseumOverview {
 }
 
 /// 配置 JSON の作品から、飾っている作品の置き場所を作る (作品の行が無い配置は飛ばす)
-fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView> {
+pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView> {
     layout
         .objects
         .iter()

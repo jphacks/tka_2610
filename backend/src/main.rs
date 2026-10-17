@@ -1,4 +1,5 @@
 mod age;
+mod ages_api;
 mod artworks;
 mod error;
 mod glb;
@@ -25,7 +26,7 @@ use axum::{
     extract::DefaultBodyLimit,
     http::{header, HeaderValue},
     response::Html,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -174,6 +175,11 @@ async fn main() {
                 .delete(artworks::delete_artwork),
         )
         .route("/artworks/{id}/favorite", put(artworks::set_favorite))
+        // 年齢ごとのおへや (ホームの年齢のチップ・積み上げの建物・マップ)
+        .route("/ages", get(ages_api::list_ages))
+        .route("/ages/{age}", get(ages_api::age_stack))
+        .route("/ages/{age}/rooms", post(ages_api::add_room))
+        .route("/rooms/{id}", delete(ages_api::delete_room))
         // 模様替え (家具と作品の配置 JSON)
         .route(
             "/home/layout",
