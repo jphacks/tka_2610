@@ -1,0 +1,4 @@
+# build_rooms.py が使うもの（同梱したキットの build_assets.py が読み込み時に 3 つとも import する）
+numpy>=1.26
+Pillow>=10
+shapely>=2
