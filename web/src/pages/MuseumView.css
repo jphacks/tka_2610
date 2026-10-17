@@ -1,4 +1,4 @@
-/* ⑤ 博物館の中（MuseumView）。全画面の 3D と、下の説明・ボタン */
+/* ⑤ おうちの中（MuseumView）。全画面の 3D と、下の説明・ボタン */
 
 .fullscreen-stage {
   position: absolute;
@@ -46,7 +46,7 @@
   opacity: 0.85;
 }
 
-/* 「見取り図」「作品を追加」のボタン列 */
+/* 「マップ」「作品を追加」のボタン列 */
 .toolbar {
   display: flex;
   justify-content: space-between;

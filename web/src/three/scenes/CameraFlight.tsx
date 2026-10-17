@@ -1,4 +1,4 @@
-// カメラを目的地へなめらかに移動させる（館内で作品や部屋へ寄る・見取り図でフロアを切り替える）。
+// カメラを目的地へなめらかに移動させる（おうちの中で、作品や部屋へ寄る）。
 
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'

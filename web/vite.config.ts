@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// 開発中は Rust (8080) に API・メディアを中継する
+// 開発中は Rust (8080) に API・メディア・家具などの GLB（/home-assets）を中継する
 const backend = 'http://localhost:8080'
 
 export default defineConfig({
@@ -12,6 +12,7 @@ export default defineConfig({
     proxy: {
       '/api': backend,
       '/media': backend,
+      '/home-assets': backend,
     },
   },
   build: {

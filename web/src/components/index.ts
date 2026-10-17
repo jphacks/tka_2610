@@ -3,6 +3,7 @@
 export { ActionMenu, type MenuItem } from './ActionMenu'
 export { ArtworkForm } from './ArtworkForm'
 export { ArtworkThumb, ThumbSkeletons } from './ArtworkThumb'
+export { ErrorBoundary } from './ErrorBoundary'
 export { GlassButton } from './GlassButton'
 export { Img } from './Img'
 export { Busy, Spinner, StageFallback } from './Loading'

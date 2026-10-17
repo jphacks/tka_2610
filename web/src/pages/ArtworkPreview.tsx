@@ -1,12 +1,12 @@
 // ④ 3D プレビュー（/artworks/:id/preview）。モーダルで下から開く。
-// 台座の上で作品が回る。「この作品を展示する」で博物館に飾り、⑤ 博物館の中へ進む。
+// 家の真ん中の台座の上で作品が回る。「おうちに飾る」で空いている棚や机に飾り、⑤ おうちの中へ進む。
 import { Suspense, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useArtwork, useDisplay, useMuseum } from '../api'
 import { GlassButton, Screen, useToast } from '../components'
 import { CloseIcon, ExpandIcon } from '../icons'
 import { useNav } from '../nav'
-import { PreviewScene, StageShell } from '../three'
+import { PreviewScene, StageShell, hasHouseModel } from '../three'
 import './ArtworkPreview.css'
 
 export default function ArtworkPreview() {
@@ -27,9 +27,10 @@ export default function ArtworkPreview() {
       { id: artwork.id, display: true },
       {
         onSuccess: (a) => {
-          toast(`${a.room_name ?? '博物館'}に展示しました`)
+          toast(`${a.room_name ?? 'おうち'}に飾りました`)
           nav.push(`/museum?focus=${a.id}`)
         },
+        // 飾る場所がいっぱいのとき（409）なども、Rust が返す日本語のメッセージをそのまま出す
         onError: (e) => toast(e.message),
       },
     )
@@ -45,7 +46,7 @@ export default function ArtworkPreview() {
       <div ref={stageRef} style={{ position: 'relative' }}>
         <StageShell
           className="preview-stage"
-          ready={ready || (!!museum.data && !museum.data.model_url)}
+          ready={ready || (!!museum.data && !hasHouseModel(museum.data))}
           label="3Dにしています…"
           overlay={
             <div className="stage-top">
@@ -83,10 +84,10 @@ export default function ArtworkPreview() {
           <div style={{ marginTop: 24 }}>
             <button className="btn btn-filled" onClick={exhibit} disabled={display.isPending}>
               {artwork.displayed
-                ? `${artwork.room_name ?? '博物館'}で見る`
+                ? `${artwork.room_name ?? 'おうち'}で見る`
                 : display.isPending
-                  ? '展示しています…'
-                  : 'この作品を展示する'}
+                  ? '飾っています…'
+                  : 'おうちに飾る'}
             </button>
           </div>
         </section>

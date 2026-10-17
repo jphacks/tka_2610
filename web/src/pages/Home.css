@@ -1,60 +1,77 @@
-/* ② ホーム（Home）。上の 3D の博物館（ヒーロー）と、その上の文字とボタン */
+/* ② ホーム（Home）。画面いっぱいの 3D の家と、その上に浮かぶ 2 段の UI（上：館名とアバター、下：飾っている数と丸いボタン） */
 
-.home-hero {
-  margin: 0 20px;
-  height: 340px;
-  border-radius: 18px;
-  color: #fff;
+/* 3D をなぞっても、ページがスクロールしたり、引っぱって再読み込みしたりしないようにする */
+.home-screen {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
-/* 3D の下側を少し暗くして文字を読みやすくする */
-.hero-scrim {
+/* 3D は画面いっぱい（下部タブの後ろまで。タブはガラスなので、後ろに家が透ける） */
+.home-stage {
   position: absolute;
-  inset: auto 0 0 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(22, 15, 10, 0.62), rgba(22, 15, 10, 0));
+  inset: 0;
+}
+
+/* 上段（.stage-top）：館名とアバターの間を空ける */
+.home-top {
+  gap: 12px;
+}
+
+/* 館名。押しても何もしないので、なぞる操作はその下の 3D に通す。長いときは「…」で切る */
+.home-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
-.hero-text {
+/* 館名がまだ無いとき（読み込み中）も、アバターは右に置く */
+.home-avatar {
+  margin-left: auto;
+}
+
+/* 下段：下部タブ（下から 14px、高さ 62px）のすぐ上。--tabbar-space（96px）の上に置くので、タブとの間は 20px 空く */
+.home-dock {
   position: absolute;
-  left: 20px;
-  right: 80px;
-  bottom: 20px;
-  pointer-events: none;
-}
-
-.hero-text p {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.6;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.25);
-}
-
-.hero-text small {
-  display: block;
-  margin-top: 8px;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  opacity: 0.85;
-}
-
-/* 右下の「博物館に入る」ボタン（GlassButton を少し大きくする） */
-.hero-go {
-  position: absolute;
+  left: 16px;
   right: 16px;
-  bottom: 18px;
-  width: 48px;
-  height: 48px;
+  bottom: calc(var(--tabbar-space) + var(--safe-bottom));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
 }
 
-/* 角を iOS のような曲線に（対応ブラウザだけ） */
-@supports (corner-shape: squircle) {
-  .home-hero {
-    corner-shape: squircle;
-    border-radius: 30px;
-  }
+/* 飾っている数としまってある数。押しても何もしないので、なぞる操作は 3D に通す。狭い画面で入りきらないときは「…」で切る */
+.home-status {
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 44px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+
+/* 右の丸いボタン（歩く・模様替え）。飾っている数がまだ無いとき（読み込み中）も右に置く */
+.home-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+/* 指で押しやすいよう、GlassButton（40px）を少し大きくする */
+.home-action {
+  width: 44px;
+  height: 44px;
 }

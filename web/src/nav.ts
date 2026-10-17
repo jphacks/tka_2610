@@ -7,16 +7,25 @@
 // tab     : タブ切り替えは素早いクロスフェード
 //
 // 対応していないブラウザでは普通に遷移する。
-// 動きそのもの（どこからどこへ動くか）は nav.css に書いてある。
+// 動きそのもの（どこからどこへ動くか・長さ）は nav.css に書いてある。
+// 遷移が動いている間は useNavSettled が false を返す。3D の枠（three/StageShell.tsx）はこれを見て、
+// アニメーションが終わってからキャンバスを置く（重い処理がアニメーションと重なってコマ落ちしないように）。
 // 仕組みの全体像は docs/frontend.md の「画面遷移」を参照。
 
-import { useLayoutEffect, useMemo } from 'react'
+import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate, type NavigateOptions, type To } from 'react-router-dom'
 import './nav.css'
 
 export type NavKind = 'push' | 'pop' | 'modal' | 'dismiss' | 'tab' | 'fade'
 
-type StartViewTransition = (cb: () => Promise<void> | void) => { finished: Promise<void> }
+type ViewTransitionLike = { finished: Promise<void>; skipTransition: () => void }
+type StartViewTransition = (cb: () => Promise<void> | void) => ViewTransitionLike
+
+/**
+ * finished を待たずに「遷移は終わった」とみなすまでの時間（ms）。
+ * タブが裏に回ったときなど、finished がなかなか来なくても 3D が出ないままにならないように
+ */
+const SETTLE_TIMEOUT = 1200
 
 let pendingResolve: (() => void) | null = null
 
@@ -39,6 +48,41 @@ export function RouteRendered() {
   return null
 }
 
+// ---------- 動いている遷移（useNavSettled が読む小さなストア） ----------
+
+interface ActiveTransition {
+  transition: ViewTransitionLike
+  /** SETTLE_TIMEOUT のタイマー */
+  timer: number
+  /** タイマーが切れて、finished を待たずに終わったとみなしたら true */
+  timedOut: boolean
+}
+
+/** いちばん新しい遷移。終わったら null。<html> の data-nav と共有要素の名前も、この遷移のもの */
+let active: ActiveTransition | null = null
+const listeners = new Set<() => void>()
+
+function emit() {
+  listeners.forEach((listener) => listener())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+const isSettled = () => active === null || active.timedOut
+
+/**
+ * 画面遷移のアニメーションが動いていなければ true。
+ * View Transitions に対応していないブラウザ・「視差効果を減らす」の端末・遷移なしで開いた画面では、いつも true
+ */
+export function useNavSettled(): boolean {
+  return useSyncExternalStore(subscribe, isSettled, () => true)
+}
+
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /**
@@ -58,12 +102,18 @@ export function runTransition(kind: NavKind, go: () => void, shareId?: string) {
     return
   }
 
+  // 前の遷移がまだ動いていたら、終わりまで飛ばす（2 つの遷移が重なると、古い画面の写しが残ったように見えるため）。
+  // 飛ばした遷移の後始末（data-nav と共有要素の名前を消す）は、下の finished で active を見て行わない
+  active?.transition.skipTransition()
+
   const root = document.documentElement
   root.dataset.nav = kind
   applyShare(shareId)
 
   const transition = start.call(document, () =>
     new Promise<void>((resolve) => {
+      // 前の遷移が新しい画面の描画を待ったままなら、先に終わらせる（重なったときに固まらないように）
+      notifyRouteRendered()
       const done = () => {
         applyShare(shareId)
         resolve()
@@ -77,10 +127,24 @@ export function runTransition(kind: NavKind, go: () => void, shareId?: string) {
     }),
   )
 
-  transition.finished.finally(() => {
-    if (root.dataset.nav === kind) delete root.dataset.nav
+  const entry: ActiveTransition = { transition, timer: 0, timedOut: false }
+  entry.timer = window.setTimeout(() => {
+    entry.timedOut = true
+    if (active === entry) emit()
+  }, SETTLE_TIMEOUT)
+  active = entry
+  emit()
+
+  const settle = () => {
+    window.clearTimeout(entry.timer)
+    // 新しい遷移に替わっている：印はそちらのもの
+    if (active !== entry) return
+    active = null
+    delete root.dataset.nav
     applyShare(undefined)
-  })
+    emit()
+  }
+  transition.finished.then(settle, settle)
 }
 
 const canGoBack = () => ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0

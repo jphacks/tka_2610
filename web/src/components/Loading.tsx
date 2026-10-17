@@ -24,7 +24,7 @@ export function Busy({ label }: { label: string }) {
   )
 }
 
-export function StageFallback({ label = '博物館を準備しています…' }: { label?: string }) {
+export function StageFallback({ label = 'おうちを準備しています…' }: { label?: string }) {
   return (
     <div className="stage-fallback">
       <div className="stage-fallback-inner">

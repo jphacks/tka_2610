@@ -8,6 +8,12 @@
   animation-delay: calc(var(--i, 0) * 30ms);
 }
 
+/* ボタンのとき（onSelect を渡したとき）。リンクと同じ見た目にする */
+.thumb-button {
+  width: 100%;
+  text-align: left;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

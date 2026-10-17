@@ -1,5 +1,6 @@
-// three.js のキャンバスと照明。4 つの 3D 画面すべての土台になる。
-// 3D 全体の明るさや背景色を変えるときはここを触る。
+// three.js のキャンバスと照明。ホーム・おうちの中・マップ・3D プレビューの 4 つの 3D 画面の土台になる
+// （鑑賞モードの照明は walk/lighting.tsx）。3D 全体の明るさや背景色を変えるときはここを触る。
+// 照明は 8 × 8 m の家に合わせた大きさで、影は付けない（斜め上から見る画面なので、やわらかく均一に照らす）。
 
 import type { ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
@@ -13,14 +14,14 @@ export function Stage({
 }: {
   children: ReactNode
   camera: { position: [number, number, number]; fov: number }
-  /** 'demand' にすると、動きがあるときだけ描画する（見取り図で使う） */
+  /** 'demand' にすると、動きがあるときだけ描画する（マップで使う） */
   frameloop?: 'always' | 'demand'
 }) {
   return (
     <Canvas
       dpr={[1, 1.75]}
       frameloop={frameloop}
-      camera={{ ...camera, near: 0.1, far: 120 }}
+      camera={{ ...camera, near: 0.1, far: 80 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
         // 子どもの絵の色がくすまないトーンマッピング
@@ -29,23 +30,25 @@ export function Stage({
       }}
     >
       <color attach="background" args={['#efe2d0']} />
-      <MuseumLights />
+      <HomeLights />
       {children}
     </Canvas>
   )
 }
 
-function MuseumLights() {
+function HomeLights() {
   return (
     <>
-      <hemisphereLight args={['#fff8ee', '#cbb497', 1.1]} />
-      <directionalLight position={[8, 14, -6]} intensity={1.6} color="#fff0db" />
-      <directionalLight position={[-6, 10, 8]} intensity={0.5} color="#ffe6cc" />
-      {/* 外部 HDR を読まずに、その場で柔らかい環境光を作る */}
+      <hemisphereLight args={['#fff8ee', '#cbb497', 1.05]} />
+      {/* 主な光は、はじめのカメラのある南東の斜め上から。そこから見た奥の壁（北・西）の内側がよく照らされる */}
+      <directionalLight position={[4, 8, 5]} intensity={1.4} color="#fff0db" />
+      {/* 反対側からの弱い光。家具の陰になる面を少し明るくする */}
+      <directionalLight position={[-5, 6, -3]} intensity={0.45} color="#ffe6cc" />
+      {/* 外部 HDR を読まずに、その場で柔らかい環境光を作る（家の大きさに合わせた天井と左右の明かり） */}
       <Environment resolution={64} frames={1}>
-        <Lightformer form="rect" intensity={2.2} position={[0, 9, 0]} rotation-x={Math.PI / 2} scale={[24, 24, 1]} color="#fff6e8" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 2, -12]} scale={[24, 5, 1]} color="#ffe5c7" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 2, 12]} rotation-y={Math.PI} scale={[24, 5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={2.2} position={[0, 4.5, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} color="#fff6e8" />
+        <Lightformer form="rect" intensity={0.9} position={[0, 1, -6]} scale={[12, 2.5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={0.9} position={[0, 1, 6]} rotation-y={Math.PI} scale={[12, 2.5, 1]} color="#ffe5c7" />
       </Environment>
     </>
   )

@@ -30,7 +30,7 @@
   max-height: 210px;
 }
 
-/* 作品情報の表（制作日・展示） */
+/* 作品情報の表（制作日・飾る場所） */
 .spec {
   margin: 22px 0 0;
   border-top: 0.5px solid var(--line-strong);
