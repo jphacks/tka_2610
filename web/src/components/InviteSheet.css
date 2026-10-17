@@ -1,118 +1,510 @@
+
+/* 招待状全体 */
 .invite-card-wrapper {
-  padding: 24px 16px 36px 16px;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 0px;
+  box-sizing: border-box;
+  padding: 0 20px 120px;
+  overflow: hidden;
+  overflow-y: auto;
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  color: #48647f;
   text-align: center;
-  color: var(--color-text, #2c2522);
-  font-family: var(--serif, serif);
-  
-  /* 作品一覧と同じあたたかいアイボリーの背景色 */
-  background-color: #faf6f0;
+  font-family:
+    "Hiragino Maru Gothic ProN",
+    "Yu Gothic",
+    "Meiryo",
+    sans-serif;
+
+  background-color: #fcf8ee;
+  background-image:
+    radial-gradient(
+      ellipse at 20% 30%,
+      rgba(224, 209, 180, 0.12) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      ellipse at 70% 60%,
+      rgba(224, 209, 180, 0.14) 0 1px,
+      transparent 2px
+    );
+  background-size: 8px 9px, 11px 13px;
   border-radius: 24px 24px 0 0;
-  position: relative;
-  overflow: hidden; /* あしらいがはみ出さないようにする */
 }
 
-/* ――― ペンキのようにくっきりした水彩風の水玉 ――― */
-.invite-card-wrapper::before,
-.invite-card-wrapper::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  /* ぼかしを少なくして、ペンキや絵の具のように輪郭をはっきりさせる */
-  filter: blur(8px);
-  z-index: 0;
-  /* 不透明度を上げてしっかり発色させる */
-  opacity: 0.9;
+/* 上部の空 */
+.invite-sky {
+  position: relative;
+  width: calc(100% + 40px);
+  height: 100px;
+  flex-shrink: 0;
   pointer-events: none;
 }
 
-/* 左上の水色の水玉 */
-.invite-card-wrapper::before {
-  top: -20px;
-  left: -20px;
-  width: 140px;
-  height: 140px;
-  background: rgba(130, 185, 220, 0.9); /* はっきりした鮮やかな水色 */
+/* 左上の水色の絵の具 */
+.invite-blue-paint {
+  position: absolute;
+  top: -48px;
+  left: -30px;
+  width: 215px;
+  height: 155px;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(116, 184, 220, 0.55) 0 1.5px,
+      transparent 2px
+    ),
+    radial-gradient(
+      ellipse at 40% 45%,
+      rgba(124, 193, 226, 0.48),
+      rgba(124, 193, 226, 0.18) 60%,
+      transparent 74%
+    );
+  background-size: 7px 7px, 100% 100%;
+  clip-path: polygon(
+    0 0, 100% 0, 88% 20%, 78% 31%,
+    82% 44%, 68% 56%, 57% 65%,
+    45% 82%, 27% 100%, 0 100%
+  );
+  transform: rotate(-8deg);
 }
 
-/* 右上の黄色の水玉 */
-.invite-card-wrapper::after {
-  top: -10px;
-  right: -15px;
-  width: 130px;
-  height: 130px;
-  background: rgba(245, 200, 90, 0.9); /* はっきりした鮮やかな黄色・オレンジ系 */
+/* 右上の虹 */
+.invite-rainbow {
+  position: absolute;
+  top: 20px;
+  right: 13px;
+  width: 132px;
+  height: 100px;
+  transform: rotate(-13deg);
 }
 
-/* 中身の要素が背景より手前に表示されるようにする */
-.invite-header-text,
-.invite-image-frame,
-.invite-visit-btn,
-.invite-url-text,
-.invite-qr-section {
+.invite-rainbow span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 5px solid transparent;
+  border-top-color: var(--rainbow-color);
+  border-left-color: var(--rainbow-color);
+  border-right-color: var(--rainbow-color);
+  border-radius: 90px 90px 0 0;
+  transform: translate(-50%, -50%);
+  opacity: 0.82;
+}
+
+.invite-rainbow span:nth-child(1) {
+  --rainbow-color: #e88e91;
+  width: 132px;
+  height: 63px;
+}
+
+.invite-rainbow span:nth-child(2) {
+  --rainbow-color: #efb96b;
+  width: 112px;
+  height: 52px;
+}
+
+.invite-rainbow span:nth-child(3) {
+  --rainbow-color: #d6d76f;
+  width: 92px;
+  height: 41px;
+}
+
+.invite-rainbow span:nth-child(4) {
+  --rainbow-color: #83c6a0;
+  width: 72px;
+  height: 30px;
+}
+
+.invite-rainbow span:nth-child(5) {
+  --rainbow-color: #81b8dc;
+  width: 52px;
+  height: 19px;
+}
+
+.invite-sky-star {
+  position: absolute;
+  right: 25px;
+  bottom: 8px;
+  color: #86c1e0;
+  font-size: 25px;
+}
+
+/* 招待文 */
+.invite-header-text {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  width: 100%;
+  margin-top: 0px;
 }
 
 .invite-header-text h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-  letter-spacing: 0.03em;
+  margin: 0 0 14px;
+  color: #496581;
+  font-size: clamp(19px, 4.7vw, 26px);
+  line-height: 1.7;
+  letter-spacing: 0.045em;
+  font-weight: 700;
 }
 
 .invite-header-text p {
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: var(--color-text-muted, #554a43);
-  margin-bottom: 16px;
+  margin: 0;
+  color: #5e7690;
+  font-size: clamp(12px, 3vw, 14px);
+  font-weight: 600;
+  line-height: 1.8;
+  letter-spacing: 0.035em;
 }
 
-/* おうちのイラスト/写真の枠 */
-.invite-image-frame {
+/* 左右のキラキラ */
+.invite-spark {
+  position: absolute;
+  z-index: 1;
+  top: 135px;
+  color: #edc45d;
+  font-size: 32px;
+  font-weight: 400;
+}
+
+.invite-spark-left {
+  left: 22px;
+  transform: rotate(-20deg);
+}
+
+.invite-spark-right {
+  right: 22px;
+  transform: rotate(20deg);
+}
+
+/* QRコード配置 */
+.invite-qr-layout {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: 320px;
-  height: 180px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  background-color: #f7f3ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 28px;
+  margin-bottom: 18px;
 }
 
-.invite-house-art {
-  width: 100%;
-  height: 100%;
-  /* 実際の画像を置く場合は background-image: url('画像のパス'); を設定してください */
-  background: linear-gradient(135deg, #f3ede2 0%, #e6dace 100%);
-  background-image: url('/house.png');
-  background-size: cover;
-  background-position: center;
+/* QRコードの周囲の手描き風フレーム */
+.invite-qr-frame {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 9px;
+  border: 2px solid rgba(229, 196, 123, 0.72);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(-1deg);
+  cursor: pointer;
+  box-shadow:
+    2px 2px 0 rgba(112, 176, 208, 0.35),
+    -2px -2px 0 rgba(232, 204, 143, 0.3);
+  transition: transform 0.15s ease;
 }
 
-/* 「ここに見に来てね」ボタン */
-.invite-visit-btn {
-  display: inline-flex;
+.invite-qr-frame:active {
+  transform: rotate(0deg) scale(0.97);
+}
+
+.invite-qr-paper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.invite-qr-paper svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* QRコードの左右のメモ */
+.invite-side-note {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  color: #607d97;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.8;
+  letter-spacing: 0.015em;
+}
+
+.invite-side-note-left {
+  left: -4px;
+  width: 108px;
+  padding: 13px 5px;
+  border: 2px solid rgba(131, 185, 214, 0.7);
+  border-radius: 48% 42% 44% 40%;
+  background: rgba(252, 248, 238, 0.94);
+  transform: translateY(-50%) rotate(-8deg);
+}
+
+.invite-side-note-right {
+  right: -7px;
+  width: 90px;
+  transform: translateY(42%);
+}
+
+/* リンクコピー */
+.invite-copy-btn {
+  position: relative;
+  z-index: 2;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 80%;
-  max-width: 260px;
-  padding: 12px 20px;
-  background: linear-gradient(180deg, #fcfaf7 0%, #e8e0d5 100%);
-  border: 1px solid #d4c8b8;
+
+  width: min(100%, 260px);
+  padding: 11px 16px;
+
+  border: 1px solid #d8c9aa;
   border-radius: 999px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #3d342f;
+  background: rgba(255, 255, 255, 0.55);
+  color: #526c86;
+
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.1s ease;
-  margin-bottom: 14px;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
+
+.invite-copy-btn span {
+  color: #d68f99;
+  font-size: 17px;
+}
+
+.invite-copy-btn:hover {
+  background: #fffdf8;
+}
+
+.invite-copy-btn:active {
+  transform: scale(0.97);
+}
+
+/* memoriaロゴ */
+.invite-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 20px;
+}
+
+.invite-footer h3 {
+  margin: 0 0 5px;
+  color: #496581;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.invite-footer p {
+  margin: 0;
+  color: #687d91;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.invite-footer-underline {
+  display: block;
+  width: 95px;
+  height: 11px;
+  margin: 8px auto 0;
+  border-top: 2px solid #a4cce0;
+  border-radius: 50%;
+  transform: rotate(-3deg);
+}
+
+/* 下部の庭 */
+.invite-garden {
+  position: absolute;
+  z-index: 1;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 115px;
+  pointer-events: none;
+}
+
+/* 草原 */
+.invite-grass {
+  position: absolute;
+  bottom: -32px;
+  left: -8%;
+  width: 116%;
+  height: 90px;
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(
+      circle,
+      rgba(116, 167, 105, 0.65) 0 1.5px,
+      transparent 2px
+    ),
+    #dce7c8;
+  background-size: 9px 10px, auto;
+  transform: rotate(-2deg);
+}
+
+/* 小さな家 */
+.invite-house {
+  position: absolute;
+  bottom: 23px;
+  left: 8px;
+  z-index: 2;
+  width: 80px;
+  height: 100px;
+  transform: rotate(-3deg);
+}
+
+.invite-house-roof {
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 88px;
+  height: 45px;
+  background:
+    repeating-linear-gradient(
+      140deg,
+      transparent 0 5px,
+      rgba(179, 88, 75, 0.25) 5px 7px
+    ),
+    #e5a09a;
+  border: 3px solid #d9817c;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.invite-house-body {
+  position: absolute;
+  left: 10px;
+  top: 37px;
+  width: 60px;
+  height: 57px;
+  border: 2px solid #dca18c;
+  background: #fff3d9;
+}
+
+.invite-house-window {
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  width: 20px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  background: #a8d5e3;
+  border: 2px solid #fff9e9;
+  color: #6ca6c0;
+  font-size: 12px;
+}
+
+.invite-house-door {
+  position: absolute;
+  right: 7px;
+  bottom: 0;
+  width: 15px;
+  height: 25px;
+  background: #c79b77;
+  border: 2px solid #fff3d9;
+  border-bottom: 0;
+}
+
+/* 花 */
+.invite-flower {
+  position: absolute;
+  z-index: 3;
+  font-size: 24px;
+  filter: saturate(0.8);
+}
+
+.invite-flower-one {
+  left: 95px;
+  bottom: 26px;
+  font-size: 27px;
+}
+
+.invite-flower-two {
+  left: 126px;
+  bottom: 11px;
+  font-size: 25px;
+}
+
+.invite-flower-three {
+  right: 45px;
+  bottom: 26px;
+  font-size: 26px;
+}
+
+.invite-flower-four {
+  right: 12px;
+  bottom: 43px;
+  font-size: 25px;
+}
+
+/* 小さな画面 */
+@media (max-width: 390px) {
+  .invite-card-wrapper {
+    padding-right: 14px;
+    padding-left: 14px;
+    min-height: 0px;
+  }
+
+  .invite-sky {
+    height: 90px;
+  }
+
+  .invite-header-text h2 {
+    font-size: 19px;
+  }
+
+  .invite-header-text p {
+    font-size: 11px;
+  }
+
+  .invite-qr-layout {
+    margin-top: 25px;
+  }
+
+  .invite-qr-paper svg {
+    width: 124px;
+    height: 124px;
+  }
+
+  .invite-side-note-left {
+    left: -3px;
+    width: 90px;
+    font-size: 9px;
+  }
+
+  .invite-side-note-right {
+    right: -5px;
+    width: 75px;
+    font-size: 10px;
+  }
+
+  .invite-spark-left {
+    left: 10px;
+  }
+
+  .invite-spark-right {
+    right: 10px;
+  }
+}
+
 
 .invite-visit-btn:active {
   transform: scale(0.97);
