@@ -2155,7 +2155,7 @@ mod tests {
         assert!(door_blockers(&layout).is_empty());
         check_placement(&layout, &Sizes::new(), DoorPolicy::OnlyMoved(&moved_ids(&layout, &layout))).unwrap();
 
-        // アトリエの 13 点の実寸でも通り、どれも 1 倍以下で置かれる
+        // アトリエの 33 点の実寸でも通り、どれも 1 倍以下で置かれる
         let sizes = atelier_sizes();
         check_placement(&layout, &sizes, DoorPolicy::Ignore).unwrap();
         for a in layout.artworks() {
@@ -2245,9 +2245,9 @@ mod tests {
     // 作品の実寸での判定
     // =============================
 
-    /// アトリエの 13 点の寸法 (幅・高さ・奥行き)。static/atelier/catalog.json の dimensionsMeters を mm に丸めた値
+    /// アトリエの 33 点の寸法 (幅・高さ・奥行き)。static/atelier/catalog.json の dimensionsMeters を mm に丸めた値
     /// (GLB を測った値とも 1 mm 以内: glb::tests::measures_atelier_models_like_the_kit_catalog)
-    const ATELIER: [(&str, [f64; 3]); 13] = [
+    const ATELIER: [(&str, [f64; 3]); 33] = [
         ("06_starbound_rocket", [0.381, 0.576, 0.3]),
         ("07_rainbow_sailboat", [0.56, 0.582, 0.34]),
         ("08_cardboard_stegosaurus", [0.622, 0.363, 0.34]),
@@ -2261,13 +2261,33 @@ mod tests {
         ("16_little_fire_engine", [0.6, 0.297, 0.34]),
         ("17_little_bakery", [0.466, 0.421, 0.34]),
         ("18_wishwheel", [0.57, 0.525, 0.34]),
+        ("19_cardboard_puppet_theatre", [0.49, 0.521, 0.363]),
+        ("20_patchwork_hot_air_balloon", [0.36, 0.554, 0.3]),
+        ("21_craft_stick_biplane", [0.49, 0.212, 0.44]),
+        ("22_milk_carton_lighthouse", [0.389, 0.544, 0.323]),
+        ("23_tissue_lava_volcano", [0.428, 0.437, 0.371]),
+        ("24_cardboard_treasure_chest", [0.41, 0.325, 0.34]),
+        ("25_egg_carton_crocodile", [0.57, 0.136, 0.3]),
+        ("26_paper_bowl_jellyfish", [0.45, 0.559, 0.405]),
+        ("27_paper_plate_lion", [0.46, 0.431, 0.31]),
+        ("28_clay_hedgehog_hideout", [0.458, 0.241, 0.392]),
+        ("29_cardboard_submarine", [0.63, 0.403, 0.34]),
+        ("30_origami_crane_wetland", [0.54, 0.295, 0.365]),
+        ("31_toadstool_cottage", [0.501, 0.45, 0.378]),
+        ("32_clay_sea_turtle", [0.495, 0.132, 0.442]),
+        ("33_recycled_drum_kit", [0.564, 0.317, 0.412]),
+        ("34_paper_horn_gramophone", [0.403, 0.476, 0.341]),
+        ("35_woven_picnic_basket", [0.393, 0.316, 0.311]),
+        ("36_folded_paper_peacock", [0.499, 0.418, 0.321]),
+        ("37_craft_stick_bridge", [0.714, 0.289, 0.397]),
+        ("38_cardboard_excavator", [0.688, 0.36, 0.368]),
     ];
 
     fn seed_id(asset_id: &str) -> Uuid {
         crate::seed::seed_id(asset_id)
     }
 
-    /// アトリエの 13 点の寸法 (作品 id は seed と同じ)
+    /// アトリエの 33 点の寸法 (作品 id は seed と同じ)
     fn atelier_sizes() -> Sizes {
         ATELIER.iter().map(|(asset_id, size)| (seed_id(asset_id), ArtSize { size: *size, custom: true })).collect()
     }
@@ -2440,7 +2460,7 @@ mod tests {
     /// 表で、新しく置く物 (出入口の前を見る物) の object id
     const CANDIDATE_ID: &str = "cand";
 
-    /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 13 点、仮生成の額縁、寸法の分からない作品
+    /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 33 点、仮生成の額縁、寸法の分からない作品
     fn case_arts() -> Vec<(String, Uuid, Option<ArtSize>)> {
         let mut arts: Vec<_> = ATELIER
             .iter()
@@ -2819,7 +2839,7 @@ mod tests {
         );
     }
 
-    /// 受け入れ条件: アトリエの 13 点すべてが、どの面の中央にも (どの部屋の床の中央にも) 0° でも 90° でも置ける
+    /// 受け入れ条件: アトリエの 33 点すべてが、どの面の中央にも (どの部屋の床の中央にも) 0° でも 90° でも置ける
     #[test]
     fn every_atelier_artwork_fits_every_surface_at_0_and_90_degrees() {
         let cases = placement_cases();
@@ -2832,7 +2852,7 @@ mod tests {
                 checked += 1;
             }
         }
-        // (面 13 (本棚は段 3 つと天板) + 4 部屋の床) × 13 点 × 2 つの向き
+        // (面 13 (本棚は段 3 つと天板) + 部屋の床) × 33 点 × 2 つの向き
         let surfaces: usize = CATALOG.assets.iter().map(|a| a.surfaces.len()).sum();
         assert_eq!(surfaces, 13);
         assert_eq!(checked, (surfaces + ROOM_DEFS.len()) * ATELIER.len() * 2);
