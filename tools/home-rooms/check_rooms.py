@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""4 部屋の建物 GLB（backend/static/models/rooms/*.glb）の作りを確かめる。Python の標準ライブラリだけで動く。
+"""家の建物 GLB（backend/static/models/rooms/*.glb。今はリビングの hub.glb だけ）の作りを確かめる。Python の標準ライブラリだけで動く。
+出入口・床のつながり・開いた側・共有の壁の検査は、隣の部屋がある家（EXPECT に部屋と出入口があるとき）だけ行う。
 
 開発用シェルにも、納品された本番の GLB にも使える（docs/house-assets.md のチェックリストを機械で見る部分）。
 
@@ -28,16 +29,14 @@ H = 3.2
 T = 0.24
 R = 1.05
 SPRING = 1.55
-ORIGINS = {'hub': (0.0, 0.0), 'left': (-9.24, 0.0), 'right': (9.24, 0.0), 'front': (0.0, -9.24)}
+# 家は中央のリビング（hub）の 1 部屋だけ。出入口も隣の部屋も無い（以前の 4 部屋の値は git の履歴にある）
+ORIGINS = {'hub': (0.0, 0.0)}
 EXPECT = {
-    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': {'south', 'east'}},
-    'left': {'size': (8.0, 8.0), 'open': 'east', 'doors': (), 'cutaway': {'south'}},
-    'right': {'size': (8.0, 8.0), 'open': 'west', 'doors': (), 'cutaway': {'south', 'east'}},
-    'front': {'size': (8.0, 8.0), 'open': 'south', 'doors': (), 'cutaway': {'east'}},
+    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': (), 'cutaway': {'south', 'east'}},
 }
-# hub のどの壁の開口が、どの部屋へつながるか
-DOOR_TO_ROOM = {'west': 'left', 'east': 'right', 'north': 'front'}
-HUB_WALL_AT_OPEN = {'left': 'west', 'right': 'east', 'front': 'north'}
+# hub のどの壁の開口が、どの部屋へつながるか（隣の部屋が無いので空）
+DOOR_TO_ROOM: dict[str, str] = {}
+HUB_WALL_AT_OPEN: dict[str, str] = {}
 SIDES = ('north', 'south', 'east', 'west')
 ROLES = {'floor', 'foundation', 'wall_lower', 'wall_upper', 'trim_lower', 'trim_upper', 'trim'}
 MATERIALS = {'Wall_Plaster', 'Floor_Oak', 'Trim_Oak', 'Foundation'}

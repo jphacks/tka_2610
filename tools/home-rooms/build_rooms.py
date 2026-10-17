@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""4 部屋の家（中央 hub 10×10 m ＋ 左 left・右 right・前 front 8×8 m）の建物を、開発用の GLB で書き出す。
+"""家（中央のリビング hub 10×10 m の 1 部屋。出入口なし）の建物を、開発用の GLB で書き出す。
 
-- 書き出し先: backend/static/models/rooms/{hub,left,right,front}.glb
+- 書き出し先: backend/static/models/rooms/hub.glb
+- 以前は左・右・前の 3 部屋（8×8 m）もあり、hub の西・東・北の出入口でつながっていた。今は hub だけで、出入口もふさいでいる。
+  部屋を戻すときは、下の ROOMS と HUB_WALL_AT_OPEN に部屋を足し、hub の doors に出入口の向きを足す（git の履歴に前の値がある）
 - **開発用のシェル**です。本番品質の GLB は別に納品してもらい、同じ名前で差し替えます（仕様は docs/house-assets.md）。
 - キット v1（MemoryMuseum_Home）の build_assets.py を kit/tools/ に同梱し、その形の関数（bevel_box・arch_band）、
   材質、GLB の書き出し（Writer）を使います。幅木・回り縁・開口の枠とアーチ・角の柱はキットと同じ寸法です。
@@ -10,7 +12,7 @@
 - 実行方法は README.md を見てください。確認は check_rooms.py（Python の標準ライブラリだけで動く）。
 
 座標: メートル、Y が上、床の上面が y = 0。部屋ごとに部屋の中心を原点にして書き出し、回転はしない。
-アプリは各 GLB を部屋の origin（hub (0,0)、left (−9.24,0)、right (9.24,0)、front (0,−9.24)）へ平行移動して置く。
+アプリは GLB を部屋の origin（hub (0,0)）へ平行移動して置く。
 """
 from __future__ import annotations
 
@@ -52,13 +54,10 @@ BASE_T = 0.2  # 床の下の土台（role: foundation）まで含めた厚さ
 
 # 部屋。open は壁を作らない側（hub の壁と共有する）。doors は開口を開ける壁。cutaway は手前の壁のカットで隠す壁
 ROOMS = {
-    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': ('west', 'east', 'north'), 'cutaway': ('south', 'east')},
-    'left': {'size': (8.0, 8.0), 'open': 'east', 'doors': (), 'cutaway': ('south',)},
-    'right': {'size': (8.0, 8.0), 'open': 'west', 'doors': (), 'cutaway': ('south', 'east')},
-    'front': {'size': (8.0, 8.0), 'open': 'south', 'doors': (), 'cutaway': ('east',)},
+    'hub': {'size': (10.0, 10.0), 'open': None, 'doors': (), 'cutaway': ('south', 'east')},
 }
-# 部屋の開いた側をふさいでいる hub の壁
-HUB_WALL_AT_OPEN = {'left': 'west', 'right': 'east', 'front': 'north'}
+# 部屋の開いた側をふさいでいる hub の壁（隣の部屋が無いので空）
+HUB_WALL_AT_OPEN: dict[str, str] = {}
 # hub の共有の壁 → 外側の面が見える部屋
 SHARED = {side: rid for rid, side in HUB_WALL_AT_OPEN.items()}
 

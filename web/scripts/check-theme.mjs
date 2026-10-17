@@ -118,7 +118,12 @@ const PARTS = new Set(Object.keys(UV))
 
 // ---------- 建物の GLB ----------
 
-const ROOM_IDS = ['hub', 'left', 'right', 'front']
+// リビング（hub）は必ず要る。左・右・前の部屋は、GLB があるときだけ調べる（今の家はリビングだけ）
+const ROOM_IDS = ['hub', 'left', 'right', 'front'].filter((id) => id === 'hub' || existsSync(resolve(roomsDir, `${id}.glb`)))
+/** リビングと壁を共有する部屋（共有の壁の面 faceRoom を調べる。リビングだけの家では空） */
+const SIDE_ROOMS = ROOM_IDS.filter((id) => id !== 'hub')
+/** 競合を試す建物（部屋が足りなければリビングを複製して使う） */
+const roomAt = (i) => ROOM_IDS[i % ROOM_IDS.length]
 const loader = new GLTFLoader()
 const glbs = {}
 for (const id of ROOM_IDS) {
@@ -252,7 +257,7 @@ function checkSeam(mesh, material, part, label) {
   }
 }
 
-/** 部屋ごとの仕上げ rooms を 4 部屋の建物に当てて、全部のメッシュを確かめる */
+/** 部屋ごとの仕上げ rooms を、ある部屋の建物（ROOM_IDS）に当てて、全部のメッシュを確かめる */
 async function applyAll(rooms, label) {
   const roots = Object.fromEntries(ROOM_IDS.map((id) => [id, cloneRoom(id)]))
   const originals = Object.fromEntries(ROOM_IDS.map((id) => [id, new Map(meshesOf(roots[id]).map((m) => [m, m.material]))]))
@@ -326,7 +331,7 @@ async function applyAll(rooms, label) {
   if (lateA !== 0 || lateB !== 1) fail(`競合 (a): onLate の回数 A ${lateA}・B ${lateB}（0 と 1 のはず）`)
 
   // (b) C と D を両方待つ。D（あと）が先に読め、C（前）があとで読めても D のまま
-  const root2 = cloneRoom('left')
+  const root2 = cloneRoom(roomAt(1))
   const C = themeOf('dark_marble')
   const D = themeOf('brick_oak')
   const heldC = hold(C)
@@ -339,7 +344,7 @@ async function applyAll(rooms, label) {
   if (wallName(root2) !== 'Theme_soft_brick_wall_lower') fail(`競合 (b): 前のテーマ C に戻りました（${wallName(root2)}）`)
 
   // (c) E を待つ間に、焼き込みと同じナチュラル（画像を待たない）を選ぶ。E が読めても GLB の材質のまま
-  const root3 = cloneRoom('right')
+  const root3 = cloneRoom(roomAt(2))
   const E = themeOf('white_marble')
   const heldE = hold(E)
   applyTheme(root3, E, materials)
@@ -350,7 +355,7 @@ async function applyAll(rooms, label) {
 
   // (d) 読めない画像があるテーマは当てない（今の材質のまま）。もう一度選ぶと読み直す
   // （内装セットの画像は (a)〜(c) で全部読んだので、まだ読んでいないキットのレンガで試す）
-  const root4 = cloneRoom('front')
+  const root4 = cloneRoom(roomAt(3))
   applyTheme(root4, themeOf('nordic_oak'), materials)
   await settle()
   const F = themeOf('brick')
@@ -366,12 +371,12 @@ async function applyAll(rooms, label) {
   if (wallName(root4) !== 'Theme_brick_wall_lower' || floorName(root4) !== 'Theme_limestone_floor') fail(`読めない画像 (d): 読み直したあとも ${wallName(root4)}`)
 }
 
-// ---------- 2. どのテーマも、4 部屋に当てたときに材質・場所・継ぎ目が正しい ----------
+// ---------- 2. どのテーマも、どの部屋に当てても材質・場所・継ぎ目が正しい ----------
 
 const all = themes.map((t) => t.id)
 for (const id of all) {
   const f = themeOf(id)
-  await applyAll({ hub: f, left: f, right: f, front: f }, `テーマ ${id}`)
+  await applyAll(Object.fromEntries(ROOM_IDS.map((r) => [r, f])), `テーマ ${id}`)
 }
 
 // ---------- 3. 部屋ごとに別のテーマ：共有する壁の表と裏 ----------
@@ -386,7 +391,7 @@ for (const mix of mixes) {
   const { roots } = await applyAll(rooms, `部屋ごと ${Object.values(mix).join('/')}`)
   // リビングの共有する壁：隣の部屋に向いた面（faceRoom）は隣の部屋の壁紙、リビング側の面はリビングの壁紙
   const hubWalls = meshesOf(roots.hub).filter((m) => m.userData.role === 'wall_lower' || m.userData.role === 'wall_upper')
-  for (const face of ['left', 'right', 'front']) {
+  for (const face of SIDE_ROOMS) {
     const outer = hubWalls.filter((m) => m.userData.faceRoom === face)
     if (outer.length === 0) fail(`リビングに ${face} に向いた壁の面（faceRoom）がありません`)
     for (const m of outer) {
@@ -413,13 +418,17 @@ for (const mix of mixes) {
   const mid = (dims?.[0] ?? 0) / 2 + 0.12
   const inside = mid - 0.22
   const side = { left: (v) => v.x < -mid, right: (v) => v.x > mid, front: (v) => v.z < -mid }
-  const inner = { left: (v) => v.x > -mid && v.x < -inside, right: (v) => v.x < mid && v.x > inside, front: (v) => v.z > -mid && v.z < -inside }
+  // リビングに向いた面：共有の壁なら内側の半分（中心は壁の中心線より内側）、共有しない壁なら壁 1 枚（中心は壁の中心線の上）
+  const on = mid + 0.005
+  const inner = { left: (v) => v.x >= -on && v.x < -inside, right: (v) => v.x <= on && v.x > inside, front: (v) => v.z >= -on && v.z < -inside }
   for (const mesh of meshesOf(root)) {
     const face = mesh.userData.faceRoom
     if (typeof face !== 'string') continue
     box.setFromObject(mesh).getCenter(c)
+    if (!SIDE_ROOMS.includes(face)) fail(`共有の壁 ${mesh.name}: 隣の部屋 ${face} が無いのに faceRoom があります`)
     if (!side[face]?.(c)) fail(`共有の壁 ${mesh.name}（faceRoom ${face}）が隣の部屋の側にありません（中心 ${c.x.toFixed(2)}, ${c.z.toFixed(2)}）`)
   }
+  // リビングの西・東・北の壁には、リビングに向いた面がある（隣の部屋があってもなくても）
   for (const face of ['left', 'right', 'front']) {
     const own = meshesOf(root).filter((m) => {
       if (m.userData.faceRoom || !(m.userData.role === 'wall_lower' || m.userData.role === 'wall_upper')) return false
@@ -436,8 +445,8 @@ if (seamCount.lower === 0 || seamCount.upper === 0) fail(`上下の壁の境目�
 
 {
   // 同じテーマの材質は建物の複製どうしで同じ物（作り直さない）。GLB の scene そのものの材質は替わらない
-  const a = cloneRoom('left')
-  const b = cloneRoom('left')
+  const a = cloneRoom(roomAt(1))
+  const b = cloneRoom(roomAt(1))
   const f = themeOf('dark_marble')
   applyTheme(a, f, materials)
   applyTheme(b, f, materials)
@@ -457,7 +466,7 @@ if (errors.length) {
   process.exit(1)
 }
 console.log(
-  `[check:theme] OK: テーマ ${themes.length} 種（内装セット ${FINISH_PACK_THEMES.length} 種）× 4 部屋、部屋ごとの組 ${mixes.length} 通り、` +
+  `[check:theme] OK: テーマ ${themes.length} 種（内装セット ${FINISH_PACK_THEMES.length} 種）× ${ROOM_IDS.length} 部屋（${ROOM_IDS.join('・')}）、部屋ごとの組 ${mixes.length} 通り、` +
     `競合 4 通り。壁の表と裏の頂点 ${total} 個で上下の模様がつながる（境目の頂点 下 ${seamCount.lower}・上 ${seamCount.upper}、` +
     `決まりの違う面（上面・出入口の側面など）の頂点 ${seamCount.other} 個は対象外）`,
 )

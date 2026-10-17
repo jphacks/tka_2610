@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "kitVersion": "1.1.0-home",
   "rooms": {
     "hub": {
@@ -8,27 +8,6 @@
       "depth": 10,
       "wall": "plaster",
       "floor": "oak"
-    },
-    "left": {
-      "enabled": true,
-      "width": 8,
-      "depth": 8,
-      "wall": "oak",
-      "floor": "oak"
-    },
-    "right": {
-      "enabled": true,
-      "width": 8,
-      "depth": 8,
-      "wall": "plaster",
-      "floor": "oak"
-    },
-    "front": {
-      "enabled": true,
-      "width": 8,
-      "depth": 8,
-      "wall": "brick",
-      "floor": "limestone"
     }
   },
   "objects": [

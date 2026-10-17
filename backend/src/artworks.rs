@@ -100,9 +100,9 @@ pub struct ArtworkDto {
     pub favorite: bool,
     pub displayed: bool,
     pub slot_id: Option<String>,
-    /// 飾っている部屋 (hub / left / right / front)。配置 JSON から引く。飾っていなければ None
+    /// 飾っている部屋 (今は hub だけ)。配置 JSON から引く。飾っていなければ None
     pub room_id: Option<&'static str>,
-    /// 飾っている部屋の名前 (例: "左の部屋")
+    /// 飾っている部屋の名前 (例: "中央のリビング")
     pub room_name: Option<&'static str>,
     pub floor: Option<&'static str>,
     pub displayed_at: Option<DateTime<Utc>>,
@@ -855,7 +855,7 @@ pub async fn set_favorite(
 /// position を省くと空いている場所に自動で置く (room_id があればその部屋だけ、parent_id があればその家具を先に探す)
 #[derive(Deserialize, Default)]
 pub struct DisplayBody {
-    /// 部屋 (hub / left / right / front)。自動で置くときはこの部屋の家具だけを探す (空きが無ければ 409。ほかの部屋には置かない)。
+    /// 部屋 (今は hub だけ。知らない部屋は 400)。自動で置くときはこの部屋の家具だけを探す (空きが無ければ 409。ほかの部屋には置かない)。
     /// 床に置くとき (position あり・parent_id なし) は置く部屋 (省くと hub)。家具の上に置くときは使わない (部屋は家具の部屋)
     pub room_id: Option<String>,
     /// 載せる家具の object id。省くと床 (position があるとき) か自動
