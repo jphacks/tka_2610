@@ -4,6 +4,7 @@
 
 子どもの絵や工作を写真に撮って登録すると、3D のおうちに飾れるアプリです。
 Web で写真を登録すると Rust のサーバーが 3D モデル（GLB）を作り、「おうちに飾る」を押すと、Web の 3D のおうち（three.js）の棚や机の上に並びます。作品は、作ったときの子どもの年齢（設定のお誕生日と作品の作成日から計算）ごとの「おへや」に飾ります。おへやは中央のリビング（10 × 10 m）1 部屋の家で、1 つの年齢におへやをいくつでも足せます（階として積み上がる）。アプリのホームでは年齢を選ぶと、その年齢のおへやを積み上げた建物が 3D で出て、階を押すとそのおへやに入れます。おへやの中は画面いっぱいの 3D で、ドラッグで見回せて、放っておくとゆっくり回り、作品をタップすると詳細が開きます。PC とスマホのブラウザで、家の中を一人称で歩いて見て回れます（鑑賞モード）。
+作品には「おもいで」として、作っているところの動画や別の角度の写真、子どもの声を、いくつでも付けられます（作品の詳細で足す。声はアプリで録音もできる）。おへやの 3D では記録のある作品の上に印が出て、鑑賞モードでは声のある作品の前に立つと声が流れます。
 家具と作品の置き場所は、配置 JSON としてデータベースに保存しています。模様替えの画面で、家具や作品を動かす・回す・消す・足す、壁紙と床材（テーマ）を選ぶ、ができます。初回の起動で、サンプルの作品 13 点（アトリエ）が登録され、作った年齢のおへや（3さい 2 点・4さい 8 点・5さい 3 点）に飾られます。
 3D の表示は Web（three.js）だけで完結しています。
 
@@ -54,7 +55,7 @@ flowchart LR
 |---|---|
 | Rust | 写真の回転補正・縮小・サムネイル作成、写真から GLB の生成（仮の実装）、作品の GLB の実寸の計測、家の部屋の定義（部屋の位置・大きさ・出入口。今はリビングだけで出入口なし。`backend/src/home.rs` の `ROOM_DEFS`）、子どもの年齢の計算（`age.rs`）、年齢ごとのおへやの管理、配置 JSON の検証と保存、作品を飾る場所の自動選択（作品の年齢のおへやを 1 階から探す）、関連作品の検索、日付の整形、起動時のサンプルの作品の登録 |
 | React | 表示だけを担当。家の 3D（画面いっぱいのホーム・おうちの中・マップ・3D プレビュー・鑑賞モード・模様替え）を three.js で表示し、部屋ごとの建物を API の部屋の定義のとおりに並べ、家具と作品を配置 JSON のとおりに置く。模様替えでは、置けるかどうかを Rust と同じ計算で先に調べて、置けない場所を赤く出す（保存のときは Rust がもう一度検証する）。three.js は必要になってから読み込む |
-| PostgreSQL | 作品の情報（GLB から測った実寸・飾っているおへや `house_room_id` も）、おへやと、おへやごとの配置 JSON（`house_rooms`）、アプリの設定（子どものお誕生日も） |
+| PostgreSQL | 作品の情報（GLB から測った実寸・飾っているおへや `house_room_id` も）、作品のおもいで（`artwork_memories`。ファイルは `media/memories/`）、おへやと、おへやごとの配置 JSON（`house_rooms`）、アプリの設定（子どものお誕生日も） |
 
 ### 作品を登録して飾るまで
 
@@ -270,6 +271,7 @@ PC の広い画面では、スマホの枠をやめてウィンドウいっぱ�
 │   │   ├── home_api.rs    おへやと、おへやごとの配置 JSON の読み書き（/api/home/layout）・年齢で飾るおへやを選ぶ・起動時の整理
 │   │   ├── ages_api.rs    年齢の一覧と、積み上げの建物（/api/ages）・おへやを足す・消す
 │   │   ├── age.rs         作品を作ったときの子どもの年齢の計算
+│   │   ├── memories.rs    作品のおもいで（写真・動画・声の記録）の追加・ひとこと・削除と、起動時の掃除
 │   │   ├── seed.rs        起動時にサンプルの作品 13 点を登録して飾る
 │   │   ├── museum.rs      作品の種類の名前
 │   │   ├── media.rs       写真の処理
@@ -360,7 +362,7 @@ cargo run
 http://localhost:8080 を開くと Web アプリが表示されます。
 初回の起動では、次のことが自動で行われます。ログは、空のデータベースで起動したときのものです。
 
-- マイグレーション（作品の実寸の列 `model_width`・`model_height`・`model_depth`、子どものお誕生日 `museum_settings.child_birthday`（`010_child_birthday.sql`。デモの値 2021-06-01 が入る）、おへやの表 `house_rooms` と作品の列 `artworks.house_room_id`（`011_house_rooms.sql`）もここで作られます。`008_wider_rooms.sql`・`009_single_room.sql`・`011_house_rooms.sql` は古いサーバーを止める番兵も兼ねます）
+- マイグレーション（作品の実寸の列 `model_width`・`model_height`・`model_depth`、子どものお誕生日 `museum_settings.child_birthday`（`010_child_birthday.sql`。デモの値 2021-06-01 が入る）、おへやの表 `house_rooms` と作品の列 `artworks.house_room_id`（`011_house_rooms.sql`）もここで作られます。作品のおもいでの表 `artwork_memories`（`012_artwork_memories.sql`）もここで作られます。`008_wider_rooms.sql`・`009_single_room.sql`・`011_house_rooms.sql` は古いサーバーを止める番兵も兼ねます。012 は番兵ではありません）
 - 家の GLB の圧縮。家の建物（`backend/static/models/rooms/hub.glb`）と、前の版の Web 用の `home-empty.glb` を `backend/data/media/museum/` にコピーして gzip 版を作ります（初めてのときだけ `[Museum] Prepared room-hub model: … KB -> … KB (gzip)` のように出ます）
 - 寸法の無い作品の GLB を測って、実寸を入れる（`[Artwork] model sizes: measured 0, skipped 0 (missing file), failed 0` と出ます）
 - 今の年齢（5さい）のおへやを、初期配置（`backend/static/home/default-layout.json`。家具 11 個）で作る（`[Home] 今までの配置をおへやに分けました (5 さい。…)`・`[Home] rooms loaded (1 rooms)` と出ます）
@@ -431,7 +433,7 @@ npm run check:theme
 
 `npm run check:theme` は、壁紙と床材（`theme.ts`）を本物の建物の GLB と `catalog.json` で当ててみて、材質の作り・上下の壁の継ぎ目・連続して切り替えたときの競合を確かめます（ブラウザと GPU は使いません。画像も読みません）。GLB のある部屋だけを調べるので、今は `× 1 部屋（hub）` と出ます。隣の部屋の GLB があるときは、共有する壁の表と裏も確かめます。
 
-`cargo test` では、総当たり表を作り直すテスト 1 件だけを、ふだんは飛ばします（74 件が通り、1 件が ignored）。
+`cargo test` では、総当たり表を作り直すテスト 1 件だけを、ふだんは飛ばします（80 件が通り、1 件が ignored）。
 `npm run check:placement` は、Rust のテストと同じ総当たり表（`backend/src/testdata/placement-cases.json`。リビングだけの家の表で、1,740 件と、重なり・壁・床の台座などの 10 件）を Web の `placement.ts` で計算し直し、置けるかどうか・縁に寄せた位置・作品の倍率が Rust と同じかを確かめます。置き方の決まりを変えたときは、`cargo test` と両方を通してください（表の作り直し方は [AGENTS.md](../AGENTS.md) の「守ること」）。
 開発用の建物 GLB を作り直したとき・本番の GLB に置き換えるときは、`python3 tools/home-rooms/check_rooms.py` でも確かめます（[tools/home-rooms/README.md](../tools/home-rooms/README.md)）。
 
@@ -441,6 +443,7 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 つながらないときは、Windows のファイアウォールで 8080 番を許可してください。
 スマホなど指で操作する端末では、作品の GLB が重いので、カメラに近い作品 6 つだけを表示します（模様替えの画面では、どの作品も選べるように全部表示します）。
 鑑賞モードは、スマホではタッチで歩きます（左の親指の仮想スティックで歩き、右の指でなぞって見回す）。開発サーバー（`npm run dev`）を使うときは `http://<PC の IP アドレス>:5173` を開きます。
+ブラウザは https か localhost で開いたときだけマイクを使わせるので、`http://<PC の IP アドレス>` で開いたスマホでは、おもいでの「声を録音する」が使えません（理由を出して、録音したファイルを選ぶ方へ案内します）。写真・動画・音声ファイルを選んで足すのは使えます。
 
 ### 別の PC のサーバーにつなぐとき
 
@@ -479,12 +482,14 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | POST | `/api/artworks` | 作品の登録（multipart。`image` は必須、`model` に GLB を渡すとそれを使う）。飾るモデルの実寸を測って `model_size` に入れる |
 | GET / PATCH / DELETE | `/api/artworks/:id` | 作品の詳細（関連作品つき）・編集・削除（削除すると配置 JSON からも外れる）。編集でモデルを作り直したときは実寸を測り直す |
 | PUT | `/api/artworks/:id/favorite` | お気に入りの切り替え |
+| POST | `/api/artworks/:id/memories` | おもいでを 1 つ足す（multipart。`file` は必須、任意で `caption`（80 文字まで）・`duration_ms`・`width`・`height`（Web が測った長さと大きさ））。種類は Content-Type と拡張子で決める：写真（JPEG・PNG・WebP・GIF。長辺 1600px と 400px の正方形の JPEG に縮める）・動画（MP4・MOV・WebM。そのまま）・声（M4A・AAC・MP3・WebM・OGG・WAV。そのまま）。上限は写真と声 20 MB・動画 100 MB（超えると 413）、1 作品 30 個（超えると 409）。このルートだけ送信の上限が 110 MB（ほかの `/api` は 40 MB） |
+| PATCH / DELETE | `/api/artworks/:id/memories/:memory_id` | おもいでのひとことを変える（`{ "caption": "…" }`）・消す（ファイルも消える） |
 | POST / DELETE | `/api/artworks/:id/display` | おうちに飾る・飾るのをやめる。POST の本文は任意で `{ "room_id"?, "parent_id"?, "surface"?, "position"?, "rotation_y"? }`（`surface` は `parent_id` と一緒に使う）。`room_id` はおへやの id（前の版の Web が送る `hub` は省いたのと同じ）。`room_id` を省くと、作品の年齢のおへやを 1 階から探して、空いている棚や机に自動で置く（作品の実寸で空きを探す。その年齢のおへやが 1 つも無ければ 1 階を作る）。全部いっぱいなら 409（「4 さいのおへやがいっぱいです。…」）。`room_id` を付けると、そのおへやの家具だけを探し、空きが無ければ 409。作品の年齢と違うおへやは 400。別のおへやに飾っていた作品は、そこから外して移す。`position` を付けて置き場所を決めるときは、`room_id` も要る（無いと 400）。出入口のある部屋では、置いた作品が出入口の前にかかると 400（今の家には出入口が無い） |
-| GET | `/media/*` | 生成した画像・サムネイル・GLB と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
+| GET | `/media/*` | 生成した画像・サムネイル・GLB、おもいでのファイル（`memories/`。Range に対応）と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |
 | GET | `/healthz` | 死活確認 |
 
-作品の項目（`/api/artworks` の一覧・詳細など）の `model_size` は、GLB から測った実寸（`[幅, 高さ, 奥行き]`、m）です。測れなかった作品は null です。`age_at_made` は作ったときの子どもの年齢（お誕生日と作成日から。お誕生日が無ければ手入力の `age`）です。`room_id`・`room_name` は、飾っているおへやの id と名前（「4さいのおへや 2」）で、飾っていなければ null です。
+作品の項目（`/api/artworks` の一覧・詳細など）の `model_size` は、GLB から測った実寸（`[幅, 高さ, 奥行き]`、m）です。測れなかった作品は null です。`age_at_made` は作ったときの子どもの年齢（お誕生日と作成日から。お誕生日が無ければ手入力の `age`）です。`room_id`・`room_name` は、飾っているおへやの id と名前（「4さいのおへや 2」）で、飾っていなければ null です。`memory_counts` はおもいでの数（`{ photo, video, audio }`。`/api/museum` の `slots[].artwork` にもある）です。作品の詳細（`/api/artworks/:id`）は `memories` におもいでを足した順で返します（`kind`・`url`・写真の小さい画像 `thumb_url`・`duration_ms` と表示用の `duration_label`（「0:12」）・`caption`・足した日 `date_label` など）。
 
 `/api/museum` の `house`（家の形。`home.rs` の `ROOM_DEFS` をそのまま出す。Web は部屋の位置・大きさ・出入口・建物の GLB をここから読む）：
 
