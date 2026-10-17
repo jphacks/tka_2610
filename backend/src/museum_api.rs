@@ -45,18 +45,37 @@ async fn displayed_rows(state: &AppState) -> AppResult<Vec<DisplayedRow>> {
 // 設定 (⑩)
 // =============================
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow)]
 pub struct Settings {
     pub museum_name: String,
     pub owner_name: String,
+    /// 子どもの誕生日 ("2021-06-01")。作品の作成日から、作ったときの年齢 (おへや) を決める。未設定なら null
+    pub child_birthday: Option<NaiveDate>,
+}
+
+/// PUT /api/settings の本文。child_birthday を省くと今の誕生日のまま (消すことはできない)
+#[derive(Deserialize)]
+pub struct SettingsBody {
+    pub museum_name: String,
+    pub owner_name: String,
+    #[serde(default)]
+    pub child_birthday: Option<NaiveDate>,
 }
 
 async fn load_settings(state: &AppState) -> AppResult<Settings> {
     Ok(sqlx::query_as::<_, Settings>(
-        "SELECT museum_name, owner_name FROM museum_settings WHERE id = 1",
+        "SELECT museum_name, owner_name, child_birthday FROM museum_settings WHERE id = 1",
     )
     .fetch_one(&state.pool)
     .await?)
+}
+
+/// 子どもの誕生日 (未設定なら None)。作品の年齢 (crate::age) を計算するのに使う
+pub async fn child_birthday<'e>(executor: impl sqlx::PgExecutor<'e>) -> AppResult<Option<NaiveDate>> {
+    Ok(sqlx::query_scalar::<_, Option<NaiveDate>>("SELECT child_birthday FROM museum_settings WHERE id = 1")
+        .fetch_optional(executor)
+        .await?
+        .flatten())
 }
 
 pub async fn get_settings(State(state): State<AppState>) -> AppResult<Json<Settings>> {
@@ -65,7 +84,7 @@ pub async fn get_settings(State(state): State<AppState>) -> AppResult<Json<Setti
 
 pub async fn update_settings(
     State(state): State<AppState>,
-    Json(body): Json<Settings>,
+    Json(body): Json<SettingsBody>,
 ) -> AppResult<Json<Settings>> {
     let museum_name = body.museum_name.trim();
     let owner_name = body.owner_name.trim();
@@ -76,12 +95,20 @@ pub async fn update_settings(
         return Err(AppError::bad_request("名前は1〜30文字で入力してください"));
     }
 
+    if let Some(birthday) = body.child_birthday
+        && (birthday > Local::now().date_naive() || birthday.year() < 1900)
+    {
+        return Err(AppError::bad_request("誕生日の日付が正しくありません"));
+    }
+
     let settings = sqlx::query_as::<_, Settings>(
-        "UPDATE museum_settings SET museum_name = $1, owner_name = $2, updated_at = NOW() \
-         WHERE id = 1 RETURNING museum_name, owner_name",
+        "UPDATE museum_settings SET museum_name = $1, owner_name = $2, \
+            child_birthday = COALESCE($3, child_birthday), updated_at = NOW() \
+         WHERE id = 1 RETURNING museum_name, owner_name, child_birthday",
     )
     .bind(museum_name)
     .bind(owner_name)
+    .bind(body.child_birthday)
     .fetch_one(&state.pool)
     .await?;
     Ok(Json(settings))

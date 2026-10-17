@@ -15,10 +15,11 @@ use tokio::fs;
 use uuid::Uuid;
 
 use crate::{
+    age,
     error::{AppError, AppResult},
     glb::{self, Style},
     home::{self, ArtworkObject, DoorPolicy, Layout, LayoutObject},
-    home_api, media, museum,
+    home_api, media, museum, museum_api,
     state::{media_url, AppState, MediaKind},
 };
 
@@ -77,6 +78,9 @@ pub struct ArtworkDto {
     pub age: Option<i16>,
     /// 例: "5歳"
     pub age_label: String,
+    /// 作ったときの年齢。子どもの誕生日と作成日から計算する (誕生日が無ければ age、それも無ければ 0)。
+    /// 作品はこの年齢のおへやに飾る
+    pub age_at_made: i16,
     /// 例: "はるか（5歳）"
     pub author_label: String,
     /// 例: "2024-05-12" (フォーム用)
@@ -120,8 +124,9 @@ pub fn date_long(date: NaiveDate) -> String {
 
 impl ArtworkDto {
     /// layout は飾っている部屋を引くための配置 (home_api::peek_layout など)。
-    /// 飾っていない作品だけのとき (登録直後など) は None でよい。配置に slot_id が見つからなければ部屋は None
-    pub fn new(row: &ArtworkRow, layout: Option<&Layout>) -> Self {
+    /// 飾っていない作品だけのとき (登録直後など) は None でよい。配置に slot_id が見つからなければ部屋は None。
+    /// birthday は子どもの誕生日 (museum_api::child_birthday。作ったときの年齢を計算する)
+    pub fn new(row: &ArtworkRow, layout: Option<&Layout>, birthday: Option<NaiveDate>) -> Self {
         let age_label = row.age.map(|a| format!("{a}歳")).unwrap_or_default();
         let author_label = match (row.child_name.is_empty(), age_label.is_empty()) {
             (false, false) => format!("{}（{}）", row.child_name, age_label),
@@ -141,6 +146,7 @@ impl ArtworkDto {
             child_name: row.child_name.clone(),
             age: row.age,
             age_label,
+            age_at_made: age::artwork_age(birthday, row.made_on, row.age),
             author_label,
             made_on: row.made_on.format("%Y-%m-%d").to_string(),
             date_short: date_short(row.made_on),
@@ -332,6 +338,7 @@ pub async fn list_artworks(
 
     let (rows, counts) = tokio::try_join!(rows_query, counts_query)?;
     let layout = home_api::peek_layout(&state.pool).await?;
+    let birthday = museum_api::child_birthday(&state.pool).await?;
 
     let total: i64 = counts.iter().map(|(_, n)| n).sum();
     let mut categories = vec![CategoryCount { id: "all", label: "すべて", count: total }];
@@ -341,7 +348,7 @@ pub async fn list_artworks(
     }
 
     Ok(Json(ArtworkList {
-        items: rows.iter().map(|r| ArtworkDto::new(r, layout.as_ref())).collect(),
+        items: rows.iter().map(|r| ArtworkDto::new(r, layout.as_ref(), birthday)).collect(),
         total,
         categories,
     }))
@@ -363,6 +370,7 @@ pub async fn get_artwork(
 ) -> AppResult<Json<ArtworkDetail>> {
     let row = fetch_row(&state.pool, id).await?;
     let layout = home_api::peek_layout(&state.pool).await?;
+    let birthday = museum_api::child_birthday(&state.pool).await?;
 
     // 同じカテゴリ → 同じ子ども → 制作日が近い順
     let related = sqlx::query_as::<_, ArtworkRow>(&format!(
@@ -378,8 +386,8 @@ pub async fn get_artwork(
     .await?;
 
     Ok(Json(ArtworkDetail {
-        artwork: ArtworkDto::new(&row, layout.as_ref()),
-        related: related.iter().map(|r| ArtworkDto::new(r, layout.as_ref())).collect(),
+        artwork: ArtworkDto::new(&row, layout.as_ref(), birthday),
+        related: related.iter().map(|r| ArtworkDto::new(r, layout.as_ref(), birthday)).collect(),
     }))
 }
 
@@ -601,7 +609,8 @@ pub async fn create_artwork(
                 started.elapsed()
             );
             // 登録したばかりの作品は飾っていない
-            Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, None))))
+            let birthday = museum_api::child_birthday(&state.pool).await?;
+            Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, None, birthday))))
         }
         Err(error) => {
             remove_files(&state, files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -774,7 +783,8 @@ pub async fn update_artwork(
             remove_files(&state, old_files.into_iter()).await;
             println!("[Artwork] updated \"{}\" in {:?}", updated.title, started.elapsed());
             let layout = home_api::peek_layout(&state.pool).await?;
-            Ok(Json(ArtworkDto::new(&updated, layout.as_ref())))
+            let birthday = museum_api::child_birthday(&state.pool).await?;
+            Ok(Json(ArtworkDto::new(&updated, layout.as_ref(), birthday)))
         }
         Err(error) => {
             remove_files(&state, new_files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -844,7 +854,8 @@ pub async fn set_favorite(
     .fetch_one(&state.pool)
     .await?;
     let layout = home_api::peek_layout(&state.pool).await?;
-    Ok(Json(ArtworkDto::new(&row, layout.as_ref())))
+    let birthday = museum_api::child_birthday(&state.pool).await?;
+    Ok(Json(ArtworkDto::new(&row, layout.as_ref(), birthday)))
 }
 
 // =============================
@@ -896,7 +907,8 @@ pub async fn display_artwork(
         && room.is_none_or(|r| layout.room_of_id(&current.id).is_some_and(|c| c.id == r.id))
     {
         // すでに飾ってある (同じ要求を 2 回送っても置き場所は変わらない)。別の部屋を指定したときは、その部屋へ移す
-        return Ok(Json(ArtworkDto::new(&row, Some(&layout))));
+        let birthday = museum_api::child_birthday(&mut *tx).await?;
+        return Ok(Json(ArtworkDto::new(&row, Some(&layout), birthday)));
     }
     if let Some(parent_id) = &request.parent_id {
         let support = layout
@@ -960,10 +972,11 @@ pub async fn display_artwork(
     let moved = HashSet::from([slot_id.clone()]);
     let saved = home_api::save_layout(&mut tx, layout, DoorPolicy::OnlyMoved(&moved)).await?;
     let row = fetch_row(&mut *tx, id).await?;
+    let birthday = museum_api::child_birthday(&mut *tx).await?;
     tx.commit().await?;
 
     println!("[Display] \"{}\" -> {}", row.title, slot_id);
-    Ok(Json(ArtworkDto::new(&row, Some(&saved.layout))))
+    Ok(Json(ArtworkDto::new(&row, Some(&saved.layout), birthday)))
 }
 
 pub async fn undisplay_artwork(
@@ -979,10 +992,11 @@ pub async fn undisplay_artwork(
         home_api::save_layout(&mut tx, layout, DoorPolicy::Ignore).await?;
     }
     let row = fetch_row(&mut *tx, id).await?;
+    let birthday = museum_api::child_birthday(&mut *tx).await?;
     tx.commit().await?;
 
     println!("[Display] \"{}\" removed", row.title);
-    Ok(Json(ArtworkDto::new(&row, None)))
+    Ok(Json(ArtworkDto::new(&row, None, birthday)))
 }
 
 #[cfg(test)]
