@@ -1,77 +1,133 @@
-/* ② ホーム（Home）。画面いっぱいの 3D の家と、その上に浮かぶ 2 段の UI（上：館名とアバター、下：飾っている数と丸いボタン） */
+/* ② ホーム（Home）。年齢のチップ、選んだ年齢のおへやの見出し、積み上げの建物の 3D、「はいる」「おへやを足す」 */
 
-/* 3D をなぞっても、ページがスクロールしたり、引っぱって再読み込みしたりしないようにする */
-.home-screen {
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-/* 3D は画面いっぱい（下部タブの後ろまで。タブはガラスなので、後ろに家が透ける） */
-.home-stage {
-  position: absolute;
-  inset: 0;
-}
-
-/* 上段（.stage-top）：館名とアバターの間を空ける */
-.home-top {
-  gap: 12px;
-}
-
-/* 館名。押しても何もしないので、なぞる操作はその下の 3D に通す。長いときは「…」で切る */
-.home-title {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
-
-/* 館名がまだ無いとき（読み込み中）も、アバターは右に置く */
-.home-avatar {
-  margin-left: auto;
-}
-
-/* 下段：下部タブ（下から 14px、高さ 62px）のすぐ上。--tabbar-space（96px）の上に置くので、タブとの間は 20px 空く */
-.home-dock {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(var(--tabbar-space) + var(--safe-bottom));
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-}
-
-/* 飾っている数としまってある数。押しても何もしないので、なぞる操作は 3D に通す。狭い画面で入りきらないときは「…」で切る */
-.home-status {
-  min-width: 0;
-  height: 44px;
-  margin: 0;
-  padding: 0 16px;
-  border-radius: 999px;
+/* 誕生日が無いときの案内（設定へ） */
+.home-notice {
+  display: block;
+  margin: 0 20px 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--sun);
   font-size: 13px;
   font-weight: 600;
-  line-height: 44px;
+  line-height: 1.5;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* 年齢のチップ。多いときは横にスクロールする */
+.age-chips {
+  display: flex;
+  gap: 8px;
+  padding: 2px 20px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.age-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.age-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 20px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+/* 選んでいる年齢：緑の地に、家のしるし */
+.age-chip.selected {
+  border-color: transparent;
+  background: var(--sage);
   color: var(--ink);
 }
 
-/* 右の丸いボタン（歩く・模様替え）。飾っている数がまだ無いとき（読み込み中）も右に置く */
-.home-actions {
+/* 「4さいのおへや 13」 */
+.home-heading {
   display: flex;
-  flex: none;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin-left: auto;
-  pointer-events: auto;
+  margin: 14px 20px 4px;
 }
 
-/* 指で押しやすいよう、GlassButton（40px）を少し大きくする */
-.home-action {
-  width: 44px;
-  height: 44px;
+.home-heading-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.home-heading-count {
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent);
+}
+
+.home-heading-stored {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* 積み上げの建物の 3D */
+.home-stage {
+  height: min(46dvh, 420px);
+  margin: 4px 12px 0;
+  border-radius: 20px;
+}
+
+/* おへやがまだ無い年齢 */
+.home-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* 「はいる」「おへやを足す」 */
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 20px 8px;
+}
+
+.home-enter {
+  min-width: 180px;
+  height: 52px;
+  border-radius: 999px;
+  font-size: 17px;
+}
+
+.home-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+}
+
+.home-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
 }

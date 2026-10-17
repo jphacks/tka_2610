@@ -35,6 +35,7 @@ export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene }
 export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))
 export const MapScene = lazy(() => load().then((m) => ({ default: m.MapScene })))
 export const PreviewScene = lazy(() => load().then((m) => ({ default: m.PreviewScene })))
+export const StackScene = lazy(() => load().then((m) => ({ default: m.StackScene })))
 export const WalkScene = lazy(() => load().then((m) => ({ default: m.WalkScene })))
 export const HomeEditScene = lazy(() => load().then((m) => ({ default: m.HomeEditScene })))
 // 型だけなので、three.js は読み込まれない
