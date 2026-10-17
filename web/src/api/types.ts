@@ -70,8 +70,8 @@ export interface ListParams {
 
 export type Vec3 = [number, number, number]
 /**
- * 部屋の名前。中央のリビング（hub、10 × 10 m）と、hub の西・東・北に壁を共有して並ぶ 8 × 8 m の 3 部屋
- * （left = −X、right = +X、front = −Z。入口（南、+Z）から入って正面が front）
+ * 部屋の名前。今の家は中央のリビング（hub、10 × 10 m）だけ。
+ * left・right・front は以前あった部屋（hub の西・東・北）。部屋を戻したときのために型に残している（API には出てこない）
  */
 export type RoomId = 'hub' | 'left' | 'right' | 'front'
 /** 壁の向き（north = −Z、south = +Z、west = −X、east = +X） */
@@ -139,16 +139,16 @@ export interface ArtworkObject {
 export type LayoutObject = FurnitureObject | ArtworkObject
 
 /**
- * おうちの配置 JSON（v4）。家具と作品をどこに置くかの、ただ 1 つの正。Rust: home.rs の Layout
- * 4 部屋とも enabled: true で、壁紙・床材（wall / floor）は部屋ごと。v1〜v3 はサーバーが v4 に上げて返す
- * （v3 は 8 × 8 と 6 × 6 の 4 部屋。上げるときに壁ぎわの物を広がった壁の方へ動かす）
+ * おうちの配置 JSON（v5）。家具と作品をどこに置くかの、ただ 1 つの正。Rust: home.rs の Layout
+ * rooms は house.rooms にある部屋だけ（今はリビングの hub だけ）。enabled: true で、壁紙・床材（wall / floor）は部屋ごと。
+ * v1〜v4 はサーバーが v5 に上げて返す（v4 までの左・右・前の部屋の物は外し、v3 までは壁ぎわの物を広がった壁の方へ動かす）
  * 注意：API の中で、この配置 JSON（Layout とその中身）だけは camelCase。
  * 家のキットの JSON と同じ形にしておくため。ほかの API の項目はすべて snake_case のまま。
  */
 export interface Layout {
-  schemaVersion: 4
+  schemaVersion: 5
   kitVersion: string
-  rooms: Record<RoomId, LayoutRoom>
+  rooms: { hub: LayoutRoom } & Partial<Record<RoomId, LayoutRoom>>
   objects: LayoutObject[]
 }
 
@@ -235,7 +235,7 @@ export interface HouseDoor {
  */
 export interface HouseRoom {
   id: RoomId
-  /** 部屋の名前（「中央のリビング」「左の部屋」など。400 の文言にも使われる） */
+  /** 部屋の名前（「中央のリビング」など。400 の文言にも使われる） */
   name: string
   /** 部屋の中心の世界座標（x, z, m）。床は y = 0 */
   origin: [number, number]
@@ -335,7 +335,7 @@ export interface Museum {
   model_url: string | null
   /** 一人称で歩く画面用の別の GLB（リビングの建物の代わりに使う）。ふだんは null */
   walk_model_url: string | null
-  /** 家の建物（4 部屋の定義と部屋ごとの GLB）。古いサーバーには無い（そのときは model_url のリビング 1 部屋） */
+  /** 家の建物（部屋の定義と部屋ごとの GLB。今はリビングだけ）。古いサーバーには無い（そのときは model_url のリビング 1 部屋） */
   house?: House | null
   total_artworks: number
   displayed_count: number

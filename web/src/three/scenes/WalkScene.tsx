@@ -36,7 +36,7 @@
 //     トーンマッピング（Neutral）と sRGB への変換は、PC では PostEffects の最後の OutputPass が、lite では描くときに renderer が、
 //     同じ renderer の設定（onCreated）で行うので、色や明るさは PC とそろう（隅の陰と光のにじみが無い分だけ違う）
 //   - 描画の細かさ（dpr）の上限を 1.5 → 1.25（重いときに PerformanceMonitor が 1 まで下げるのは同じ）
-//   - 作品のスポットライトを 6 → 2 個、8 × 8 の部屋のダウンライトを 3 → 1 灯（stagePreset の smallLite。4 部屋で 14 → 8 灯）。
+//   - 作品のスポットライトを 6 → 2 個、小さい部屋のダウンライトを 3 → 1 灯（stagePreset の smallLite。今の家はリビングだけなので 5 灯のまま）。
 //     three.js はライトの数だけ画面の全部の点で計算するため
 //   - 太陽の影の細かさを 2048 → 1024 px、映り込みの細かさを 128 → 64 px（どちらも作り直したときだけ撮るのは同じ）
 // 作品の GLB を置く数は HomeObjects が端末（pointer: coarse）で決める（スマホは近い 6 つ）。
