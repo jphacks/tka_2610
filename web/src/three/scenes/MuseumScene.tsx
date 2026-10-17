@@ -16,6 +16,14 @@ import { Stage } from './Stage'
 /** はじめの位置と、部屋全体を見渡す位置（部屋の中心から見た値。リビングの中心が原点） */
 const OVERVIEW_EYE = new THREE.Vector3(5.2, 4.2, 5.2)
 const OVERVIEW_TARGET = new THREE.Vector3(0, 1, 0)
+/** OVERVIEW_EYE を決めたときの部屋の大きさ（m）。部屋の大きさに比例して離れる（10 m のリビングなら 1.25 倍） */
+const OVERVIEW_ROOM_SIZE = 8
+
+/** 部屋を見渡すカメラの位置（部屋の中心から見た値）。部屋が無ければ OVERVIEW_EYE のまま */
+function overviewEye(room: HouseRoom | undefined): THREE.Vector3 {
+  const scale = room ? Math.max(room.size[0], room.size[1]) / OVERVIEW_ROOM_SIZE : 1
+  return OVERVIEW_EYE.clone().multiplyScalar(scale)
+}
 
 /**
  * 作品の正面から見る位置。北や西を向いた作品も、その正面から見る
@@ -38,7 +46,7 @@ function roomGoal(rooms: HouseRoom[], roomId: string): CameraGoal | null {
   if (!room) return null
   const center = new THREE.Vector3(room.origin[0], 0, room.origin[1])
   return {
-    position: center.clone().add(OVERVIEW_EYE),
+    position: center.clone().add(overviewEye(room)),
     target: center.clone().add(OVERVIEW_TARGET),
     key: `room-${roomId}`,
   }
@@ -60,6 +68,8 @@ export function MuseumScene({
   const rooms = houseRoomsOf(museum)
   const wall = wallThicknessOf(museum)
   const bounds = useMemo(() => houseBounds(rooms, wall), [rooms, wall])
+  // はじめはリビングを見渡す（リビングの中心が原点）
+  const startEye = overviewEye(rooms.find((r) => r.id === 'hub') ?? rooms[0])
   const goal = useMemo(() => {
     const slot = focusId ? museum.slots.find((s) => s.artwork?.id === focusId) : undefined
     if (slot) return slotGoal(slot)
@@ -70,7 +80,7 @@ export function MuseumScene({
   if (!hasHouseModel(museum)) return null
 
   return (
-    <Stage camera={{ position: OVERVIEW_EYE.toArray(), fov: 50 }}>
+    <Stage camera={{ position: startEye.toArray(), fov: 50 }}>
       <HouseShells museum={museum} cutaway="house" onReady={onReady} />
       <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onSelect={onSelect} />
       <OrbitControls

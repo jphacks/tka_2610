@@ -70,7 +70,7 @@ export interface ListParams {
 
 export type Vec3 = [number, number, number]
 /**
- * 部屋の名前。中央のリビング（hub、8 × 8 m）と、hub の西・東・北に壁を共有して並ぶ 6 × 6 m の 3 部屋
+ * 部屋の名前。中央のリビング（hub、10 × 10 m）と、hub の西・東・北に壁を共有して並ぶ 8 × 8 m の 3 部屋
  * （left = −X、right = +X、front = −Z。入口（南、+Z）から入って正面が front）
  */
 export type RoomId = 'hub' | 'left' | 'right' | 'front'
@@ -95,7 +95,7 @@ export type FloorFinish = 'oak' | 'limestone' | 'white_oak' | 'pale_ash' | 'warm
 /** 配置 JSON の部屋 1 つ。Rust: home.rs の Room */
 export interface LayoutRoom {
   enabled: boolean
-  /** 幅・奥行き（m）。リビングは 8 × 8、ほかの部屋は 6 × 6 で固定（違えばサーバーが 400） */
+  /** 幅・奥行き（m）。リビングは 10 × 10、ほかの部屋は 8 × 8 で固定（違えばサーバーが 400） */
   width: number
   depth: number
   wall: WallFinish
@@ -139,13 +139,14 @@ export interface ArtworkObject {
 export type LayoutObject = FurnitureObject | ArtworkObject
 
 /**
- * おうちの配置 JSON（v3）。家具と作品をどこに置くかの、ただ 1 つの正。Rust: home.rs の Layout
- * v3 では 4 部屋とも enabled: true で、壁紙・床材（wall / floor）は部屋ごと。v2（リビングだけ）はサーバーが v3 に上げて返す
+ * おうちの配置 JSON（v4）。家具と作品をどこに置くかの、ただ 1 つの正。Rust: home.rs の Layout
+ * 4 部屋とも enabled: true で、壁紙・床材（wall / floor）は部屋ごと。v1〜v3 はサーバーが v4 に上げて返す
+ * （v3 は 8 × 8 と 6 × 6 の 4 部屋。上げるときに壁ぎわの物を広がった壁の方へ動かす）
  * 注意：API の中で、この配置 JSON（Layout とその中身）だけは camelCase。
  * 家のキットの JSON と同じ形にしておくため。ほかの API の項目はすべて snake_case のまま。
  */
 export interface Layout {
-  schemaVersion: 3
+  schemaVersion: 4
   kitVersion: string
   rooms: Record<RoomId, LayoutRoom>
   objects: LayoutObject[]

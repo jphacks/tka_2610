@@ -1,32 +1,32 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "kitVersion": "1.1.0-home",
   "rooms": {
     "hub": {
+      "enabled": true,
+      "width": 10,
+      "depth": 10,
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    "left": {
+      "enabled": true,
+      "width": 8,
+      "depth": 8,
+      "wall": "oak",
+      "floor": "oak"
+    },
+    "right": {
       "enabled": true,
       "width": 8,
       "depth": 8,
       "wall": "plaster",
       "floor": "oak"
     },
-    "left": {
-      "enabled": true,
-      "width": 6,
-      "depth": 6,
-      "wall": "oak",
-      "floor": "oak"
-    },
-    "right": {
-      "enabled": true,
-      "width": 6,
-      "depth": 6,
-      "wall": "plaster",
-      "floor": "oak"
-    },
     "front": {
       "enabled": true,
-      "width": 6,
-      "depth": 6,
+      "width": 8,
+      "depth": 8,
       "wall": "brick",
       "floor": "limestone"
     }
@@ -61,7 +61,7 @@
       "id": "home-004",
       "assetId": "home_display_shelf",
       "roomId": "hub",
-      "position": [-2.82, 0, 1.45],
+      "position": [-4.62, 0, 2.3],
       "rotationY": 1.5707963267948966
     },
     {
@@ -69,7 +69,7 @@
       "id": "home-005",
       "assetId": "home_console",
       "roomId": "hub",
-      "position": [2.7, 0, 1.55],
+      "position": [4.6, 0, 2.4],
       "rotationY": -1.5707963267948966
     },
     {
@@ -77,7 +77,7 @@
       "id": "home-006",
       "assetId": "home_floor_lamp",
       "roomId": "hub",
-      "position": [2.86, 0, -2.88],
+      "position": [4.3, 0, -4.3],
       "rotationY": 0
     },
     {
@@ -85,7 +85,7 @@
       "id": "home-007",
       "assetId": "plant",
       "roomId": "hub",
-      "position": [-3.08, 0, -2.99],
+      "position": [-4.3, 0, -4.3],
       "rotationY": 0
     },
     {
@@ -93,7 +93,7 @@
       "id": "home-008",
       "assetId": "home_craft_desk",
       "roomId": "hub",
-      "position": [0, 0, 3.4],
+      "position": [0, 0, 4.45],
       "rotationY": 3.141592653589793
     },
     {
@@ -101,7 +101,7 @@
       "id": "home-009",
       "assetId": "plinth_low",
       "roomId": "hub",
-      "position": [-2.5, 0, 3.25],
+      "position": [-2.6, 0, 4.25],
       "rotationY": 0
     },
     {
@@ -109,7 +109,7 @@
       "id": "home-010",
       "assetId": "plinth_ivory",
       "roomId": "hub",
-      "position": [2.9, 0, 3.4],
+      "position": [2.6, 0, 4.35],
       "rotationY": 0
     },
     {
@@ -117,7 +117,7 @@
       "id": "home-011",
       "assetId": "plinth_ivory",
       "roomId": "hub",
-      "position": [-3.4, 0, -0.9],
+      "position": [-4.35, 0, -2.2],
       "rotationY": 0
     }
   ]

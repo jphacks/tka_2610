@@ -11,7 +11,7 @@
 //
 // 表の形は 2 つとも読める：
 //   v2（リビングだけ）… 配置は schemaVersion 2、床のケースに room が無い。ドアの判定はしない（リビングにドアが無かったころの表）
-//   v3（4 部屋）      … 配置は schemaVersion 3、床のケースに room（部屋の id）がある。部屋の定義（中心・大きさ・ドア）は
+//   v3・v4（4 部屋）  … 配置は schemaVersion 3 か 4（4 は部屋を広げた版）、床のケースに room（部屋の id）がある。部屋の定義（中心・大きさ・ドア）は
 //                       表の house（/api/museum の house と同じ形）か room_defs から読み、無ければ仕様の値（DEFAULT_HOUSE）を使う。
 //                       ドアの前の判定は、候補（candidate）を「新しく置いた物」として調べる（Rust は保存時に動かした物だけを調べる）。
 //                       ケースに moved: false があれば、そのケースではドアの判定をしない
@@ -65,22 +65,22 @@ const tolScale = fixture.tolerance?.scale ?? 1e-6
 // 表の形（v2 = リビングだけ、v3 = 4 部屋）
 const layoutsOf = Object.values(fixture.layouts ?? {})
 const v3 =
-  layoutsOf.some((l) => l?.schemaVersion === 3) ||
+  layoutsOf.some((l) => l?.schemaVersion >= 3) ||
   (fixture.cases ?? []).some((c) => c.room !== undefined) ||
   fixture.house !== undefined ||
   fixture.room_defs !== undefined
 
 /**
  * 仕様の部屋の定義（home.rs の ROOM_DEFS と同じ値のはず）。表に house も room_defs も無いときだけ使う。
- * hub 8 × 8（西・東・北にドア）、left・right・front 6 × 6（hub 側にドア）。front は −Z
+ * hub 10 × 10（西・東・北にドア）、left・right・front 8 × 8（hub 側にドア）。front は −Z
  */
 const DEFAULT_HOUSE = {
   wall_thickness: 0.24,
   rooms: [
-    { id: 'hub', name: 'hub', origin: [0, 0], size: [8, 8], model_url: null, cutaway: [], doors: ['west', 'east', 'north'].map(door) },
-    { id: 'left', name: 'left', origin: [-7.24, 0], size: [6, 6], model_url: null, cutaway: [], doors: [door('east')] },
-    { id: 'right', name: 'right', origin: [7.24, 0], size: [6, 6], model_url: null, cutaway: [], doors: [door('west')] },
-    { id: 'front', name: 'front', origin: [0, -7.24], size: [6, 6], model_url: null, cutaway: [], doors: [door('south')] },
+    { id: 'hub', name: 'hub', origin: [0, 0], size: [10, 10], model_url: null, cutaway: [], doors: ['west', 'east', 'north'].map(door) },
+    { id: 'left', name: 'left', origin: [-9.24, 0], size: [8, 8], model_url: null, cutaway: [], doors: [door('east')] },
+    { id: 'right', name: 'right', origin: [9.24, 0], size: [8, 8], model_url: null, cutaway: [], doors: [door('west')] },
+    { id: 'front', name: 'front', origin: [0, -9.24], size: [8, 8], model_url: null, cutaway: [], doors: [door('south')] },
   ],
 }
 function door(side) {
@@ -239,7 +239,7 @@ console.log(`[check:placement] ${casesPath}`)
 if (fixture.generated_by) console.log(`[check:placement] generated_by: ${fixture.generated_by}`)
 const floorRooms = [...new Set(cases.filter((c) => c.surface === 'floor').map((c) => c.room ?? 'hub'))]
 console.log(
-  `[check:placement] 表の形: ${v3 ? 'v3（4 部屋）' : 'v2（リビングだけ）'}・床のケースの部屋: ${floorRooms.join(', ') || 'なし'}・部屋の定義: ${houseSource}`,
+  `[check:placement] 表の形: ${v3 ? '4 部屋' : 'v2（リビングだけ）'}・床のケースの部屋: ${floorRooms.join(', ') || 'なし'}・部屋の定義: ${houseSource}`,
 )
 console.log(
   `[check:placement] cases ${cases.length} 件・extra ${extra.length} 件・world ${worlds.length} 件 → 違い ${mismatches.length} 件` +

@@ -404,9 +404,16 @@ for (const mix of mixes) {
   const root = cloneRoom('hub')
   const box = new THREE.Box3()
   const c = new THREE.Vector3()
-  // リビングの内寸 8 m、壁の厚さ 0.24 m → 壁の中心線は ±4.12
-  const side = { left: (v) => v.x < -4.12, right: (v) => v.x > 4.12, front: (v) => v.z < -4.12 }
-  const inner = { left: (v) => v.x > -4.12 && v.x < -3.9, right: (v) => v.x < 4.12 && v.x > 3.9, front: (v) => v.z > -4.12 && v.z < -3.9 }
+  // 壁の中心線 = リビングの内寸の半分 + 壁の厚さの半分（内寸は GLB のルートの extras.dimensionsMeters。10 m なら ±5.12）
+  let dims = null
+  root.traverse((o) => {
+    if (!dims && Array.isArray(o.userData.dimensionsMeters)) dims = o.userData.dimensionsMeters
+  })
+  if (!dims) fail('リビングの GLB に extras.dimensionsMeters がありません')
+  const mid = (dims?.[0] ?? 0) / 2 + 0.12
+  const inside = mid - 0.22
+  const side = { left: (v) => v.x < -mid, right: (v) => v.x > mid, front: (v) => v.z < -mid }
+  const inner = { left: (v) => v.x > -mid && v.x < -inside, right: (v) => v.x < mid && v.x > inside, front: (v) => v.z > -mid && v.z < -inside }
   for (const mesh of meshesOf(root)) {
     const face = mesh.userData.faceRoom
     if (typeof face !== 'string') continue
