@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 2,
+  "kitVersion": "1.1.0-home",
+  "rooms": {
+    "hub": {
+      "enabled": true,
+      "width": 8,
+      "depth": 8,
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    "left": {
+      "enabled": false,
+      "width": 6,
+      "depth": 6,
+      "wall": "oak",
+      "floor": "oak"
+    },
+    "right": {
+      "enabled": false,
+      "width": 6,
+      "depth": 6,
+      "wall": "plaster",
+      "floor": "oak"
+    },
+    "front": {
+      "enabled": false,
+      "width": 6,
+      "depth": 6,
+      "wall": "brick",
+      "floor": "limestone"
+    }
+  },
+  "objects": [
+    {
+      "kind": "furniture",
+      "id": "home-001",
+      "assetId": "home_rug",
+      "roomId": "hub",
+      "position": [
+        0.05,
+        0.0,
+        -0.6
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-002",
+      "assetId": "home_sofa",
+      "roomId": "hub",
+      "position": [
+        0.0,
+        0.0,
+        -2.45
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-003",
+      "assetId": "home_coffee_table",
+      "roomId": "hub",
+      "position": [
+        0.05,
+        0.0,
+        -0.65
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-004",
+      "assetId": "home_display_shelf",
+      "roomId": "hub",
+      "position": [
+        -2.82,
+        0.0,
+        1.45
+      ],
+      "rotationY": 1.5707963267948966
+    },
+    {
+      "kind": "furniture",
+      "id": "home-005",
+      "assetId": "home_console",
+      "roomId": "hub",
+      "position": [
+        2.7,
+        0.0,
+        1.55
+      ],
+      "rotationY": -1.5707963267948966
+    },
+    {
+      "kind": "furniture",
+      "id": "home-006",
+      "assetId": "home_floor_lamp",
+      "roomId": "hub",
+      "position": [
+        2.86,
+        0.0,
+        -2.88
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-007",
+      "assetId": "plant",
+      "roomId": "hub",
+      "position": [
+        -3.08,
+        0.0,
+        -2.99
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-008",
+      "assetId": "home_craft_desk",
+      "roomId": "hub",
+      "position": [
+        -0.09,
+        0.0,
+        3.26
+      ],
+      "rotationY": 3.141592653589793
+    },
+    {
+      "kind": "furniture",
+      "id": "home-009",
+      "assetId": "plinth_low",
+      "roomId": "hub",
+      "position": [
+        -2.5,
+        0.0,
+        3.25
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-010",
+      "assetId": "plinth_ivory",
+      "roomId": "hub",
+      "position": [
+        1.65,
+        0.0,
+        2.56
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-011",
+      "assetId": "plinth_ivory",
+      "roomId": "hub",
+      "position": [
+        -3.4,
+        0.0,
+        -0.9
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-494d0cf9",
+      "artworkId": "076b8290-bf73-5872-931b-e6f69da0cbbd",
+      "parentId": "home-004",
+      "position": [
+        0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-91dd7914",
+      "artworkId": "b3839bd6-c431-5f0e-bb1c-313e9072822e",
+      "parentId": "home-005",
+      "position": [
+        -0.56,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-6dc525ea",
+      "artworkId": "11b72806-b682-5417-8512-d4d07e38c2df",
+      "parentId": "home-005",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-867f7b2d",
+      "artworkId": "57061136-1338-5b67-a7b8-29b7728422c5",
+      "parentId": "home-005",
+      "position": [
+        0.56,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-c2b670d2",
+      "artworkId": "e3a69cf7-a643-57e7-b7bb-fd804e0bfb53",
+      "parentId": "home-008",
+      "position": [
+        -0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-5ba223a1",
+      "artworkId": "a7fad65f-d9a6-5229-a88a-b88814165251",
+      "parentId": "home-008",
+      "position": [
+        0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-618ef2ee",
+      "artworkId": "b7be87bf-8c39-5d4d-8a96-4dd91928ab58",
+      "parentId": "home-003",
+      "position": [
+        -0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-4b986ed8",
+      "artworkId": "3296d686-7ba1-5cc5-a3c9-3d60db70f82d",
+      "parentId": "home-003",
+      "position": [
+        0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-0ef8317c",
+      "artworkId": "0176c99c-7444-512d-bfad-eef47c325b3a",
+      "parentId": "home-009",
+      "position": [
+        -0.56,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-604ff01a",
+      "artworkId": "1551ba02-9be4-5227-b26d-ad66094ac89d",
+      "parentId": "home-009",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-0bffa3b2",
+      "artworkId": "3a749a18-30b0-5af6-9fe2-27d18d0f7df7",
+      "parentId": "home-009",
+      "position": [
+        0.56,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-b17c8c93",
+      "artworkId": "40b91f38-f757-5a84-90a5-f1c1614ebc92",
+      "parentId": "home-010",
+      "position": [
+        0.02,
+        0.0,
+        0.07
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "artwork",
+      "id": "art-ab4b138d",
+      "artworkId": "7505d491-1bc8-5357-aa22-3be72ba26a4e",
+      "parentId": "home-004",
+      "position": [
+        -0.28,
+        0.0,
+        0.0
+      ],
+      "rotationY": 0.0
+    },
+    {
+      "kind": "furniture",
+      "id": "home-22325339",
+      "assetId": "home_console",
+      "roomId": "hub",
+      "position": [
+        0.75,
+        0.0,
+        0.94
+      ],
+      "rotationY": 0.0
+    }
+  ]
+}
