@@ -226,7 +226,7 @@ Rust のファイルと対応するように分けています。
 | ファイル | 内容 | Rust 側 |
 |---|---|---|
 | `index.ts` | 入口。画面からは `import { useMuseum } from '../api'` で読み込む | |
-| `types.ts` | API の型。Rust の構造体名をコメントに書いている。配置 JSON（`Layout`。v3）だけは camelCase。テーマの型（`HomeTheme`・`HomeMaterial`・`WallFinish`・`FloorFinish`）、部屋の型（`RoomId`・`Side`・`LayoutRoom`）と家の形（`House`・`HouseRoom`・`HouseDoor`。`Museum.house`）もここ | DTO（`ArtworkDto`、`MuseumOverview`、`Layout`、`HouseView` など） |
+| `types.ts` | API の型。Rust の構造体名をコメントに書いている。配置 JSON（`Layout`。v4）だけは camelCase。テーマの型（`HomeTheme`・`HomeMaterial`・`WallFinish`・`FloorFinish`）、部屋の型（`RoomId`・`Side`・`LayoutRoom`）と家の形（`House`・`HouseRoom`・`HouseDoor`。`Museum.house`）もここ | DTO（`ArtworkDto`、`MuseumOverview`、`Layout`、`HouseView` など） |
 | `client.ts` | 通信の共通処理（`request`、`ApiError`）、TanStack Query の設定、キャッシュのキー | `error.rs`（`{ "error": "..." }` の形） |
 | `museum.ts` | おうちの全体像（家の GLB・配置 JSON・家具の一覧・飾っている作品）と設定：`useMuseum`、`useSettings`、`useUpdateSettings` | `museum_api.rs` |
 | `home.ts` | 配置 JSON の読み書き：`useLayout`（`GET /api/home/layout`）、`useSaveLayout`（`PUT`。保存すると、おうちの全体像と作品の一覧も取り直す。置き方がおかしいと 400 で、Rust の日本語の文言の `ApiError` になる）、`saveLayoutOnLeave`（画面を閉じるときに `keepalive` で送る。結果は待たない）。⑫ は配置を `useMuseum` から読み、`useLayout` は今は使っていない | `home_api.rs` |
@@ -276,7 +276,7 @@ iOS 風のアニメーションは、ブラウザの View Transitions API で作
 
 - 型チェックとビルド：`cd web && npm run build`
 - 置けるかどうかの判定が Rust と同じか：`cd web && npm run check:placement`。`tsc -p tsconfig.check.json` で `placement.ts` だけを `node_modules/.cache/placement-check/` に出力し、`scripts/check-placement.mjs` が Rust の総当たり表（`backend/src/testdata/placement-cases.json`）を計算し直して、寄せた位置・倍率・置けるかどうかを比べます。違いがあれば最初の 20 件を出して、終了コード 1 で終わります。TypeScript を直接読む機能は使わないので、Node 20.19 でも動きます。環境変数 `PLACEMENT_CASES` で別の表を渡せます
-  - 今の表は v3（4 部屋）です。`cases` は 2,280 件（面 13 × 作品 15 × 2 つの向き × 寄せる先 4 = 1,560 件と、4 部屋の床 × 作品 15 × 2 × 寄せる先 6 = 720 件。床の行には `room` がある）、`extra` は重なり・部屋をまたぐ位置・小さい部屋の壁・出入口などの 20 件です。部屋の定義は表の `house`（`/api/museum` の `house` と同じ形）、出入口の前の大きさは `door_zone` から読み、`placement.ts` の `DOOR_ZONE_WIDTH`・`DOOR_ZONE_DEPTH` と比べます。
+  - 今の表は 4 部屋（配置は v4。部屋を広げた家）の表です。`cases` は 2,280 件（面 13 × 作品 15 × 2 つの向き × 寄せる先 4 = 1,560 件と、4 部屋の床 × 作品 15 × 2 × 寄せる先 6 = 720 件。床の行には `room` がある）、`extra` は重なり・部屋をまたぐ位置・小さい部屋の壁・出入口などの 20 件です。部屋の定義は表の `house`（`/api/museum` の `house` と同じ形）、出入口の前の大きさは `door_zone` から読み、`placement.ts` の `DOOR_ZONE_WIDTH`・`DOOR_ZONE_DEPTH` と比べます。
   - 候補（id `cand`）は「新しく置いた物」として、出入口の前も調べます（`canPlace` に `house` を渡す）。`extra[].moved` が `false` の行は、動かしていない保存済みの物の扱いで、出入口の前を調べません。
-  - 終わりに `表の形: v3（4 部屋）・床のケースの部屋: hub, left, right, front・部屋の定義: 表の house` と `cases 2280 件・extra 20 件・world 0 件 → 違い 0 件` が出れば OK です。リビングだけの v2 の表も読めます（そのときは出入口を調べない）
+  - 終わりに `表の形: 4 部屋・床のケースの部屋: hub, left, right, front・部屋の定義: 表の house` と `cases 2280 件・extra 20 件・world 0 件 → 違い 0 件` が出れば OK です。リビングだけの v2 の表も読めます（そのときは出入口を調べない）
 - 開発中の表示：サーバー（`cd backend && cargo run`）を起動したうえで、`cd web && npm run dev` → http://localhost:5173
