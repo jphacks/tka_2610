@@ -11,9 +11,10 @@ use tokio::fs;
 use uuid::Uuid;
 
 use crate::{
+    age,
     artworks::{load_sizes, measure_model, remove_files, set_model_size, sizes_of, write_files},
     error::AppError,
-    glb, home, home_api, media,
+    glb, home_api, media, museum_api,
     state::{AppState, MediaKind},
 };
 
@@ -235,28 +236,26 @@ async fn repair_files(
     Ok(files.len())
 }
 
-/// 新しく登録した作品を、空いている棚や机の上に飾る
+/// 新しく登録した作品を、作ったときの年齢のおへやの空いている棚や机の上に飾る (その年齢のおへやが無ければ 1 階を作る)
 async fn place(state: &AppState, ids: &[Uuid]) -> Result<usize, String> {
     let message = |e: AppError| e.message;
     let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
-    let mut layout = home_api::lock_layout(&mut tx).await.map_err(message)?;
-    // 載っている作品と、新しく置く作品の実寸
-    let all: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).chain(ids.iter().copied()).collect();
-    let sizes = sizes_of(&load_sizes(&mut *tx, &all).await.map_err(message)?);
+    home_api::lock_house(&mut tx).await.map_err(message)?;
+    let birthday = museum_api::child_birthday(&mut *tx).await.map_err(message)?;
+    let rows = sqlx::query_as::<_, (Uuid, NaiveDate, Option<i16>)>("SELECT id, made_on, age FROM artworks WHERE id = ANY($1)")
+        .bind(ids)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    let sizes = sizes_of(&load_sizes(&mut *tx, ids).await.map_err(message)?);
 
     let mut placed = 0;
     for &id in ids {
-        if layout.artwork_for(id).is_some() {
-            continue;
+        let Some((_, made_on, manual)) = rows.iter().find(|r| r.0 == id) else { continue };
+        let age = age::artwork_age(birthday, *made_on, *manual);
+        if home_api::place_in_age(&mut tx, id, sizes.get(&id), age).await.map_err(message)?.is_some() {
+            placed += 1;
         }
-        let Some(spot) = home::pick_spot(&layout, &sizes, sizes.get(&id), None, None) else { break };
-        layout.objects.push(home::artwork_on(id, spot));
-        placed += 1;
-    }
-
-    if placed > 0 {
-        // 家具の上にだけ置くので、出入口の前は見ない
-        home_api::save_layout(&mut tx, layout, home::DoorPolicy::Ignore).await.map_err(message)?;
     }
     tx.commit().await.map_err(|e| e.to_string())?;
     Ok(placed)

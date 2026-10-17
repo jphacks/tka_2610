@@ -145,9 +145,9 @@ async fn main() {
     if let Err(error) = artworks::backfill_model_sizes(&state).await {
         println!("[Artwork] model sizes failed: {}", error.message);
     }
-    home_api::ensure_layout(&state)
+    home_api::ensure_rooms(&state)
         .await
-        .unwrap_or_else(|e| panic!("failed to prepare home layout: {}", e.message));
+        .unwrap_or_else(|e| panic!("failed to prepare rooms: {}", e.message));
     if let Err(error) = home_api::reconcile(&state).await {
         println!("[Home] reconcile failed: {}", error.message);
     }

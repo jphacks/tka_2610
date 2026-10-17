@@ -1,6 +1,9 @@
 //! 作品 API (Web 画面 ②③④⑥⑧⑨ が使う)
 
-use std::{collections::HashSet, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 use axum::{
     body::Bytes,
@@ -10,7 +13,7 @@ use axum::{
 };
 use chrono::{DateTime, Datelike, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgExecutor};
+use sqlx::{FromRow, PgExecutor, PgPool, Postgres, Transaction};
 use tokio::fs;
 use uuid::Uuid;
 
@@ -18,18 +21,15 @@ use crate::{
     age,
     error::{AppError, AppResult},
     glb::{self, Style},
-    home::{self, ArtworkObject, DoorPolicy, Layout, LayoutObject},
+    home::{self, ArtworkObject, DoorPolicy, LayoutObject},
     home_api, media, museum, museum_api,
     state::{media_url, AppState, MediaKind},
 };
 
-/// 飾る場所が無いときの文言 (409)
-const NO_SPACE: &str = "飾る場所がいっぱいです。模様替えで棚や机を足してください";
-
 pub const COLUMNS: &str = "id, title, child_name, age, made_on, memo, category, \
     image_file, thumb_file, model_file, model_kind, image_width, image_height, tint, \
     favorite, slot_id, displayed_at, created_at, updated_at, catalog_no, \
-    model_width, model_height, model_depth";
+    model_width, model_height, model_depth, house_room_id";
 
 #[derive(Debug, Clone, FromRow)]
 pub struct ArtworkRow {
@@ -57,6 +57,8 @@ pub struct ArtworkRow {
     pub model_width: Option<f64>,
     pub model_height: Option<f64>,
     pub model_depth: Option<f64>,
+    /// 飾っているおへや (house_rooms.id)。飾っていなければ NULL
+    pub house_room_id: Option<Uuid>,
 }
 
 impl ArtworkRow {
@@ -104,10 +106,10 @@ pub struct ArtworkDto {
     pub favorite: bool,
     pub displayed: bool,
     pub slot_id: Option<String>,
-    /// 飾っている部屋 (今は hub だけ)。配置 JSON から引く。飾っていなければ None
-    pub room_id: Option<&'static str>,
-    /// 飾っている部屋の名前 (例: "中央のリビング")
-    pub room_name: Option<&'static str>,
+    /// 飾っているおへや (house_rooms.id)。飾っていなければ None
+    pub room_id: Option<Uuid>,
+    /// 飾っているおへやの名前 (例: "4さいのおへや 2")
+    pub room_name: Option<String>,
     pub floor: Option<&'static str>,
     pub displayed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -122,11 +124,29 @@ pub fn date_long(date: NaiveDate) -> String {
     format!("{}年{}月{}日", date.year(), date.month(), date.day())
 }
 
+/// 作品の DTO を作るのに使う値: 子どもの誕生日 (作ったときの年齢を計算する) と、おへやの名前
+pub struct DtoContext {
+    pub birthday: Option<NaiveDate>,
+    pub rooms: HashMap<Uuid, String>,
+}
+
+impl DtoContext {
+    pub async fn load(pool: &PgPool) -> AppResult<Self> {
+        let (birthday, rooms) = tokio::try_join!(museum_api::child_birthday(pool), home_api::room_names(pool))?;
+        Ok(DtoContext { birthday, rooms })
+    }
+
+    /// トランザクションの中で読む
+    pub async fn load_in(tx: &mut Transaction<'_, Postgres>) -> AppResult<Self> {
+        let birthday = museum_api::child_birthday(&mut **tx).await?;
+        let rooms = home_api::room_names(&mut **tx).await?;
+        Ok(DtoContext { birthday, rooms })
+    }
+}
+
 impl ArtworkDto {
-    /// layout は飾っている部屋を引くための配置 (home_api::peek_layout など)。
-    /// 飾っていない作品だけのとき (登録直後など) は None でよい。配置に slot_id が見つからなければ部屋は None。
-    /// birthday は子どもの誕生日 (museum_api::child_birthday。作ったときの年齢を計算する)
-    pub fn new(row: &ArtworkRow, layout: Option<&Layout>, birthday: Option<NaiveDate>) -> Self {
+    pub fn new(row: &ArtworkRow, ctx: &DtoContext) -> Self {
+        let birthday = ctx.birthday;
         let age_label = row.age.map(|a| format!("{a}歳")).unwrap_or_default();
         let author_label = match (row.child_name.is_empty(), age_label.is_empty()) {
             (false, false) => format!("{}（{}）", row.child_name, age_label),
@@ -134,9 +154,9 @@ impl ArtworkDto {
             (true, false) => age_label.clone(),
             (true, true) => String::new(),
         };
-        // 飾っている作品はどれも 1F のどこかの部屋にある
+        // 飾っている作品はどれも、どこかのおへや (1F) にある
         let displayed = row.slot_id.is_some();
-        let room = row.slot_id.as_deref().zip(layout).and_then(|(slot, layout)| layout.room_of_id(slot));
+        let room_name = row.house_room_id.and_then(|id| ctx.rooms.get(&id).cloned());
 
         ArtworkDto {
             catalog_no: row.catalog_no,
@@ -165,8 +185,8 @@ impl ArtworkDto {
             favorite: row.favorite,
             displayed,
             slot_id: row.slot_id.clone(),
-            room_id: room.map(|r| r.id),
-            room_name: room.map(|r| r.name),
+            room_id: row.house_room_id,
+            room_name,
             floor: displayed.then_some(home::FLOOR_ID),
             displayed_at: row.displayed_at,
             created_at: row.created_at,
@@ -337,8 +357,7 @@ pub async fn list_artworks(
     .fetch_all(&state.pool);
 
     let (rows, counts) = tokio::try_join!(rows_query, counts_query)?;
-    let layout = home_api::peek_layout(&state.pool).await?;
-    let birthday = museum_api::child_birthday(&state.pool).await?;
+    let ctx = DtoContext::load(&state.pool).await?;
 
     let total: i64 = counts.iter().map(|(_, n)| n).sum();
     let mut categories = vec![CategoryCount { id: "all", label: "すべて", count: total }];
@@ -348,7 +367,7 @@ pub async fn list_artworks(
     }
 
     Ok(Json(ArtworkList {
-        items: rows.iter().map(|r| ArtworkDto::new(r, layout.as_ref(), birthday)).collect(),
+        items: rows.iter().map(|r| ArtworkDto::new(r, &ctx)).collect(),
         total,
         categories,
     }))
@@ -369,8 +388,7 @@ pub async fn get_artwork(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ArtworkDetail>> {
     let row = fetch_row(&state.pool, id).await?;
-    let layout = home_api::peek_layout(&state.pool).await?;
-    let birthday = museum_api::child_birthday(&state.pool).await?;
+    let ctx = DtoContext::load(&state.pool).await?;
 
     // 同じカテゴリ → 同じ子ども → 制作日が近い順
     let related = sqlx::query_as::<_, ArtworkRow>(&format!(
@@ -386,8 +404,8 @@ pub async fn get_artwork(
     .await?;
 
     Ok(Json(ArtworkDetail {
-        artwork: ArtworkDto::new(&row, layout.as_ref(), birthday),
-        related: related.iter().map(|r| ArtworkDto::new(r, layout.as_ref(), birthday)).collect(),
+        artwork: ArtworkDto::new(&row, &ctx),
+        related: related.iter().map(|r| ArtworkDto::new(r, &ctx)).collect(),
     }))
 }
 
@@ -609,8 +627,8 @@ pub async fn create_artwork(
                 started.elapsed()
             );
             // 登録したばかりの作品は飾っていない
-            let birthday = museum_api::child_birthday(&state.pool).await?;
-            Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, None, birthday))))
+            let ctx = DtoContext::load(&state.pool).await?;
+            Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, &ctx))))
         }
         Err(error) => {
             remove_files(&state, files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -779,12 +797,20 @@ pub async fn update_artwork(
     .await;
 
     match updated {
-        Ok(updated) => {
+        Ok(mut updated) => {
             remove_files(&state, old_files.into_iter()).await;
             println!("[Artwork] updated \"{}\" in {:?}", updated.title, started.elapsed());
-            let layout = home_api::peek_layout(&state.pool).await?;
-            let birthday = museum_api::child_birthday(&state.pool).await?;
-            Ok(Json(ArtworkDto::new(&updated, layout.as_ref(), birthday)))
+            // 作成日 (や年齢) が変わって、飾っているおへやの年齢と合わなくなったら、正しい年齢のおへやへ置き直す
+            if let Some(room_id) = updated.house_room_id {
+                let birthday = museum_api::child_birthday(&state.pool).await?;
+                let room = home_api::find_room(&state.pool, room_id).await?;
+                if room.age != age::artwork_age(birthday, updated.made_on, updated.age) {
+                    home_api::reconcile(&state).await?;
+                    updated = fetch_row(&state.pool, id).await?;
+                }
+            }
+            let ctx = DtoContext::load(&state.pool).await?;
+            Ok(Json(ArtworkDto::new(&updated, &ctx)))
         }
         Err(error) => {
             remove_files(&state, new_files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
@@ -801,9 +827,17 @@ pub async fn delete_artwork(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    // 配置からも同じトランザクションで外す
+    // 飾っているおへやの配置からも、同じトランザクションで外す
     let mut tx = state.pool.begin().await?;
-    let mut layout = home_api::lock_layout(&mut tx).await?;
+    home_api::lock_house(&mut tx).await?;
+    let row = fetch_row(&mut *tx, id).await?;
+    let room = match row.house_room_id {
+        Some(room_id) => {
+            let room = home_api::find_room(&mut *tx, room_id).await?;
+            Some((room, home_api::lock_layout(&mut tx, room_id).await?))
+        }
+        None => None,
+    };
 
     let (image_file, thumb_file, model_file) = sqlx::query_as::<_, (String, String, String)>(
         "DELETE FROM artworks WHERE id = $1 RETURNING image_file, thumb_file, model_file",
@@ -812,9 +846,11 @@ pub async fn delete_artwork(
     .fetch_one(&mut *tx)
     .await?;
 
-    if layout.remove_artwork(id) {
+    if let Some((room, mut layout)) = room
+        && layout.remove_artwork(id)
+    {
         // 外すだけで、動かす物は無い
-        home_api::save_layout(&mut tx, layout, DoorPolicy::Ignore).await?;
+        home_api::save_layout(&mut tx, room, layout, DoorPolicy::Ignore).await?;
     }
     tx.commit().await?;
 
@@ -853,9 +889,8 @@ pub async fn set_favorite(
     .bind(body.favorite)
     .fetch_one(&state.pool)
     .await?;
-    let layout = home_api::peek_layout(&state.pool).await?;
-    let birthday = museum_api::child_birthday(&state.pool).await?;
-    Ok(Json(ArtworkDto::new(&row, layout.as_ref(), birthday)))
+    let ctx = DtoContext::load(&state.pool).await?;
+    Ok(Json(ArtworkDto::new(&row, &ctx)))
 }
 
 // =============================
@@ -863,17 +898,18 @@ pub async fn set_favorite(
 // =============================
 
 /// POST /api/artworks/{id}/display の本文 (任意)。
-/// position を省くと空いている場所に自動で置く (room_id があればその部屋だけ、parent_id があればその家具を先に探す)
+/// position を省くと空いている場所に自動で置く (room_id があればそのおへやだけ、無ければその作品の年齢のおへやを下の階から)
 #[derive(Deserialize, Default)]
 pub struct DisplayBody {
-    /// 部屋 (今は hub だけ。知らない部屋は 400)。自動で置くときはこの部屋の家具だけを探す (空きが無ければ 409。ほかの部屋には置かない)。
-    /// 床に置くとき (position あり・parent_id なし) は置く部屋 (省くと hub)。家具の上に置くときは使わない (部屋は家具の部屋)
+    /// 飾るおへや (house_rooms.id)。作品の年齢と違うおへやは 400。自動で置くときはこのおへやの家具だけを探す
+    /// (空きが無ければ 409。ほかのおへやには置かない)。position・parent_id を指定するときは要る (省くと今飾っているおへや)。
+    /// "hub" など家の部屋の id (前の版の Web) は、省いたのと同じに扱う
     pub room_id: Option<String>,
     /// 載せる家具の object id。省くと床 (position があるとき) か自動
     pub parent_id: Option<String>,
     /// 載せる面 ("top"・"shelf1" など)。省くと天板。parent_id と position があるときだけ使う
     pub surface: Option<String>,
-    /// 配置 JSON と同じ意味の位置 (家具の上なら面の中心から、床なら部屋の中心から見た位置)
+    /// 配置 JSON と同じ意味の位置 (家具の上なら面の中心から、床ならおへやの中心から見た位置)
     pub position: Option<[f64; 3]>,
     /// 向き (ラジアン)。position があるときだけ使う
     pub rotation_y: Option<f64>,
@@ -889,94 +925,126 @@ pub async fn display_artwork(
     } else {
         serde_json::from_slice(&body).map_err(|e| AppError::bad_request(e.to_string()))?
     };
-    let room = match request.room_id.as_deref() {
-        Some(room_id) => Some(
-            home::room_def(room_id).ok_or_else(|| AppError::bad_request(format!("部屋「{room_id}」はありません")))?,
-        ),
+    let target = match request.room_id.as_deref() {
         None => None,
+        Some(room) => match Uuid::parse_str(room) {
+            Ok(id) => Some(id),
+            Err(_) if home::room_def(room).is_some() => None,
+            Err(_) => return Err(AppError::bad_request(format!("おへや「{room}」はありません"))),
+        },
     };
 
     let mut tx = state.pool.begin().await?;
-    let mut layout = home_api::lock_layout(&mut tx).await?;
-    let row = fetch_row(&mut *tx, id).await?;
-
-    let current = layout.artwork_for(id).cloned();
-    if let Some(current) = &current
-        && request.parent_id.is_none()
-        && request.position.is_none()
-        && room.is_none_or(|r| layout.room_of_id(&current.id).is_some_and(|c| c.id == r.id))
-    {
-        // すでに飾ってある (同じ要求を 2 回送っても置き場所は変わらない)。別の部屋を指定したときは、その部屋へ移す
-        let birthday = museum_api::child_birthday(&mut *tx).await?;
-        return Ok(Json(ArtworkDto::new(&row, Some(&layout), birthday)));
-    }
-    if let Some(parent_id) = &request.parent_id {
-        let support = layout
-            .furniture(parent_id)
-            .and_then(|f| home::asset(&f.asset_id))
-            .filter(|a| a.is_support());
-        let Some(support) = support else {
-            return Err(AppError::bad_request("その家具には作品を置けません"));
-        };
-        if support.surface(request.surface.as_deref()).is_none() {
-            return Err(AppError::bad_request("その家具にはその置き場所がありません"));
-        }
-    } else if request.surface.is_some() {
-        return Err(AppError::bad_request("surface は parent_id と一緒に指定してください"));
-    }
-
-    // 移動するときは object id をそのまま使う
-    layout.remove_artwork(id);
-    let object_id = current.map(|c| c.id).unwrap_or_else(|| home::new_object_id("art"));
-    let object = match request.position {
-        Some(position) => ArtworkObject {
-            id: object_id,
-            artwork_id: id,
-            room_id: request.parent_id.is_none().then(|| room.map_or(home::HUB_ID, |r| r.id).to_string()),
-            parent_id: request.parent_id,
-            // 天板 ("top") は省いた形にそろえる (save_layout の検証でも直る)
-            surface: request.surface.filter(|s| s != home::TOP_SURFACE),
-            position,
-            rotation_y: request.rotation_y.unwrap_or(0.0),
-        },
-        None => {
-            // 載っている作品は実寸、置く作品も実寸で空きを探す
-            let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
-            let sizes = sizes_of(&load_sizes(&mut *tx, &ids).await?);
-            let spot = home::pick_spot(
-                &layout,
-                &sizes,
-                row.art_size().as_ref(),
-                room.map(|r| r.id),
-                request.parent_id.as_deref(),
-            )
-            .ok_or_else(|| match room {
-                Some(r) => AppError::conflict(format!("{} に飾る場所がいっぱいです。模様替えで棚や机を足してください", r.name)),
-                None => AppError::conflict(NO_SPACE),
-            })?;
-            ArtworkObject {
-                id: object_id,
-                artwork_id: id,
-                parent_id: Some(spot.parent_id),
-                room_id: None,
-                surface: spot.surface,
-                position: spot.position,
-                rotation_y: 0.0,
-            }
-        }
-    };
-    let slot_id = object.id.clone();
-    layout.objects.push(LayoutObject::Artwork(object));
-
-    // 置けない位置 (はみ出し・重なり・出入口の前) はここで 400 になる。出入口の前を見るのは、いま置いた作品だけ
-    let moved = HashSet::from([slot_id.clone()]);
-    let saved = home_api::save_layout(&mut tx, layout, DoorPolicy::OnlyMoved(&moved)).await?;
+    home_api::lock_house(&mut tx).await?;
     let row = fetch_row(&mut *tx, id).await?;
     let birthday = museum_api::child_birthday(&mut *tx).await?;
+    let age = age::artwork_age(birthday, row.made_on, row.age);
+    let manual = request.parent_id.is_some() || request.position.is_some();
+
+    if row.house_room_id.is_some() && !manual && target.is_none_or(|t| Some(t) == row.house_room_id) {
+        // すでに飾ってある (同じ要求を 2 回送っても置き場所は変わらない)。別のおへやを指定したときは、そのおへやへ移す
+        let ctx = DtoContext::load_in(&mut tx).await?;
+        return Ok(Json(ArtworkDto::new(&row, &ctx)));
+    }
+
+    // 飾るおへや。手で置く (parent_id・position) ときは、省くと今飾っているおへや
+    let room = match target.or(if manual { row.house_room_id } else { None }) {
+        Some(room_id) => Some(home_api::find_room(&mut *tx, room_id).await?),
+        None if manual => return Err(AppError::bad_request("置き場所を指定するときは、おへや (room_id) も指定してください")),
+        None => None,
+    };
+    if let Some(room) = room
+        && room.age != age
+    {
+        return Err(AppError::bad_request(format!(
+            "「{}」は {age} さいのときの作品なので、{} には飾れません",
+            row.title,
+            room.name()
+        )));
+    }
+
+    // ほかのおへやに飾ってあれば、先に外す (object id は移した先でも使う)
+    let mut moving_id = None;
+    if let Some(current) = row.house_room_id
+        && room.is_none_or(|r| r.id != current)
+    {
+        let current_room = home_api::find_room(&mut *tx, current).await?;
+        let mut layout = home_api::lock_layout(&mut tx, current).await?;
+        moving_id = layout.artwork_for(id).map(|a| a.id.clone());
+        if layout.remove_artwork(id) {
+            home_api::save_layout(&mut tx, current_room, layout, DoorPolicy::Ignore).await?;
+        }
+    }
+
+    let saved = match room {
+        // おへやを省いたとき: その年齢のおへやを下の階から探す (おへやが無ければ 1 階を作る)
+        None => home_api::place_in_age(&mut tx, id, row.art_size().as_ref(), age).await?.ok_or_else(|| {
+            AppError::conflict(format!("{age} さいのおへやがいっぱいです。「おへやを足す」でおへやを増やしてください"))
+        })?,
+        Some(room) => {
+            let mut layout = home_api::lock_layout(&mut tx, room.id).await?;
+            if let Some(parent_id) = &request.parent_id {
+                let support = layout
+                    .furniture(parent_id)
+                    .and_then(|f| home::asset(&f.asset_id))
+                    .filter(|a| a.is_support());
+                let Some(support) = support else {
+                    return Err(AppError::bad_request("その家具には作品を置けません"));
+                };
+                if support.surface(request.surface.as_deref()).is_none() {
+                    return Err(AppError::bad_request("その家具にはその置き場所がありません"));
+                }
+            } else if request.surface.is_some() {
+                return Err(AppError::bad_request("surface は parent_id と一緒に指定してください"));
+            }
+
+            // 移動するときは object id をそのまま使う
+            let current = layout.artwork_for(id).cloned();
+            layout.remove_artwork(id);
+            let object_id = current.map(|c| c.id).or(moving_id).unwrap_or_else(|| home::new_object_id("art"));
+            let object = match request.position {
+                Some(position) => ArtworkObject {
+                    id: object_id,
+                    artwork_id: id,
+                    room_id: request.parent_id.is_none().then(|| home::HUB_ID.to_string()),
+                    parent_id: request.parent_id,
+                    // 天板 ("top") は省いた形にそろえる (save_layout の検証でも直る)
+                    surface: request.surface.filter(|s| s != home::TOP_SURFACE),
+                    position,
+                    rotation_y: request.rotation_y.unwrap_or(0.0),
+                },
+                None => {
+                    // 載っている作品は実寸、置く作品も実寸で空きを探す
+                    let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
+                    let sizes = sizes_of(&load_sizes(&mut *tx, &ids).await?);
+                    let spot = home::pick_spot(&layout, &sizes, row.art_size().as_ref(), None, request.parent_id.as_deref())
+                        .ok_or_else(|| {
+                            AppError::conflict(format!("{} に飾る場所がいっぱいです。模様替えで棚や机を足してください", room.name()))
+                        })?;
+                    ArtworkObject {
+                        id: object_id,
+                        artwork_id: id,
+                        parent_id: Some(spot.parent_id),
+                        room_id: None,
+                        surface: spot.surface,
+                        position: spot.position,
+                        rotation_y: 0.0,
+                    }
+                }
+            };
+            let slot_id = object.id.clone();
+            layout.objects.push(LayoutObject::Artwork(object));
+            // 置けない位置 (はみ出し・重なり・出入口の前) はここで 400 になる。出入口の前を見るのは、いま置いた作品だけ
+            let moved = HashSet::from([slot_id]);
+            home_api::save_layout(&mut tx, room, layout, DoorPolicy::OnlyMoved(&moved)).await?
+        }
+    };
+    let row = fetch_row(&mut *tx, id).await?;
+    let ctx = DtoContext::load_in(&mut tx).await?;
     tx.commit().await?;
 
-    println!("[Display] \"{}\" -> {}", row.title, slot_id);
-    Ok(Json(ArtworkDto::new(&row, Some(&saved.layout), birthday)))
+    println!("[Display] \"{}\" -> {} ({})", row.title, row.slot_id.as_deref().unwrap_or("-"), saved.room.name);
+    Ok(Json(ArtworkDto::new(&row, &ctx)))
 }
 
 pub async fn undisplay_artwork(
@@ -984,19 +1052,31 @@ pub async fn undisplay_artwork(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ArtworkDto>> {
     let mut tx = state.pool.begin().await?;
-    let mut layout = home_api::lock_layout(&mut tx).await?;
+    home_api::lock_house(&mut tx).await?;
     let row = fetch_row(&mut *tx, id).await?;
 
-    if layout.remove_artwork(id) || row.slot_id.is_some() {
-        // 外すだけで、動かす物は無い
-        home_api::save_layout(&mut tx, layout, DoorPolicy::Ignore).await?;
+    match row.house_room_id {
+        Some(room_id) => {
+            let room = home_api::find_room(&mut *tx, room_id).await?;
+            let mut layout = home_api::lock_layout(&mut tx, room_id).await?;
+            layout.remove_artwork(id);
+            // 外すだけで、動かす物は無い。配置に無くても save_layout で未展示に揃う
+            home_api::save_layout(&mut tx, room, layout, DoorPolicy::Ignore).await?;
+        }
+        None if row.slot_id.is_some() => {
+            sqlx::query("UPDATE artworks SET slot_id = NULL, displayed_at = NULL, updated_at = NOW() WHERE id = $1")
+                .bind(id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        None => {}
     }
     let row = fetch_row(&mut *tx, id).await?;
-    let birthday = museum_api::child_birthday(&mut *tx).await?;
+    let ctx = DtoContext::load_in(&mut tx).await?;
     tx.commit().await?;
 
     println!("[Display] \"{}\" removed", row.title);
-    Ok(Json(ArtworkDto::new(&row, None, birthday)))
+    Ok(Json(ArtworkDto::new(&row, &ctx)))
 }
 
 #[cfg(test)]

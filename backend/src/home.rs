@@ -310,7 +310,8 @@ impl Layout {
         }
     }
 
-    /// object id の物のある部屋 (artworks.slot_id から作品の部屋を引く)
+    /// object id の物のある部屋 (テストで使う。作品のおへやは artworks.house_room_id で引く)
+    #[cfg(test)]
     pub fn room_of_id(&self, id: &str) -> Option<&'static RoomDef> {
         self.room_of(self.objects.iter().find(|o| o.id() == id)?)
     }
