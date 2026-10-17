@@ -3,12 +3,17 @@
 // three.js はとても大きいので、scenes/ の中身は必要になったときに別ファイル（チャンク）として読み込む。
 // 画面から scenes/ を直接 import すると、three.js が最初の読み込みに混ざって表示が遅くなる。
 // ホーム表示後の空き時間に、家の建物（部屋ごとの GLB。shellUrlsOf）と家具の GLB・3D のコードを先読みして（warmUp3D）、3D 画面への移動を速くする。
-// scenes/ の中でも three.js を使わない小さなファイル（house.ts）は、ここからそのまま渡している。
+// scenes/ の中でも three.js を使わない小さなファイル（house.ts・walk/inputMode.ts）は、ここからそのまま渡している。
 
 import { lazy } from 'react'
 import type { Museum } from '../api'
 
 export { StageShell } from './StageShell'
+// 一人称で歩く画面の位置の記憶（three.js を使わない）
+export { clearWalkPose } from './walkPose'
+// 一人称で歩く画面の操作の種類（タッチの端末か。開発用の ?input=touch も見る）と、仮想スティックの大きさ（three.js を使わない）。
+// ⑪ 鑑賞モードの画面が操作の説明・スティックの描画に使い、WalkScene に touch で渡す
+export { TOUCH_STICK_RADIUS, isTouchDevice, type TouchStick } from './scenes/walk/inputMode'
 // 家の建物（部屋の定義）。three.js を使わない。部屋の一覧（house が無い古いサーバーではリビング 1 部屋）・
 // 建物の GLB の URL（先読み用）・建物の GLB があるか（無ければ 3D の代わりに説明を出す）
 export { hasHouseModel, houseRoomsOf, shellUrlsOf } from './scenes/home/house'
@@ -19,6 +24,9 @@ export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene }
 export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))
 export const MapScene = lazy(() => load().then((m) => ({ default: m.MapScene })))
 export const PreviewScene = lazy(() => load().then((m) => ({ default: m.PreviewScene })))
+export const WalkScene = lazy(() => load().then((m) => ({ default: m.WalkScene })))
+// 型だけなので、three.js は読み込まれない
+export type { WalkStatus } from './scenes/WalkScene'
 
 const idle = (fn: () => void) => {
   if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout: 2000 })

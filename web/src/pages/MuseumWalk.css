@@ -1,0 +1,379 @@
+/* ⑪ 鑑賞モード（MuseumWalk）。全画面の 3D と、操作の説明・照準・仮想スティック・エラーの表示。
+   タッチの端末では .walk-screen に .walk-touch が付く */
+
+/* PC でも、スマホの枠をやめてウィンドウいっぱいに広げる（歩くには横幅が要るため） */
+.app:has(.walk-screen) {
+  max-width: none;
+}
+
+@media (min-width: 600px) and (min-height: 700px) {
+  .app:has(.walk-screen) {
+    height: 100dvh;
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* 矢印キーで画面がスクロールしないようにする。スマホで引っぱって再読み込みしたり、端で弾んだりもしないようにする */
+.walk-screen {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* タッチの端末：なぞっても拡大・スクロールせず（キャンバスには TouchControls も touch-action: none を付ける）、
+   長押しで文字の選択やメニューが出ないようにする */
+.walk-touch {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 横向きのスマホで、切り欠きの下に操作が入らないようにする */
+.walk-screen .stage-top {
+  left: calc(12px + var(--safe-left));
+  right: calc(12px + var(--safe-right));
+}
+
+.walk-stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* 上の操作列で、タイトルを真ん中に置くための空き（戻るボタンと同じ幅）。
+   タッチで歩いている間の「やめる」は、この中から左へはみ出して置く（タイトルの位置を変えない） */
+.walk-top-spacer {
+  display: flex;
+  justify-content: flex-end;
+  width: 40px;
+}
+
+/* タッチで歩くのをやめる（PC の Esc の代わり） */
+.walk-stop {
+  flex: none;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--ink);
+  transition: transform 0.35s var(--spring);
+}
+
+.walk-stop:active {
+  transform: scale(0.94);
+}
+
+/* 歩き始める前の説明。クリックはその下の 3D に届くようにする */
+.walk-guide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  min-width: 260px;
+  padding: 22px 26px 20px;
+  border-radius: 20px;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.walk-guide-title {
+  margin: 0 0 14px;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.walk-keys {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.walk-keys div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.walk-keys dt {
+  text-align: right;
+}
+
+.walk-keys dd {
+  margin: 0;
+  text-align: left;
+  opacity: 0.85;
+}
+
+/* タッチの端末での説明（3 行） */
+.walk-touch-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* 「歩き始める」。説明の中でこれだけは押せるようにする。暗いガラスの上なので、明るいボタンにする */
+.walk-start {
+  min-height: 44px;
+  background: var(--surface);
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.walk-keys kbd {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  /* 暗いガラスの上なので、文字の色（白）をうすく使って枠と背景にする */
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+/* 歩いている間の、画面の中心の印 */
+.walk-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--ink-3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.walk-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + var(--safe-bottom));
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--surface);
+  text-shadow: 0 1px 6px var(--ink-2);
+  pointer-events: none;
+}
+
+/* 3D を表示できなかったとき */
+.walk-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+
+.walk-error-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  max-width: 520px;
+  text-align: center;
+}
+
+.walk-error-card h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+
+.walk-error-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.walk-error-card code {
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--fill);
+  font-size: 12px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+/* 照準が作品に合っているとき */
+.walk-crosshair.on {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.walk-aim {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 18px);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 0;
+  transform: translateX(-50%);
+  font-family: var(--serif);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--surface);
+  text-shadow: 0 1px 6px var(--ink-2);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.walk-aim small {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  opacity: 0.9;
+}
+
+/* タッチ：作品の名前の下の「見る」。照準を合わせたまま親指で押せる大きさにする */
+.walk-aim-touch {
+  gap: 8px;
+}
+
+.walk-look {
+  min-width: 96px;
+  min-height: 44px;
+  font-family: var(--sans);
+  text-shadow: none;
+  pointer-events: auto;
+}
+
+/* 仮想スティック（タッチで歩いている間、左側に指を置いている間だけ）。left・top・大きさは画面が指の位置から決める。
+   ガラスのぼかし（backdrop-filter）は、毎フレーム変わる 3D の上では重いので使わない */
+.walk-stick {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--surface) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+  box-shadow: 0 4px 16px var(--ink-3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.walk-stick-knob {
+  position: absolute;
+  left: calc(50% - 26px);
+  top: calc(50% - 26px);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--surface),
+    0 2px 10px var(--ink-3);
+}
+
+/* 作品カード（照準の先の作品の情報） */
+.walk-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + var(--safe-bottom));
+  z-index: 6;
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 18px;
+  width: min(560px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px var(--ink-3);
+  transform: translateX(-50%);
+}
+
+.walk-card-thumb {
+  align-self: start;
+}
+
+.walk-card-body {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.walk-card-body .eyebrow {
+  margin: 0;
+}
+
+.walk-card-body h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+}
+
+.walk-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* メモは 3 行まで（続きは詳細画面で） */
+.walk-card-memo {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.walk-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* タッチの端末では、カードのボタンを指で押しやすい高さにする */
+.walk-touch .walk-card-actions .btn {
+  min-height: 44px;
+}
+
+/* 幅の狭いスマホでは、サムネイルを小さくして本文の幅を取る */
+@media (max-width: 420px) {
+  .walk-card {
+    grid-template-columns: 96px 1fr;
+    gap: 14px;
+  }
+
+  .walk-card-body h2 {
+    font-size: 19px;
+  }
+}
+
+.walk-card-loading {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  color: var(--ink-2);
+}
