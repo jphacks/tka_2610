@@ -93,7 +93,7 @@ import { HomeScene, StageShell } from '../three'
 - 「開き方」は画面遷移アニメーションの種類です（後述の「画面遷移」）。
 - 各ファイルの先頭に、番号・URL・開き方を書いています。
 - `.css` がない画面は、共通のスタイル（`styles/`）と部品だけでできています。
-- ② は、上に館名とアバター（⑩ へ）、その下に年齢のチップ（`/api/ages` の `ages`。選んだ年齢は `?age=` に入れ、`nav.replace` で切り替える。はじめは今の年齢、そこに作品が無ければ作品のあるいちばん大きい年齢）、「4さいのおへや 8（しまってある 1）」の見出し、積み上げの 3D（`StackScene`。`/api/ages/{age}`）を並べます。3D の各階の左に「4さいのおへや 2（数）›」のラベルが出て、押すと ②' へ入ります。おへやが 1 つのときは下に「はいる」も出ます。「おへやを足す」（おへやの無い年齢では「おへやをつくる」）は `POST /api/ages/{age}/rooms` です。お誕生日が未設定のときは、⑩ への案内を出します。作品の追加は下部タブの「＋」です。
+- ② は、上に館名とアバター（⑩ へ）、その下に年齢のチップ（`/api/ages` の `ages`。選んだ年齢は `?age=` に入れ、`nav.replace` で切り替える。はじめは今の年齢、そこに作品が無ければ作品のあるいちばん大きい年齢）、「4さいのおへや 8（しまってある 1）」の見出し、積み上げの 3D（`StackScene`。`/api/ages/{age}`）を並べます。3D の各階の左に「4さいのおへや 2（数）›」のラベルが出て、押すと ②' へ入ります。おへやが 1 つのときは下に「はいる」も出ます。「おへやを足す」（おへやの無い年齢では「おへやをつくる」）は `POST /api/ages/{age}/rooms` です。いちばん上の階に作品を飾っていなければ、その下に「〇〇を消す」が出て、確かめのシートのあと `DELETE /api/rooms/{id}` で消します。3D は画面の残りの高さを使って伸び縮みし（`.home-screen` を縦の flex にする）、ボタンはいつも下部タブの上に収まります。お誕生日が未設定のときは、⑩ への案内を出します。作品の追加は下部タブの「＋」です。
 - ②' は画面いっぱいの 3D のおへや（`HomeScene`）です。はじめはリビングの中の近景（手前に床ランプ、中央にソファとローテーブル、奥に棚）で、ピンチやホイールで引けば家全体まで見えます。3D の上に浮かぶ UI は 2 段だけで、上に戻る（② の `?age=` へ）とおへやの名前、下（`.room-dock`）に飾っている数と、丸いボタンの「歩く」（⑪）・「模様替え」（⑫）があります。どちらもこのおへやを `?room=` で渡します。作品をタップすると ⑥ へ進みます（家具や床のタップは何もしない）。
 - ⑪ 鑑賞モード と ⑫ 模様替え は、PC の広い画面ではスマホの枠をやめてウィンドウいっぱいに広げます（`MuseumWalk.css`・`HomeEdit.css`）。⑫ の右上の「鑑賞モードへ」は、PC でもスマホでも出します（⑪ はスマホではタッチで歩く。[walk.md](walk.md) の「スマホ（タッチ）」）。
 - ⑤ ⑪ ⑫ の `?room=` はおへやの id です（`useMuseum({ roomId })` で `/api/museum?room=` を取る）。省くとサーバーが選ぶおへや（今の年齢のいちばん下の階）です。⑥ と ④ からの「おうちで見る」は、その作品のおへや（`room_id`）を付けて ⑤ へ進みます。⑫ の「追加→作品」には、そのおへやの年齢の作品だけが出ます。
@@ -232,7 +232,7 @@ Rust のファイルと対応するように分けています。
 | `types.ts` | API の型。Rust の構造体名をコメントに書いている。配置 JSON（`Layout`。v5。`rooms` は `hub` だけ）だけは camelCase。テーマの型（`HomeTheme`・`HomeMaterial`・`WallFinish`・`FloorFinish`）、部屋の型（`RoomId`・`Side`・`LayoutRoom`）と家の形（`House`・`HouseRoom`・`HouseDoor`。`Museum.house`）もここ | DTO（`ArtworkDto`、`MuseumOverview`、`Layout`、`HouseView` など） |
 | `client.ts` | 通信の共通処理（`request`、`ApiError`）、TanStack Query の設定、キャッシュのキー | `error.rs`（`{ "error": "..." }` の形） |
 | `museum.ts` | おへや 1 つの全体像（家の GLB・配置 JSON・家具の一覧・飾っている作品）と設定：`useMuseum({ roomId })`（キャッシュのキーは `keys.museumOf(roomId)`）、`useSettings`、`useUpdateSettings`（お誕生日を変えると作品のおへやが変わるので、年齢の一覧・おへや・作品も取り直す） | `museum_api.rs` |
-| `ages.ts` | 年齢とおへや：`useAges`（`GET /api/ages`）、`useAgeStack(age)`（`GET /api/ages/{age}`）、`useAddRoom`（`POST /api/ages/{age}/rooms`）、`useDeleteRoom`（`DELETE /api/rooms/{id}`。今は画面から使っていない） | `ages_api.rs` |
+| `ages.ts` | 年齢とおへや：`useAges`（`GET /api/ages`）、`useAgeStack(age)`（`GET /api/ages/{age}`）、`useAddRoom`（`POST /api/ages/{age}/rooms`）、`useDeleteRoom`（`DELETE /api/rooms/{id}`。② の「〇〇を消す」） | `ages_api.rs` |
 | `home.ts` | おへや 1 つの配置 JSON の読み書き（どれも `roomId` を取り、`?room=` を付ける）：`useLayout`（`GET /api/home/layout`）、`useSaveLayout`（`PUT`。保存すると、おうちの全体像と作品の一覧も取り直す。置き方がおかしいと 400 で、Rust の日本語の文言の `ApiError` になる）、`saveLayoutOnLeave`（画面を閉じるときに `keepalive` で送る。結果は待たない）。⑫ は配置を `useMuseum` から読み、`useLayout` は今は使っていない | `home_api.rs` |
 | `artworks.ts` | 作品：取得は `useArtworks`、`useArtwork`。変更は `useCreateArtwork`、`useUpdateArtwork`、`useDeleteArtwork`、`useFavorite`、`useDisplay`（おうちに飾る・飾るのをやめる。`roomId`（おへやの id）を渡すと本文 `{ room_id }` でそのおへやに飾る。省くと、作品の年齢のおへやにサーバーが置く） | `artworks.rs` |
 

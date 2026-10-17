@@ -1,5 +1,15 @@
 /* ② ホーム（Home）。年齢のチップ、選んだ年齢のおへやの見出し、積み上げの建物の 3D、「はいる」「おへやを足す」 */
 
+/* 3D が残りの高さを使い、下のボタンがいつも下部タブの上に収まるように縦に並べる */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-screen > * {
+  flex-shrink: 0;
+}
+
 /* 誕生日が無いときの案内（設定へ） */
 .home-notice {
   display: block;
@@ -84,9 +94,11 @@
   color: var(--ink-3);
 }
 
-/* 積み上げの建物の 3D */
-.home-stage {
-  height: min(46dvh, 420px);
+/* 積み上げの建物の 3D。画面の残りの高さに合わせて伸び縮みする（小さい画面でも 220px は取り、そのときはページがスクロールする） */
+.home-screen > .home-stage {
+  flex: 1 1 0;
+  min-height: 220px;
+  max-height: 560px;
   margin: 4px 12px 0;
   border-radius: 20px;
 }
@@ -103,27 +115,34 @@
   text-align: center;
 }
 
-/* 「はいる」「おへやを足す」 */
+/* 「はいる」「おへやを足す」「〇〇を消す」 */
 .home-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 8px;
+  margin: 14px 20px 4px;
+}
+
+/* 「はいる」と「おへやを足す」は横に並べる */
+.home-buttons {
+  display: flex;
   gap: 10px;
-  margin: 16px 20px 8px;
+  width: 100%;
 }
 
 .home-enter {
-  min-width: 180px;
-  height: 52px;
-  border-radius: 999px;
+  flex: 1;
   font-size: 17px;
 }
 
 .home-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
+  flex: 1;
+}
+
+.home-remove {
+  color: var(--red);
+  font-size: 13px;
 }
 
 .home-hint {
