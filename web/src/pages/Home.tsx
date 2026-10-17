@@ -1,12 +1,13 @@
 // ② ホーム（/）。タブ。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 階のラベル（おへやが 1 つなら下の「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
+// いちばん上の階に作品を飾っていなければ、「〇〇を消す」で消せる（確かめのシートを出す。作品のある階や途中の階はサーバーが断る）。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAddRoom, useAgeStack, useAges } from '../api'
-import { InviteSheet, NavBar, Screen, TLink, useToast } from '../components'
+import { useAddRoom, useAgeStack, useAges, useDeleteRoom } from '../api'
+import { InviteSheet, NavBar, Screen, Sheet, TLink, useToast } from '../components'
 import { HomeIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import { StackScene, StageShell, warmUp3D } from '../three'
@@ -17,10 +18,13 @@ export default function Home() {
   const nav = useNav()
   const toast = useToast()
   const addRoom = useAddRoom()
+  const deleteRoom = useDeleteRoom()
   const [params] = useSearchParams()
   const [ready, setReady] = useState(false)
   // テスト用の招待状のシート
   const [showInvite, setShowInvite] = useState(false)
+  // 「〇〇を消す」の確かめのシート
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   const data = ages.data
   // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
@@ -34,6 +38,9 @@ export default function Home() {
     null
   const stack = useAgeStack(selected?.age ?? null)
   const rooms = selected?.rooms ?? []
+  // 消せるのは、作品を飾っていないいちばん上の階だけ
+  const top = rooms[rooms.length - 1]
+  const removable = top && top.count === 0 ? top : null
   const initial = (data?.name ?? 'は').slice(0, 1)
 
   // 建物の GLB を先に読んでおく（どの階も同じ建物）
@@ -49,6 +56,16 @@ export default function Home() {
     if (!selected) return
     addRoom.mutate(selected.age, {
       onSuccess: (room) => toast(`${room.name}を足しました`),
+      onError: (e) => toast(e.message),
+    })
+  }
+  const remove = () => {
+    if (!removable) return
+    deleteRoom.mutate(removable.id, {
+      onSuccess: () => {
+        setConfirmRemove(false)
+        toast(`${removable.name}を消しました`)
+      },
       onError: (e) => toast(e.message),
     })
   }
@@ -114,19 +131,40 @@ export default function Home() {
       </StageShell>
 
       <div className="home-actions">
-        {rooms.length === 1 && (
-          <button type="button" className="btn btn-filled home-enter" onClick={() => enter(rooms[0].id)}>
-            はいる
-          </button>
-        )}
         {rooms.length > 1 && <p className="home-hint">おへやの名前を押すと、中に入れます</p>}
-        {selected && (
-          <button type="button" className="btn btn-outline home-add" disabled={addRoom.isPending} onClick={add}>
-            <PlusIcon size={17} strokeWidth={2.2} />
-            {rooms.length === 0 ? 'おへやをつくる' : 'おへやを足す'}
+        <div className="home-buttons">
+          {rooms.length === 1 && (
+            <button type="button" className="btn btn-filled home-enter" onClick={() => enter(rooms[0].id)}>
+              はいる
+            </button>
+          )}
+          {selected && (
+            <button type="button" className="btn btn-outline home-add" disabled={addRoom.isPending} onClick={add}>
+              <PlusIcon size={17} strokeWidth={2.2} />
+              {rooms.length === 0 ? 'おへやをつくる' : 'おへやを足す'}
+            </button>
+          )}
+        </div>
+        {removable && (
+          <button type="button" className="btn btn-plain home-remove" onClick={() => setConfirmRemove(true)}>
+            {removable.name}を消す
           </button>
         )}
       </div>
+
+      <Sheet open={confirmRemove && !!removable} onClose={() => setConfirmRemove(false)} title={`${removable?.name ?? ''}を消しますか？`}>
+        <p className="hint" style={{ textAlign: 'center', margin: '4px 8px 0' }}>
+          置いてある家具とテーマも消えます。作品は飾っていないので、作品はそのまま残ります。
+        </p>
+        <div className="sheet-body">
+          <button className="btn btn-destructive" disabled={deleteRoom.isPending} onClick={remove}>
+            おへやを消す
+          </button>
+          <button className="btn btn-gray" onClick={() => setConfirmRemove(false)}>
+            キャンセル
+          </button>
+        </div>
+      </Sheet>
 
       {/* テスト用：画面の右上に出す「招待状を開く」ボタン */}
       <div style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000 }}>
