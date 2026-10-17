@@ -4,7 +4,7 @@
 //! - `Stand` : アクリルスタンド風の立体 (工作)
 //!
 //! 原点は底面中央、+Y が上、作品の正面は +Z。
-//! Unity(glTFast) と Web(three.js) の両方でそのまま読み込める。
+//! Web(three.js) でそのまま読み込める。
 
 use serde_json::{json, Value};
 

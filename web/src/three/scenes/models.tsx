@@ -7,7 +7,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { SlotView } from '../../api'
 
-/** 展示台に収める範囲（幅・高さ・奥行き, m）。Unity の MuseumDisplaySlot.displayVolume と同じ */
+/** 展示台に収める範囲（幅・高さ・奥行き, m） */
 const DISPLAY_VOLUME: [number, number, number] = [0.85, 0.9, 0.76]
 
 /** GLB を先にダウンロード・解析しておく（three/index.tsx の warmUp3D から呼ぶ） */
@@ -50,7 +50,7 @@ export function MuseumModel({ url, hide, onReady }: { url: string; hide: string[
   return <primitive object={scene} />
 }
 
-/** 作品のモデルを、Unity の MuseumDisplaySlot.PlacePrefab と同じ規則で展示台に収める */
+/** 作品のモデルを、展示台の範囲（volume）に収まる大きさにして置く */
 export function FittedModel({ url, volume = DISPLAY_VOLUME }: { url: string; volume?: [number, number, number] }) {
   const { scene } = useGLTF(url, false, false)
   const [vx, vy, vz] = volume
@@ -92,7 +92,7 @@ export function SlotArtworks({
   return (
     <>
       {slots.map((slot) =>
-        slot.artwork && slot.in_main_model ? (
+        slot.artwork ? (
           <group
             key={`${slot.id}-${slot.artwork.id}`}
             position={slot.position}

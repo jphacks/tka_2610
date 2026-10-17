@@ -15,9 +15,8 @@ function RoomLabels({ museum, floor, onRoom }: { museum: Museum; floor: Floor; o
   const labels = useMemo(
     () =>
       museum.rooms
-        .filter((r) => !r.annex)
         .map((room) => {
-          const slots = museum.slots.filter((s) => s.room_id === room.id && s.floor === floor && s.in_main_model)
+          const slots = museum.slots.filter((s) => s.room_id === room.id && s.floor === floor)
           if (slots.length === 0) return null
           const c = new THREE.Vector3()
           slots.forEach((s) => c.add(new THREE.Vector3(...s.position)))

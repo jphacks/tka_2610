@@ -91,7 +91,7 @@ export default function MapView() {
             </button>
           ))}
         </div>
-        <p className="note">作品は種類ごとの部屋に自動で飾られ、Unity の博物館にも同じ場所で表示されます。</p>
+        <p className="note">作品は種類ごとの部屋に自動で飾られます。</p>
       </div>
 
       <ActionMenu

@@ -97,8 +97,6 @@ pub struct SlotView {
     yaw: f32,
     floor: &'static str,
     room_id: Option<&'static str>,
-    /// Web の博物館モデル内にある展示台か (false は Unity の別館のみ)
-    in_main_model: bool,
     artwork: Option<SlotArtwork>,
 }
 
@@ -107,7 +105,6 @@ pub struct RoomView {
     id: &'static str,
     name: &'static str,
     description: &'static str,
-    annex: bool,
     capacity: usize,
     count: usize,
     floors: Vec<&'static str>,
@@ -156,7 +153,6 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
             yaw: museum::world_yaw(s),
             floor: museum::floor_of(s),
             room_id: museum::room_of_slot(s.id).map(|r| r.id),
-            in_main_model: s.in_main_model,
             artwork: find(s.id).map(|r| SlotArtwork {
                 id: r.id,
                 title: r.title.clone(),
@@ -169,12 +165,9 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
 
     let rooms = museum::ROOMS
         .iter()
-        .filter_map(|room| {
+        .map(|room| {
             let in_room: Vec<&DisplayedRow> =
                 room.slots.iter().filter_map(|id| find(id)).collect();
-            if room.annex && in_room.is_empty() {
-                return None;
-            }
             let mut floors: Vec<&'static str> = room
                 .slots
                 .iter()
@@ -182,11 +175,10 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
                 .map(museum::floor_of)
                 .collect();
             floors.dedup();
-            Some(RoomView {
+            RoomView {
                 id: room.id,
                 name: room.name,
                 description: room.description,
-                annex: room.annex,
                 capacity: room.slots.len(),
                 count: in_room.len(),
                 floors,
@@ -197,13 +189,13 @@ pub async fn museum_overview(State(state): State<AppState>) -> AppResult<Json<Mu
                     .map(|r| media_url(MediaKind::Thumb, &r.thumb_file))
                     .collect(),
                 tint: in_room.last().map(|r| r.tint.clone()),
-            })
+            }
         })
         .collect();
 
     let hidden_node_prefixes = displayed
         .iter()
-        .filter(|r| museum::slot(&r.slot_id).is_some_and(|s| s.in_main_model))
+        .filter(|r| museum::slot(&r.slot_id).is_some())
         .map(|r| format!("{}_PROP", r.slot_id))
         .collect();
 

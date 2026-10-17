@@ -134,7 +134,8 @@ impl From<&ArtworkRow> for ArtworkDto {
             image_height: row.image_height,
             tint: row.tint.clone(),
             favorite: row.favorite,
-            displayed: row.slot_id.is_some(),
+            // 今の展示台の表に無い台 (以前の別館など) にある作品は、展示していない扱い
+            displayed: slot.is_some(),
             slot_id: row.slot_id.clone(),
             room_id: room.map(|r| r.id),
             room_name: room.map(|r| r.name),
@@ -698,7 +699,7 @@ pub async fn set_favorite(
 }
 
 // =============================
-// 展示 / 展示をやめる (Unity に反映される)
+// 展示 / 展示をやめる
 // =============================
 
 #[derive(Deserialize, Default)]
@@ -718,7 +719,7 @@ pub async fn display_artwork(
     };
 
     let row = fetch_row(&state, id).await?;
-    if request.slot_id.is_none() && row.slot_id.is_some() {
+    if request.slot_id.is_none() && row.slot_id.as_deref().and_then(museum::slot).is_some() {
         return Ok(Json(ArtworkDto::from(&row)));
     }
 

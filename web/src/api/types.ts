@@ -66,14 +66,13 @@ export interface ListParams {
 
 // ---------- 博物館（backend/src/museum_api.rs） ----------
 
-/** 展示台 1 つ。位置と向きは Unity と同じ座標。Rust: SlotView */
+/** 展示台 1 つ。位置と向きは博物館 GLB と同じ座標。Rust: SlotView */
 export interface SlotView {
   id: string
   position: [number, number, number]
   yaw: number
   floor: '1F' | '2F'
   room_id: string | null
-  in_main_model: boolean
   /** Rust: SlotArtwork */
   artwork: {
     id: string
@@ -89,7 +88,6 @@ export interface RoomView {
   id: string
   name: string
   description: string
-  annex: boolean
   capacity: number
   count: number
   floors: string[]
