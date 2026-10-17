@@ -1,6 +1,6 @@
 // ⑥ 作品の詳細の「おもいで」。作品に付けた写真・動画・声の記録を並べ、足す・ひとことを変える・消すができる（Rust: backend/src/memories.rs）。
 // 写真と動画は 3 列のタイル（押すと MemoryViewer で画面いっぱいに見る）、声はリストの行（押すとその場で流す。<audio> を 1 つ使い回す）。
-// 「＋ 追加」のシートから、写真・動画や音声ファイルを選ぶ。選んだファイルは 1 つずつ順に送り、シートに進み具合を出す。
+// 「＋ 追加」のシートから、写真・動画や音声ファイルを選ぶ・声を録音する（VoiceRecorder）。選んだファイルは 1 つずつ順に送り、シートに進み具合を出す。
 import { useEffect, useRef, useState } from 'react'
 import {
   MEMORY_LIMITS,
@@ -12,10 +12,11 @@ import {
   type Memory,
   type UploadMemoryInput,
 } from '../api'
-import { GalleryIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
+import { GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
 import { MemoryViewer } from './MemoryViewer'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
+import { VoiceRecorder } from './VoiceRecorder'
 import './MemorySection.css'
 
 /** 送っているファイル 1 つ（シートに出す） */
@@ -73,6 +74,7 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
   const voices = memories.filter((m) => m.kind === 'audio')
 
   const [adding, setAdding] = useState(false)
+  const [recording, setRecording] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const busy = jobs.some((j) => !j.error && j.ratio < 1)
   const [viewing, setViewing] = useState<number | null>(null)
@@ -115,6 +117,17 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
     const list = Array.from(files)
     const inputs = await Promise.all(list.map(async (file) => ({ name: file.name, input: { file, ...(await probeMedia(file)) } })))
     await send(inputs)
+  }
+
+  /** 録音した声を送る（進み具合は出さず、録音のシートに「保存しています…」を出す） */
+  const saveVoice = async (input: UploadMemoryInput) => {
+    try {
+      await upload.mutateAsync({ input })
+      setRecording(false)
+      toast('声を残しました')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '送れませんでした')
+    }
   }
 
   const closeAdding = () => {
@@ -289,6 +302,16 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
               <GalleryIcon size={19} />
               写真・動画をえらぶ
             </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setAdding(false)
+                setRecording(true)
+              }}
+            >
+              <MicIcon size={19} />
+              声を録音する
+            </button>
             <button className="btn btn-outline" onClick={() => pickAudio.current?.click()}>
               <NoteIcon size={19} />
               音声ファイルをえらぶ
@@ -299,6 +322,18 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
           </div>
         )}
       </Sheet>
+
+      <VoiceRecorder
+        open={recording}
+        onClose={() => !upload.isPending && setRecording(false)}
+        onSave={saveVoice}
+        onPickFile={() => {
+          setRecording(false)
+          setAdding(true)
+          pickAudio.current?.click()
+        }}
+        saving={upload.isPending}
+      />
 
       {/* 「⋯」：ひとことを変える・消す */}
       <Sheet open={target?.mode === 'menu'} onClose={() => setTarget(null)} title="このおもいで">
