@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "node_modules/.cache/placement-check",
+    "rootDir": ".",
+    "types": []
+  },
+  "include": ["src/three/scenes/home/placement.ts"]
+}
