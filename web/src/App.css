@@ -8,6 +8,8 @@
   margin: 0 auto;
   background: var(--paper);
   overflow: hidden;
+  /* hidden だけだと、シートの入力欄にフォーカスしたときにブラウザが枠ごとスクロールさせ、画面の下半分が空く。clip はスクロールさせない */
+  overflow: clip;
   isolation: isolate;
   view-transition-name: app;
 }

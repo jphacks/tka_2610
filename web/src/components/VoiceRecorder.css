@@ -1,0 +1,60 @@
+/* 声を録音するシート（VoiceRecorder）。真ん中に大きな丸いマイクのボタン、録音中は経過時間と赤い点 */
+
+.recorder {
+  justify-items: center;
+  padding: 8px 0 4px;
+}
+
+.recorder-mic {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--paper);
+  box-shadow: 0 8px 24px var(--accent-soft);
+}
+
+/* 録音中は赤くして、ゆっくり脈打たせる */
+.recorder-mic.recording {
+  background: var(--red);
+  animation: recorder-pulse 1.6s var(--ease-out) infinite;
+}
+
+@keyframes recorder-pulse {
+  50% {
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recorder-mic.recording {
+    animation: none;
+  }
+}
+
+.recorder-hint {
+  margin: 0;
+}
+
+.recorder-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.recorder-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--red);
+}
+
+.recorder-audio {
+  width: 100%;
+}

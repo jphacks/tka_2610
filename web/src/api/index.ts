@@ -7,6 +7,7 @@
 //   home.ts      おへやの配置 JSON の読み書き（模様替え）
 //   ages.ts      年齢ごとのおへや（ホームの年齢のチップ・積み上げ・マップ）
 //   artworks.ts  作品の一覧・詳細・登録・編集・削除・お気に入り・飾る
+//   memories.ts  作品のおもいで（写真・動画・声の記録）の追加・ひとこと・削除
 
 export type {
   AgeRoom,
@@ -35,6 +36,9 @@ export type {
   LayoutObject,
   LayoutRoom,
   ListParams,
+  Memory,
+  MemoryCounts,
+  MemoryKind,
   Museum,
   RoomId,
   RoomView,
@@ -50,7 +54,10 @@ export { ApiError, queryClient } from './client'
 export { useMuseum, useSettings, useUpdateSettings } from './museum'
 export { saveLayoutOnLeave, useLayout, useSaveLayout } from './home'
 export { useAddRoom, useAgeStack, useAges, useDeleteRoom } from './ages'
+export { MEMORY_LIMITS, hasMemories, kindOfFile, probeMedia, useDeleteMemory, useUpdateMemory, useUploadMemory } from './memories'
+export type { UploadMemoryInput } from './memories'
 export {
+  fetchArtworkDetail,
   prefetchArtwork,
   useArtwork,
   useArtworks,

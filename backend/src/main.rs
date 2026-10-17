@@ -6,6 +6,7 @@ mod glb;
 mod home;
 mod home_api;
 mod media;
+mod memories;
 mod migration_repair;
 mod museum;
 mod museum_api;
@@ -26,7 +27,7 @@ use axum::{
     extract::DefaultBodyLimit,
     http::{header, HeaderValue},
     response::Html,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -109,7 +110,7 @@ async fn main() {
     // Storage
     // -----------------------------
 
-    for dir in ["images", "thumbs", "models", "museum"] {
+    for dir in ["images", "thumbs", "models", "museum", "memories"] {
         fs::create_dir_all(media_dir.join(dir))
             .await
             .expect("failed to create media directory");
@@ -153,6 +154,9 @@ async fn main() {
         println!("[Home] reconcile failed: {}", error.message);
     }
     seed::ensure_atelier(&state, &static_dir.join("atelier")).await;
+    if let Err(error) = memories::remove_orphans(&state).await {
+        println!("[Memory] cleanup failed: {}", error.message);
+    }
 
     // -----------------------------
     // Router
@@ -175,6 +179,15 @@ async fn main() {
                 .delete(artworks::delete_artwork),
         )
         .route("/artworks/{id}/favorite", put(artworks::set_favorite))
+        // おもいで (写真・動画・声の記録)。動画を送れるよう、このルートだけ送信の上限を上げる
+        .route(
+            "/artworks/{id}/memories",
+            post(memories::upload_memory).layer(DefaultBodyLimit::max(memories::UPLOAD_BODY_LIMIT)),
+        )
+        .route(
+            "/artworks/{id}/memories/{memory_id}",
+            patch(memories::update_memory).delete(memories::delete_memory),
+        )
         // 年齢ごとのおへや (ホームの年齢のチップ・積み上げの建物・マップ)
         .route("/ages", get(ages_api::list_ages))
         .route("/ages/{age}", get(ages_api::age_stack))
