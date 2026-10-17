@@ -32,15 +32,18 @@ import {
   type WallFinish,
 } from '../api'
 import { ArtworkThumb, GlassButton, Screen, Segmented, Sheet, ThumbSkeletons, useToast } from '../components'
-import { BackIcon, PlusIcon, RotateIcon, ThemeIcon, TrashIcon, UndoIcon, WalkIcon } from '../icons'
+import { ArrowDownIcon, ArrowUpIcon, BackIcon, PlusIcon, RotateIcon, ThemeIcon, TrashIcon, UndoIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
 import {
   HomeEditScene,
+  MOUNT_STEP,
   StageShell,
   addFurniture,
   hasHouseModel,
   houseRoomsOf,
+  isWallAsset,
   namesFromSlots,
+  raiseObject,
   removeObject,
   rotateObject,
   sizesFromSlots,
@@ -258,6 +261,8 @@ export default function HomeEdit() {
   // 作品の実寸（置ける大きさの判定に使う。分からない作品は置き場所の枠そのものの大きさとして判定する）
   const sizeOf = useMemo(() => sizesFromSlots(data?.slots ?? []), [data?.slots])
   const selected = (selectedId && draft?.objects.find((o) => o.id === selectedId)) || null
+  // 壁の家具を選んでいれば、「回す」の代わりに「上へ」「下へ」を出す
+  const selectedWall = selected?.kind === 'furniture' && isWallAsset(catalog?.assets.find((a) => a.id === selected.assetId))
   const selectedName = !selected
     ? null
     : selected.kind === 'furniture'
@@ -272,6 +277,15 @@ export default function HomeEdit() {
     const layout = draftRef.current
     if (!layout || !catalog || !selected || busy) return
     const result = rotateObject(layout, catalog, selected.id, QUARTER, { nameOf, sizeOf, house })
+    if (result.ok) commit(result.layout)
+    else toast(result.reason)
+  }
+
+  /** 選んだ壁の家具を 10 cm 上げ下げする（ツールバー）。範囲の端や、ほかの物と重なるときは理由を出して動かさない */
+  const raise = (direction: 1 | -1) => {
+    const layout = draftRef.current
+    if (!layout || !catalog || !selected || busy) return
+    const result = raiseObject(layout, catalog, selected.id, direction * MOUNT_STEP, { nameOf, sizeOf, house })
     if (result.ok) commit(result.layout)
     else toast(result.reason)
   }
@@ -433,10 +447,23 @@ export default function HomeEdit() {
                   <ThemeIcon size={21} />
                   テーマ
                 </button>
-                <button type="button" className="edit-tool" disabled={busy || !selected} onClick={rotate}>
-                  <RotateIcon size={21} />
-                  回す
-                </button>
+                {selectedWall ? (
+                  <>
+                    <button type="button" className="edit-tool" disabled={busy} onClick={() => raise(1)}>
+                      <ArrowUpIcon size={21} />
+                      上へ
+                    </button>
+                    <button type="button" className="edit-tool" disabled={busy} onClick={() => raise(-1)}>
+                      <ArrowDownIcon size={21} />
+                      下へ
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="edit-tool" disabled={busy || !selected} onClick={rotate}>
+                    <RotateIcon size={21} />
+                    回す
+                  </button>
+                )}
                 <button type="button" className="edit-tool" disabled={busy || !selected} onClick={remove}>
                   <TrashIcon size={21} />
                   消す
@@ -483,6 +510,7 @@ export default function HomeEdit() {
                     <span className="size num">
                       {meters(asset.dimensions_meters[0])} × {meters(asset.dimensions_meters[2])} m
                     </span>
+                    {isWallAsset(asset) && <span className="tag">壁に掛ける</span>}
                     {asset.support && <span className="tag">作品を置ける</span>}
                   </button>
                 ))}

@@ -264,3 +264,17 @@ export const NoteIcon = (p: IconProps) => (
     <circle cx="16.5" cy="16" r="2.5" />
   </Svg>
 )
+
+/** 上へ（壁の家具を上げる） */
+export const ArrowUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Svg>
+)
+
+/** 下へ（壁の家具を下げる） */
+export const ArrowDownIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Svg>
+)
