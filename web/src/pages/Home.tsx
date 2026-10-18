@@ -1,6 +1,6 @@
 // ② ホーム（/）。タブ。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
-// 階のラベル（おへやが 1 つなら下の「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
+// 建物の階か、その下の「1かい」「2かい」のボタン（おへやが 1 つなら「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
 // いちばん上の階に作品を飾っていなければ、「〇〇を消す」で消せる（確かめのシートを出す。作品のある階や途中の階はサーバーが断る）。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
@@ -130,7 +130,19 @@ export default function Home() {
       </StageShell>
 
       <div className="home-actions">
-        {rooms.length > 1 && <p className="home-hint">おへやの名前を押すと、中に入れます</p>}
+        {rooms.length > 1 && (
+          <>
+            <div className="home-floors">
+              {[...rooms].reverse().map((room) => (
+                <button key={room.id} type="button" className="home-floor" onClick={() => enter(room.id)}>
+                  {room.floor + 1}かい
+                  <small className="num">{room.count}</small>
+                </button>
+              ))}
+            </div>
+            <p className="home-hint">階を押すと、中に入れます</p>
+          </>
+        )}
         <div className="home-buttons">
           {rooms.length === 1 && (
             <button type="button" className="btn btn-filled home-enter" onClick={() => enter(rooms[0].id)}>

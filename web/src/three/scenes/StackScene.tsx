@@ -1,16 +1,16 @@
 // ホームの積み上げの建物。ある年齢のおへや（/api/ages/{age} の rooms。1 階から）を、実際の 3D のおへや（建物・家具・作品）のまま縦に重ねて、
 // 南東の斜め上から見る。上の階は下の階の壁の上にそのまま乗せる（本当の建物と同じ）。部屋の天井が高い（壁 4.2 m）ので、
-// 浅めの角度（約 16°）で見ると、上の階の床の下から下の階の中が奥まで見える。カメラの側の壁はおへやごとにカットする。
-// 階の左に「4さいのおへや 2（数）›」のラベルを出し、押すと onRoom（その階のおへやへ入る）。
+// 少し上から（約 26°）見ても、上の階の床の下から下の階の中が見える。カメラの側の壁はおへやごとにカットする。
+// 階を押すと onRoom（その階のおへやへ入る）。3D の上には文字を出さない（どの階かのボタンは Home が建物の下に出す）。
 // 建物・家具・作品を描くのは、ほかの画面と同じ HouseShells・HomeObjects（階ごとに高さをずらしたグループに入れるだけ）。
 // 階が増えるとスマホで重くなるので、動きがあるときだけ描き（frameloop demand）、作品の数はスマホでは HomeObjects の決まり（近い 6 点）に任せる。
 // 机の上の模型のように見せる仕上げ（暖かい光の影・接地の影・隅の陰・ティルトシフト・周辺減光）は DioramaEffects。
 // 引いて見ると何もない床ばかりにならないよう、ここでは部屋を横方向に縮めて描き（建物のグループを [s, 1, s]）、家具と作品を中へ寄せる
 // （home/compact.ts。重ならない範囲でいちばん小さく。全部の階で同じ s）。家具と作品の大きさと、保存されている配置はそのまま。
 // スマホなど（タッチの端末）では、重い隅の陰を省き、影の解像度を下げる。
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { useThree } from '@react-three/fiber'
-import { Html, OrbitControls } from '@react-three/drei'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useThree, type ThreeEvent } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { AgeStack, Museum, StackRoom, Vec3 } from '../../api'
 import { CameraFlight, type CameraGoal } from './CameraFlight'
@@ -22,7 +22,6 @@ import { sizesFromSlots } from './home/placement'
 import { WALL_TOP, cornersOf, fitDistance, frameCenter, roomBounds } from './home/house'
 import { Stage } from './Stage'
 import { isTouchDevice } from './walk/inputMode'
-import './StackScene.css'
 
 /** 1 階分の高さ（m）。壁の高さに、床の下の土台の厚さ（建物の GLB の 0.2 m）を足す。上の階の土台が下の階の壁の上に乗る */
 export const FLOOR_PITCH = WALL_TOP + 0.2
@@ -31,8 +30,8 @@ const DIRECTION: Vec3 = [1, 0.7, 1]
 const FOV = 38
 /** 建物全体を収めるときの余白（1 より小さいので、建物の角が少しだけ画面の外に出るくらいまで寄る） */
 const MARGIN = 0.66
-/** 階のラベルの位置（西の角から中心までのうち、角の側からどれだけ残すか） */
-const LABEL_INSET = 0.25
+/** 押したとみなす、押してから離すまでに動いた量（px）。これより動いたら見回すためのドラッグ */
+const TAP_SLOP = 6
 
 const unit = new THREE.Vector3(...DIRECTION).normalize()
 
@@ -129,7 +128,7 @@ export function StackScene({
   onReady,
 }: {
   stack: AgeStack
-  /** 階のラベルを押したとき（おへやの id） */
+  /** 階を押したとき（おへやの id） */
   onRoom?: (roomId: string) => void
   /** どの階の建物もそろったとき */
   onReady?: () => void
@@ -141,11 +140,17 @@ export function StackScene({
     const scale = compactScale(floors, stack.catalog)
     return { scale, layouts: floors.map((f) => compactLayout(f.layout, stack.catalog, scale, f.sizeOf)) }
   }, [stack])
-  // ラベルは、建物の南の壁（画面の左手前の壁）の、西の角から少し内側から右へ伸ばす。高さは各階の床の少し上
-  // （カメラが寄っていて角は画面の端にかかるので、角ちょうどに置くとラベルが切れる）
-  const hub = stack.house.rooms[0]
-  const labelX = (hub ? -(hub.size[0] / 2 + stack.house.wall_thickness) : -5.2) * compact.scale * LABEL_INSET
-  const labelZ = (hub ? hub.size[1] / 2 + stack.house.wall_thickness : 5.2) * compact.scale
+  // 階を押したとき。見回すためのドラッグの終わりでは入らない（押してから離すまでに動いた量で分ける）
+  const tap = (roomId: string) => (e: ThreeEvent<MouseEvent>) => {
+    if (e.delta > TAP_SLOP) return
+    e.stopPropagation()
+    onRoom?.(roomId)
+  }
+  const hover = (on: boolean) => () => {
+    if (onRoom) document.body.style.cursor = on ? 'pointer' : ''
+  }
+  // 階の上にいるまま画面を移ったときに、指の形のカーソルが残らないように
+  useEffect(() => () => void (document.body.style.cursor = ''), [])
   // 建物がそろった階（おへやの id）。全部の階がそろったら onReady
   const loaded = useRef(new Set<string>())
   // 建物や家具が読み込まれた回数（影を付け直すきっかけ）
@@ -156,7 +161,13 @@ export function StackScene({
   return (
     <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows>
       {stack.rooms.map((floor, i) => (
-        <group key={floor.room.id} position={[0, i * FLOOR_PITCH, 0]}>
+        <group
+          key={floor.room.id}
+          position={[0, i * FLOOR_PITCH, 0]}
+          onClick={tap(floor.room.id)}
+          onPointerOver={hover(true)}
+          onPointerOut={hover(false)}
+        >
           {/* 建物は横方向だけ縮める（壁の高さはそのまま） */}
           <group scale={[compact.scale, 1, compact.scale]}>
             <HouseShells
@@ -170,15 +181,6 @@ export function StackScene({
             />
           </group>
           <HomeObjects layout={compact.layouts[i]} catalog={stack.catalog} slots={floor.slots} house={stack.house} onReady={bump} />
-          <Html position={[labelX, WALL_TOP * 0.35, labelZ]} zIndexRange={[10, 0]}>
-            <button type="button" className="stack-label" onClick={() => onRoom?.(floor.room.id)}>
-              {floor.room.name}
-              <small>{floor.count}</small>
-              <span className="stack-chevron" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </Html>
         </group>
       ))}
       <StackCamera stack={stack} scale={compact.scale} />

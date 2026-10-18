@@ -42,7 +42,7 @@
 3D の表示は Web（three.js）だけで完結させています。3D の機能を足すときは `web/src/three/` に足してください。Unity 版は削除しました。最初のマイグレーションが作る `exhibits` 表は Unity 用の名残で、今は使っていません（適用済みのマイグレーションは書き換えられないので、表は残っています）。
 鑑賞モードの照明（`web/src/three/scenes/walk/`）は、強さを Unity の単位で書いて `lighting.tsx` で three.js の単位に換算する決まりです。コメントに出てくる「Unity」はこの単位と、もとにした Unity 版の考え方のことです。
 Web の鑑賞モード（`/museum/walk`）のはじめの位置・歩き方・照明は `web/src/three/scenes/walk/stagePreset.ts` の `HOME_STAGE` にあります。詳しくは [docs/walk.md](docs/walk.md) を見てください。
-Web のホーム（`/`）は年齢のチップと、その年齢のおへやを階として積み上げた 3D（`web/src/three/scenes/StackScene.tsx`。`GET /api/ages/{age}`）です。階のラベルを押すとおへや（`/rooms/:roomId`。`web/src/pages/Room.tsx`）に入り、そこから鑑賞モード・模様替えへ `?room=` で進みます。マップのタブ（`/map`）は全部の年齢のおへやの一覧です。
+Web のホーム（`/`）は年齢のチップと、その年齢のおへやを階として積み上げた 3D（`web/src/three/scenes/StackScene.tsx`。`GET /api/ages/{age}`）です。建物の階か、その下の「1かい」「2かい」のボタン（1 つだけなら「はいる」）を押すとおへや（`/rooms/:roomId`。`web/src/pages/Room.tsx`）に入り、そこから鑑賞モード・模様替えへ `?room=` で進みます。マップのタブ（`/map`）は全部の年齢のおへやの一覧です。
 Web の模様替え（`/home/edit?room=<id>`）は `web/src/pages/HomeEdit.tsx`（下書き・元に戻す・自動保存・追加とテーマのシート・部屋の切り替え。切り替えは `house.rooms` が 2 部屋以上のときだけ出すので、今は出ない）と `web/src/three/scenes/HomeEditScene.tsx`（3D とドラッグ・選んだ部屋へのカメラ）です。変えた配置は `PUT /api/home/layout` で保存します。作品はドラッグで、同じ部屋のほかの家具の面（本棚の段も）や床へ載せ換えられます。物は自分の部屋から出ません。家具の追加・作品の追加・テーマは選んでいる部屋（今はリビング）に入ります。「追加→作品」に出るのは、そのおへやの年齢の、飾っていない作品だけです。壁紙と床材（テーマ）は配置 JSON の `rooms.<部屋 id>.wall`・`floor` で、`web/src/three/scenes/home/theme.ts` が部屋ごとの建物に当てます。仕組みは [docs/frontend.md](docs/frontend.md) の「模様替えの仕組み」を見てください。
 家の建物を描くのは `web/src/three/scenes/home/HouseShells.tsx` だけです（`house.rooms` の部屋ごとに `MuseumModel` を 1 つ、`SHELL_<部屋 id>` のグループで部屋の中心へ動かす。今は hub の 1 つ）。
 
