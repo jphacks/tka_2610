@@ -69,7 +69,7 @@ three.js はライトの数だけ画面のすべての点で計算するので�
 | 家具 | `/api/museum` の `layout`（配置 JSON）と `catalog`（家具の GLB の URL・大きさ・作品を載せる面）。GLB は `/home-assets/modules/〇〇.glb`（`backend/static/home/modules/`）。ほかの 3D 画面と同じ `HomeObjects` で置く |
 | 飾っている作品 | 置く場所は `layout`、モデルの URL・種類・実寸（`artwork.model_size`）・収める枠（`fit`）は `slots`。`HomeObjects` が家具の面（天板・本棚の段）の上か床に、実寸 × 倍率（`home/placement.ts` の `displayScale`。`slots[].scale` と同じ値）の大きさで置く。実寸が分からない作品は枠に収める。作品の照明（`walk/ArtworkSpotlights.tsx`）は今も枠 `fit` の高さで狙う点を決め、本棚の段の作品だけ、上の棚板の下から光が入るよう低く遠くから当てる |
 | 壁紙・床材（テーマ） | `/api/museum` の `layout.rooms[部屋]` の `wall`・`floor`（部屋ごと）と、`catalog.materials`（テクスチャの URL と 1 枚の大きさ）。部屋ごとの `MuseumModel` が `home/theme.ts` で壁と床の材質を差し替える（ほかの 3D 画面と同じ） |
-| 天井 | 建物の GLB には天井が無いので、`WalkScene` が部屋ごとに、壁の高さ（3.2 m）に板（`Ceiling_<部屋 id>`。部屋の内寸より 0.6 m 大きく、壁の中まで届かせる）を張る。位置と大きさは `house.rooms` から |
+| 天井 | 建物の GLB には天井が無いので、`WalkScene` が部屋ごとに、壁の高さ（4.2 m）に板（`Ceiling_<部屋 id>`。部屋の内寸より 0.6 m 大きく、壁の中まで届かせる）を張る。位置と大きさは `house.rooms` から |
 | 天井の照明（ダウンライト） | 部屋ごとに `house.rooms` の位置と大きさから作る（`walk/stagePreset.ts` の `roomDownlights`。下の「ステージの設定」） |
 | 作品カードの中身 | `/api/artworks/:id`（詳細画面と同じ。おもいでの `memories` も） |
 | はじめの位置・歩き方・カメラ・照明・当たり判定から外すもの | `web/src/three/scenes/walk/stagePreset.ts` の `HOME_STAGE` |
@@ -80,7 +80,7 @@ three.js はライトの数だけ画面のすべての点で計算するので�
 
 詳しい仕様は [house-assets.md](house-assets.md) にあります。鑑賞モードに関係するところだけを書きます。
 
-- 1 部屋 1 ファイルで、部屋の中心が原点、床の上面が y = 0 です。回転・拡大はせず、部屋の中心へ平行移動するだけで並びます。今は `hub.glb`（中心 (0, 0)、内寸 10 × 10 m、壁の高さ 3.2 m・厚さ 0.24 m、出入口の無い 4 面の壁）だけです。
+- 1 部屋 1 ファイルで、部屋の中心が原点、床の上面が y = 0 です。回転・拡大はせず、部屋の中心へ平行移動するだけで並びます。今は `hub.glb`（中心 (0, 0)、内寸 10 × 10 m、壁の高さ 4.2 m・厚さ 0.24 m、出入口の無い 4 面の壁）だけです。
 - 部屋と出入口を戻したときは、隣の部屋とリビングの壁を共有し、出入口の下の帯（壁の厚さの分）の床はリビングの GLB に入れます。出入口の中を通る形は何も置かないので、そのまま歩いて通れます。共有する壁の、隣の部屋に向いた面には `userData.faceRoom`（部屋の id）を付け、その部屋の壁紙が付きます（`home/theme.ts`）。
 - 天井・家具・照明は入っていません（天井と照明は `WalkScene` が部屋ごとに作る）。当たり判定は見えている形そのものから作るので、見えない壁や当たり判定用の箱は入れません。
 - 壁のノードの `userData` に `side`（north / south / east / west）と `cutaway` が入っています。子のメッシュの `userData.role` は `floor`・`wall_lower`・`wall_upper`・`trim_lower`・`trim_upper` などです。`side` と `role` は、手前の壁のカット（`home/cutaway.ts`。カメラの側の壁を隠す。鑑賞モードでは使わない）と、壁紙・床材の切り替え（`home/theme.ts`。`wall_lower`・`wall_upper`・`floor` の材質だけを差し替える）で使います。`cutaway` の印は、今のアプリは読みません。
