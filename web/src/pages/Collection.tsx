@@ -11,7 +11,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useArtworks, type Artwork, type Category } from '../api'
 import { ActionMenu, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons } from '../components'
-import { MoreIcon, MuseumIcon, PlusIcon } from '../icons'
+import { MoreIcon, RainbowIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import './Collection.css'
 
@@ -293,7 +293,7 @@ export default function Collection() {
         onClose={() => setMenu(false)}
         items={[
           { label: '作品を追加', icon: <PlusIcon size={19} />, onSelect: () => nav.modal('/add') },
-          { label: 'おうちのマップ', icon: <MuseumIcon size={19} />, onSelect: () => nav.tab('/map') },
+          { label: 'memoriaのマップ', icon: <RainbowIcon size={19} />, onSelect: () => nav.tab('/map') },
         ]}
       />
     </Screen>

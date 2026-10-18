@@ -2,8 +2,28 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useAges, useSettings, useUpdateSettings } from '../api'
 import { NavBar, Screen, Sheet, useToast } from '../components'
-import { BellIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon, MuseumIcon, PersonIcon } from '../icons'
+import { BellIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon,  PersonIcon } from '../icons'
 import './Settings.css'
+// 虹のアイコンは TabBar と同じもの
+function RainbowIcon({ size = 24, strokeWidth = 1.8 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 17A9 9 0 0 1 21 17" />
+      <path d="M6.5 17A5.5 5.5 0 0 1 17.5 17" />
+      <path d="M10 17A2 2 0 0 1 14 17" />
+    </svg>
+  )
+}
 
 function Row({
   icon,
@@ -82,14 +102,14 @@ export default function Settings() {
             <span className="avatar large">{owner.slice(0, 1) || '?'}</span>
             <span className="grow">
               <div className="who">{owner || ' '}</div>
-              <div className="sub">プロフィール・博物館の名前</div>
+              <div className="sub">プロフィール・memoriaの名前</div>
             </span>
             <ChevronRight size={16} strokeWidth={2.2} className="chev" />
           </button>
           <Row
-            icon={<MuseumIcon size={18} />}
-            label="おうち"
-            detail={ages.data ? `おへや ${roomCount}・${displayed} 点を飾っています` : undefined}
+            icon={<RainbowIcon size={18} />}
+            label="memoria"
+            
             onClick={() => setEditing(true)}
           />
           <Row
@@ -138,7 +158,7 @@ export default function Settings() {
               <p className="hint">作品を作ったときの年齢を計算して、年齢ごとのおへやに分けます。変えると、作品のおへやも変わります</p>
             </div>
             <div className="field">
-              <label htmlFor="museum_name">博物館の名前</label>
+              <label htmlFor="museum_name">memoriaの名前</label>
               <input id="museum_name" name="museum_name" className="input" maxLength={30} defaultValue={settings.data.museum_name} required />
             </div>
             {update.error && <div className="form-error">{update.error.message}</div>}
