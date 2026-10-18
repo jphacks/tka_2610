@@ -85,7 +85,7 @@ export default function Settings() {
         onSuccess: () => {
           setEditing(false)
           // 誕生日が変わると、作品は作ったときの年齢のおへやへ移る（サーバーが置き直す）
-          toast(nextBirthday && nextBirthday !== birthday ? 'お誕生日を変えて、作品をおへやに分け直しました' : 'プロフィールを保存しました')
+          toast(nextBirthday && nextBirthday !== birthday ? '生年月日を変えて、作品をおへやに分け直しました' : 'プロフィールを保存しました')
         },
       },
     )
@@ -113,7 +113,7 @@ export default function Settings() {
           />
           <Row
             icon={<HomeIcon size={18} />}
-            label="お誕生日"
+            label="生年月日"
             detail={birthday ? birthdayLabel(birthday) : '未設定'}
             onClick={() => setEditing(true)}
           />
@@ -146,7 +146,7 @@ export default function Settings() {
               <input id="owner_name" name="owner_name" className="input" maxLength={30} defaultValue={settings.data.owner_name} required />
             </div>
             <div className="field">
-              <label htmlFor="child_birthday">子どものお誕生日</label>
+              <label htmlFor="child_birthday">子どもの生年月日</label>
               <input
                 id="child_birthday"
                 name="child_birthday"

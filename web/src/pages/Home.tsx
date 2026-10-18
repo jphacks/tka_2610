@@ -2,13 +2,14 @@
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 建物の階か、その下の「1かい」「2かい」のボタン（おへやが 1 つなら「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
 // いちばん上の階に作品を飾っていなければ、「〇〇を消す」で消せる（確かめのシートを出す。作品のある階や途中の階はサーバーが断る）。
+// 上の名前（「はるのミュージアム」）を押すと、名前を変えるシートが出る（設定の museum_name。マイページのプロフィールでも変えられる）。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAddRoom, useAgeStack, useAges, useDeleteRoom } from '../api'
+import { useAddRoom, useAgeStack, useAges, useDeleteRoom, useSettings, useUpdateSettings } from '../api'
 import { InviteSheet, NavBar, Screen, Sheet, TLink, useToast } from '../components'
-import { HomeIcon, PlusIcon } from '../icons'
+import { HomeIcon, PencilIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import { StackScene, StageShell, warmUp3D } from '../three'
 import './Home.css'
@@ -25,6 +26,10 @@ export default function Home() {
   const [showInvite, setShowInvite] = useState(false)
   // 「〇〇を消す」の確かめのシート
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // 名前（「はるのミュージアム」）を変えるシート。タイトルを押すと開く
+  const [renaming, setRenaming] = useState(false)
+  const settings = useSettings()
+  const updateSettings = useUpdateSettings()
 
   const data = ages.data
   // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
@@ -59,6 +64,21 @@ export default function Home() {
       onError: (e) => toast(e.message),
     })
   }
+  const rename = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!settings.data) return
+    const name = String(new FormData(e.currentTarget).get('museum_name') ?? '')
+    // 生年月日は送らない（省くと今のまま）
+    updateSettings.mutate(
+      { museum_name: name, owner_name: settings.data.owner_name },
+      {
+        onSuccess: (s) => {
+          setRenaming(false)
+          toast(`「${s.museum_name}」にしました`)
+        },
+      },
+    )
+  }
   const remove = () => {
     if (!removable) return
     deleteRoom.mutate(removable.id, {
@@ -74,7 +94,12 @@ export default function Home() {
     <Screen tabbar className="home-screen">
        <NavBar
         large
-        title={data?.name ?? 'はるのミュージアム'}
+        title={
+          <button type="button" className="home-title" onClick={() => setRenaming(true)} aria-label="名前を変える">
+            {data?.name ?? 'はるのミュージアム'}
+            <PencilIcon size={16} className="home-title-pencil" />
+          </button>
+        }
         right={
           <TLink to="/settings" kind="tab" className="avatar" aria-label="マイページ">
             {initial}
@@ -84,7 +109,7 @@ export default function Home() {
 
       {data && !data.child_birthday && (
         <TLink to="/settings" kind="tab" className="home-notice">
-          お誕生日を設定すると、作った年齢ごとにおへやを分けられます
+          子どもの生年月日を設定すると、作った年齢ごとにおへやを分けられます
         </TLink>
       )}
 
@@ -175,6 +200,29 @@ export default function Home() {
             キャンセル
           </button>
         </div>
+      </Sheet>
+
+      <Sheet open={renaming && !!settings.data} onClose={() => setRenaming(false)} title="名前を変える">
+        {settings.data && (
+          <form className="sheet-body form" onSubmit={rename}>
+            <div className="field">
+              <label htmlFor="home_museum_name">memoriaの名前</label>
+              <input
+                id="home_museum_name"
+                name="museum_name"
+                className="input"
+                maxLength={30}
+                defaultValue={settings.data.museum_name}
+                placeholder="例）はるのミュージアム"
+                required
+              />
+            </div>
+            {updateSettings.error && <div className="form-error">{updateSettings.error.message}</div>}
+            <button className="btn btn-filled" disabled={updateSettings.isPending}>
+              保存
+            </button>
+          </form>
+        )}
       </Sheet>
 
       {/* テスト用：画面の右上に出す「招待状を開く」ボタン */}
