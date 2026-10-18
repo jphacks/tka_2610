@@ -102,7 +102,7 @@ pub async fn update_settings(
     let museum_name = body.museum_name.trim();
     let owner_name = body.owner_name.trim();
     if museum_name.is_empty() || museum_name.chars().count() > 30 {
-        return Err(AppError::bad_request("博物館の名前は1〜30文字で入力してください"));
+        return Err(AppError::bad_request("memoriaの名前は1〜30文字で入力してください"));
     }
     if owner_name.is_empty() || owner_name.chars().count() > 30 {
         return Err(AppError::bad_request("名前は1〜30文字で入力してください"));

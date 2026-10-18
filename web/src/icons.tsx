@@ -287,3 +287,11 @@ export const ArrowDownIcon = (p: IconProps) => (
     <path d="M12 5v14M6 13l6 6 6-6" />
   </Svg>
 )
+
+/** 書きかえる（名前を変える） */
+export const PencilIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+    <path d="m13.5 6.5 4 4" />
+  </Svg>
+)
