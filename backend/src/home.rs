@@ -178,6 +178,8 @@ const ART_FIT_MIN_SIDE: f64 = 0.5;
 const SHELF_HEADROOM: f64 = 0.04;
 /// 床に置く作品の枠。家具と同じく 0.8 × 0.8 の場所を取る
 pub const FLOOR_ART_FIT: [f64; 3] = [0.8, 1.0, 0.8];
+/// 実寸の GLB (custom) を小さすぎるときに大きくする下限 (枠に収まる最大の大きさに対する割合)。display_scale
+pub const CUSTOM_MIN_FILL: f64 = 0.6;
 /// 壁に掛ける作品 (写真の額縁) の枠。幅と奥行きを同じにして、どの壁に掛けても (90° ごとのどの向きでも) 同じ大きさにする
 pub const WALL_ART_FIT: [f64; 3] = [0.9, 0.9, 0.9];
 /// 作品の placement の値 (壁に掛ける)。catalog.json の家具の placement と同じ言葉
@@ -601,7 +603,8 @@ pub type Sizes = HashMap<Uuid, ArtSize>;
 
 /// 作品を枠 (envelope: 幅・高さ・奥行き) に収める拡縮率。
 /// 作品の向き rotation_y で回した後の縦横 (外接長方形) と高さが枠に収まる最大の倍率。
-/// 実寸の GLB (custom) は 1 倍より大きくしない。
+/// 実寸の GLB (custom) は 1 倍より大きくしない。ただし枠に対して小さすぎる物 (ペットボトルなど、実物の大きさの GLB) は、
+/// 枠に収まる最大の倍率の CUSTOM_MIN_FILL まで大きくする (サンプルの作品は 50 cm 前後で作ってあり、並ぶと見えなくなるため)。
 /// Web の `displayScale` (placement.ts) と同じ式 (総当たり表 placement-cases.json で照合)
 pub fn display_scale(a: &ArtSize, envelope: [f64; 3], rotation_y: f64) -> f64 {
     let [w, h, d] = a.size;
@@ -609,7 +612,7 @@ pub fn display_scale(a: &ArtSize, envelope: [f64; 3], rotation_y: f64) -> f64 {
     let ex = w * c + d * s;
     let ez = w * s + d * c;
     let scale = (envelope[0] / ex).min(envelope[2] / ez).min(envelope[1] / h);
-    if a.custom { scale.min(1.0) } else { scale }
+    if a.custom { scale.min(1.0).max(scale * CUSTOM_MIN_FILL) } else { scale }
 }
 
 /// 置いたときの作品の大きさ (幅・高さ・奥行き。回す前)
@@ -2773,7 +2776,14 @@ mod tests {
         // custom でない小さな作品は枠まで大きくする (1 倍の上限なし)。custom は 1 倍まで
         let small = ArtSize { size: [0.1, 0.1, 0.1], custom: false, frame: false };
         assert!(close(display_scale(&small, fit, 0.0), 4.8));
-        assert!(close(display_scale(&ArtSize { custom: true, ..small }, fit, 0.0), 1.0));
+        // custom は 1 倍まで。ただし枠に対して小さすぎれば、枠いっぱい (4.8 倍) の CUSTOM_MIN_FILL (0.6) まで大きくする
+        assert!(close(display_scale(&ArtSize { custom: true, ..small }, fit, 0.0), 4.8 * CUSTOM_MIN_FILL));
+        // 枠いっぱいが 1.2 倍の作品は、0.6 倍の下限より 1 倍が大きいので 1 倍のまま
+        let mid = ArtSize { size: [0.4, 0.4, 0.4], custom: true, frame: false };
+        assert!(close(display_scale(&mid, fit, 0.0), 1.0));
+        // 実物の大きさのペットボトル (6.5 × 17 × 6.5 cm) は、高さで決まる枠いっぱい 0.62 / 0.17 の 0.6 倍
+        let bottle = ArtSize { size: [0.065, 0.17, 0.065], custom: true, frame: false };
+        assert!(close(display_scale(&bottle, fit, 0.0), 0.62 / 0.17 * CUSTOM_MIN_FILL));
     }
 
     #[test]

@@ -46,6 +46,8 @@ const TOLERANCE = 0.002
 export const TOP_SURFACE = 'top'
 /** 床に置く作品の枠（幅・高さ・奥行き）。家具と同じく 0.8 × 0.8 の場所を取る。Rust: FLOOR_ART_FIT */
 export const FLOOR_ART_FIT: Vec3 = [0.8, 1.0, 0.8]
+/** 実寸の GLB（custom）を小さすぎるときに大きくする下限（枠に収まる最大の大きさに対する割合）。Rust: CUSTOM_MIN_FILL */
+export const CUSTOM_MIN_FILL = 0.6
 /** 壁に掛ける作品（写真の額縁）の枠。幅と奥行きを同じにして、どの壁に掛けても同じ大きさにする。Rust: WALL_ART_FIT */
 export const WALL_ART_FIT: Vec3 = [0.9, 0.9, 0.9]
 /** 壁の判定の許容。壁ぎりぎりに寄せた位置が丸めの違いではみ出し扱いにならないよう、重なりと同じ 2 mm（Rust の check_placement と同じ） */
@@ -332,7 +334,8 @@ export function sizesFromSlots(slots: SlotView[]): SizeOf {
  * 作品を枠 envelope（幅・高さ・奥行き）に収める拡縮率。Rust: display_scale（display_scale_fits_rotated_extents）
  * 回した後の縦横（ex・ez）で決める。0° なら実寸のまま収まる作品も、浅い面で 90° 回すと収まる分だけ縮む
  * （帆船 0.56 × 0.34 をサイドボードの枠 0.56 × 0.48 に：0° = 1、90° = 0.48 / 0.56 = 0.857…）。
- * 実寸の GLB（custom）は本物より大きく見せないよう 1 倍まで
+ * 実寸の GLB（custom）は本物より大きく見せないよう 1 倍まで。ただし枠に対して小さすぎる物（ペットボトルなど）は、
+ * 枠に収まる最大の倍率の CUSTOM_MIN_FILL まで大きくする（Rust: display_scale。custom_models_are_enlarged_when_tiny）
  */
 export function displayScale(art: ArtSize, envelope: Vec3, rotationY: number): number {
   const [w, h, d] = art.size
@@ -342,7 +345,7 @@ export function displayScale(art: ArtSize, envelope: Vec3, rotationY: number): n
   const ex = w * c + d * s
   const ez = w * s + d * c
   const scale = Math.min(ew / ex, ed / ez, eh / h)
-  return art.custom ? Math.min(scale, 1) : scale
+  return art.custom ? Math.max(Math.min(scale, 1), scale * CUSTOM_MIN_FILL) : scale
 }
 
 /** 置いた後の寸法（実寸 × displayScale。回す前の幅・高さ・奥行き）。Rust: placed_size */
