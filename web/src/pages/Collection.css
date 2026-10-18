@@ -1,9 +1,9 @@
-/* ⑧ 作品一覧（Collection）。月のチップ（横にスクロール）と、選んだ月の見出し・作品の 3 列 */
+/* ⑧ 作品一覧（Collection）。年のチップ・月のチップ（どちらも横にスクロール）と、選んだ月の見出し・作品の 3 列 */
 
-/* 月のチップ。画面の端までスクロールできるよう、.page の左右の余白の外まで広げる */
+/* 年と月のチップの列。画面の端までスクロールできるよう、.page の左右の余白の外まで広げる */
+.collection-years,
 .collection-months {
   display: flex;
-  align-items: flex-end;
   gap: 8px;
   margin: 0 -20px;
   padding: 2px 20px 6px;
@@ -11,26 +11,37 @@
   scrollbar-width: none;
 }
 
+.collection-years::-webkit-scrollbar,
 .collection-months::-webkit-scrollbar {
   display: none;
 }
 
-/* 年の区切りとチップを 1 組にする（年は、その年のいちばん新しい月の上に出す） */
-.collection-month-item {
-  flex: none;
-  display: grid;
-  gap: 4px;
-}
-
+/* 年：月のチップより控えめな、文字だけのタブ。選んでいる年に下線 */
 .collection-year {
-  padding-left: 4px;
-  font-size: 11.5px;
+  flex: none;
+  padding: 6px 4px 4px;
+  border-bottom: 2.5px solid transparent;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-3);
 }
 
+.collection-year + .collection-year {
+  margin-left: 10px;
+}
+
+.collection-year.selected {
+  border-bottom-color: var(--sage);
+  color: var(--ink);
+}
+
+.collection-months {
+  margin-top: 6px;
+}
+
 .collection-chip {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;

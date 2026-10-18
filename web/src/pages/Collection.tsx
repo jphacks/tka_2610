@@ -1,7 +1,8 @@
 // ⑧ 作品一覧（/collection）。タブ。
 // 上の切り替えボタンで種類を絞り込む（?category=種類）。
-// その下の月のチップ（作品のある月だけ。新しい月が左。年が変わる所に「2025年」の区切り）で月を選び、その月の作品だけを 3 列に並べる
-// （?month=2026-10。省くか、その種類の作品が無い月なら、いちばん新しい月）。作品名の下には作ったときの年齢（「5さい 4か月」）を出す。
+// その下の年のチップ（作品のある年だけ。新しい年が左）と月のチップ（選んだ年の、作品のある月だけ）で月を選び、その月の作品だけを
+// 3 列に並べる（?month=2026-10。省くか、その種類の作品が無い月なら、いちばん新しい月。年を選ぶと、その年のいちばん新しい月）。
+// 作品名の下には作ったときの年齢（「5さい 4か月」）を出す。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -50,6 +51,11 @@ export default function Collection() {
   const current = TABS.find((t) => t.value === category)
   const months = byMonth(items)
   const month = months.find((m) => m.key === params.get('month')) ?? months[0]
+  // 年（"2026"）ごとの、いちばん新しい月。作品のある年だけ、新しい順
+  const yearOf = (key: string) => key.slice(0, 4)
+  const years = months.filter((m, i) => i === 0 || yearOf(months[i - 1].key) !== yearOf(m.key))
+  const year = month ? yearOf(month.key) : ''
+  const monthsOfYear = months.filter((m) => yearOf(m.key) === year)
   const selectedChip = useRef<HTMLButtonElement>(null)
 
   // 選んでいる月のチップが見えるようにする（URL で古い月を開いたときなど）
@@ -101,26 +107,39 @@ export default function Collection() {
           ) : (
             month && (
               <div style={{ opacity: list.isPlaceholderData ? 0.55 : 1, transition: 'opacity .2s' }}>
+                <div className="collection-years" role="tablist" aria-label="作った年">
+                  {years.map((y) => {
+                    const selected = yearOf(y.key) === year
+                    return (
+                      <button
+                        key={y.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        className={`collection-year num${selected ? ' selected' : ''}`}
+                        onClick={() => go({ month: y.key })}
+                      >
+                        {splitLabel(y.label)[0]}
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="collection-months" role="tablist" aria-label="作った月">
-                  {months.map((m, i) => {
-                    const [year, monthName] = splitLabel(m.label)
-                    const newYear = i === 0 || splitLabel(months[i - 1].label)[0] !== year
+                  {monthsOfYear.map((m) => {
                     const selected = m.key === month.key
                     return (
-                      <span key={m.key} className="collection-month-item">
-                        {newYear && <span className="collection-year num">{year}</span>}
-                        <button
-                          ref={selected ? selectedChip : undefined}
-                          type="button"
-                          role="tab"
-                          aria-selected={selected}
-                          className={`collection-chip num${selected ? ' selected' : ''}`}
-                          onClick={() => go({ month: m.key })}
-                        >
-                          {monthName}
-                          <small>{m.items.length}</small>
-                        </button>
-                      </span>
+                      <button
+                        key={m.key}
+                        ref={selected ? selectedChip : undefined}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        className={`collection-chip num${selected ? ' selected' : ''}`}
+                        onClick={() => go({ month: m.key })}
+                      >
+                        {splitLabel(m.label)[1]}
+                        <small>{m.items.length}</small>
+                      </button>
                     )
                   })}
                 </div>
