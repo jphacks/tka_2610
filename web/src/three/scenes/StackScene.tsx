@@ -29,8 +29,10 @@ export const FLOOR_PITCH = WALL_TOP + 0.2
 /** 見る先からカメラへの向き（南東の斜め上。水平から約 16°。壁の高さが分かり、上の階の床の下から下の階の中も見える角度） */
 const DIRECTION: Vec3 = [1, 0.4, 1]
 const FOV = 38
-/** 建物全体を収めるときの余白 */
-const MARGIN = 1.12
+/** 建物全体を収めるときの余白（1 より小さいので、建物の角が少しだけ画面の外に出るくらいまで寄る） */
+const MARGIN = 0.9
+/** 階のラベルの位置（西の角から中心までのうち、角の側からどれだけ残すか） */
+const LABEL_INSET = 0.6
 
 const unit = new THREE.Vector3(...DIRECTION).normalize()
 
@@ -139,9 +141,10 @@ export function StackScene({
     const scale = compactScale(floors, stack.catalog)
     return { scale, layouts: floors.map((f) => compactLayout(f.layout, stack.catalog, scale, f.sizeOf)) }
   }, [stack])
-  // ラベルは、建物の南西の角（画面の左手前）から右へ伸ばす。高さは各階の床の少し上
+  // ラベルは、建物の南の壁（画面の左手前の壁）の、西の角から少し内側から右へ伸ばす。高さは各階の床の少し上
+  // （カメラが寄っていて角は画面の端にかかるので、角ちょうどに置くとラベルが切れる）
   const hub = stack.house.rooms[0]
-  const labelX = (hub ? -(hub.size[0] / 2 + stack.house.wall_thickness) : -5.2) * compact.scale
+  const labelX = (hub ? -(hub.size[0] / 2 + stack.house.wall_thickness) : -5.2) * compact.scale * LABEL_INSET
   const labelZ = (hub ? hub.size[1] / 2 + stack.house.wall_thickness : 5.2) * compact.scale
   // 建物がそろった階（おへやの id）。全部の階がそろったら onReady
   const loaded = useRef(new Set<string>())
