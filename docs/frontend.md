@@ -160,7 +160,7 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 - `/api/museum` の `slots` は、配置 JSON から Rust が計算した世界座標です（飾っている作品だけ。部屋の中心込み）。カメラを作品に寄せる、作品を照らす、近い作品を選ぶ、などに使います。家具は `layout` と `catalog` から `HomeObjects` が置きます。家具の上の作品は、配置 JSON の位置（載せている面の中心から。面は `catalog` の `surfaces`）に置きます。
 - `/api/museum` の `house` は家の形（部屋ごとの `origin`・`size`・`doors`・`cutaway`・建物の GLB の `model_url`、壁の厚さ）です。今の `rooms` は hub の 1 件で、`doors` は `[]` です。部屋の位置や大きさが要るときは、必ずここから読みます（`house.ts`・`placement.ts` の `roomOrigin`・`doorZones`）。`house` の無い古いサーバーのときだけ、`model_url` のリビング 1 部屋として扱います（`houseRoomsOf`）。今のサーバーの `model_url` はリビングだけの `home-empty.glb` で、前の版の Web のために返しているだけです。
 - 家の中の作品の大きさは、実寸（`slots[].artwork.model_size`。登録時に Rust が GLB から測った値）× 倍率です。倍率は、作品の向き（配置 JSON の `rotationY`）で回した縦横と高さが置き場所の枠 `fit` に収まる、いちばん大きい値です（`placement.ts` の `displayScale`。Rust の `display_scale` と同じ式で、`slots[].scale` と一致する）。枠は、家具の上なら載せている面の `art_fit`（本棚の段では上の棚板にぶつからない高さ）、床なら 0.8 × 1.0 × 0.8 m です。
-- `model_kind` が `custom` の作品（登録時に渡した GLB と、サンプルの作品 33 点。実寸のモデル）は 1 倍まで（拡大しない）、それ以外（写真から作った額縁・スタンド）は枠いっぱいの大きさにします。置けるかどうかの判定も、この置いた後の大きさ（`placedSize`・`artRect`）で調べます。
+- `model_kind` が `custom` の作品（登録時に渡した GLB と、サンプルの作品 33 点。実寸のモデル）は 1 倍まで（ふつうは拡大しない。ただし枠に対して小さすぎる物は、枠に収まる最大の大きさの `CUSTOM_MIN_FILL`（0.6）まで大きくする）、それ以外（写真から作った額縁・スタンド）は枠いっぱいの大きさにします。置けるかどうかの判定も、この置いた後の大きさ（`placedSize`・`artRect`）で調べます。
 - 実寸が分からない作品（`model_size` が null）は、`FittedModel` が範囲 `fit` に収めます（水平方向は対角線の長さで合わせる。`custom` なら `noUpscale` で縮めるだけ）。判定では枠そのものを作品の大きさとして扱います。④ 3D プレビューも `FittedModel` で、台座の上の範囲に収めます。
 
 ### 模様替えの仕組み（⑫）
