@@ -111,7 +111,7 @@ pub async fn update_settings(
     if let Some(birthday) = body.child_birthday
         && (birthday > Local::now().date_naive() || birthday.year() < 1900)
     {
-        return Err(AppError::bad_request("誕生日の日付が正しくありません"));
+        return Err(AppError::bad_request("生年月日の日付が正しくありません"));
     }
 
     let settings = sqlx::query_as::<_, Settings>(

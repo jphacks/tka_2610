@@ -84,7 +84,7 @@ export default function Home() {
 
       {data && !data.child_birthday && (
         <TLink to="/settings" kind="tab" className="home-notice">
-          お誕生日を設定すると、作った年齢ごとにおへやを分けられます
+          子どもの生年月日を設定すると、作った年齢ごとにおへやを分けられます
         </TLink>
       )}
 
