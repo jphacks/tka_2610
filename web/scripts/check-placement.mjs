@@ -47,6 +47,7 @@ const {
   DOOR_ZONE_WIDTH,
   FLOOR_ART_FIT,
   WALL_HEIGHT,
+  WALL_ART_FIT,
   WALL_MARGIN,
   WALL_MOUNT_MIN,
   artExtent,
@@ -125,10 +126,10 @@ const catalog = {
   materials: {},
 }
 
-// 作品の実寸（artwork_id で引く）。寸法なし（size: null）の作品は入れない
+// 作品の実寸（artwork_id で引く）。寸法なし（size: null）の作品は入れない。frame は写真の額縁（壁に掛けられる）
 const arts = new Map()
 for (const art of Object.values(fixture.arts)) {
-  if (art.size) arts.set(art.artwork_id, { size: art.size, custom: Boolean(art.custom) })
+  if (art.size) arts.set(art.artwork_id, { size: art.size, custom: Boolean(art.custom), frame: Boolean(art.frame) })
 }
 const sizeOf = (artworkId) => arts.get(artworkId) ?? null
 
@@ -144,6 +145,9 @@ const fmt = (v) => JSON.stringify(v)
 // 定数がそろっているか
 if (fixture.floor_art_fit && !fixture.floor_art_fit.every((v, i) => near(v, FLOOR_ART_FIT[i], 1e-12))) {
   miss('setup', 'floor_art_fit', `表 ${fmt(fixture.floor_art_fit)} / Web ${fmt(FLOOR_ART_FIT)}`)
+}
+if (fixture.wall_art_fit && !fixture.wall_art_fit.every((v, i) => near(v, WALL_ART_FIT[i], 1e-12))) {
+  miss('setup', 'wall_art_fit', `表 ${fmt(fixture.wall_art_fit)} / Web ${fmt(WALL_ART_FIT)}`)
 }
 if (fixture.wall_margin !== undefined && !near(fixture.wall_margin, WALL_MARGIN, 1e-12)) {
   miss('setup', 'wall_margin', `表 ${fixture.wall_margin} / Web ${WALL_MARGIN}`)
@@ -198,7 +202,7 @@ cases.forEach((c, i) => {
     miss('position', label, `位置 表 ${fmt(c.position)} / Web ${fmt([x, z])}`)
   }
 
-  const scale = art.size ? displayScale({ size: art.size, custom: Boolean(art.custom) }, envelope, c.rotation) : null
+  const scale = art.size ? displayScale({ size: art.size, custom: Boolean(art.custom), frame: Boolean(art.frame) }, envelope, c.rotation) : null
   const sameScale = scale === null || c.scale === null ? scale === c.scale : near(scale, c.scale, tolScale)
   if (!sameScale) miss('scale', label, `拡縮率 表 ${c.scale} / Web ${scale}`)
 

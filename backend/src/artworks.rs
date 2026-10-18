@@ -1104,6 +1104,7 @@ pub async fn display_artwork(
                     parent_id: request.parent_id,
                     // 天板 ("top") は省いた形にそろえる (save_layout の検証でも直る)
                     surface: request.surface.filter(|s| s != home::TOP_SURFACE),
+                    placement: None,
                     position,
                     rotation_y: request.rotation_y.unwrap_or(0.0),
                 },
@@ -1111,19 +1112,15 @@ pub async fn display_artwork(
                     // 載っている作品は実寸、置く作品も実寸で空きを探す
                     let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
                     let sizes = sizes_of(&load_sizes(&mut *tx, &ids).await?);
-                    let spot = home::pick_spot(&layout, &sizes, row.art_size().as_ref(), None, request.parent_id.as_deref())
-                        .ok_or_else(|| {
-                            AppError::conflict(format!("{} に飾る場所がいっぱいです。模様替えで棚や机を足してください", room.name()))
-                        })?;
-                    ArtworkObject {
-                        id: object_id,
-                        artwork_id: id,
-                        parent_id: Some(spot.parent_id),
-                        room_id: None,
-                        surface: spot.surface,
-                        position: spot.position,
-                        rotation_y: 0.0,
-                    }
+                    // 写真の額縁は、家具を指定していなければ壁に掛ける (壁がいっぱいなら家具の上)
+                    let placed = home::pick_place(&layout, &sizes, id, row.art_size().as_ref(), request.parent_id.as_deref());
+                    let Some(LayoutObject::Artwork(object)) = placed else {
+                        return Err(AppError::conflict(format!(
+                            "{} に飾る場所がいっぱいです。模様替えで棚や机を足してください",
+                            room.name()
+                        )));
+                    };
+                    ArtworkObject { id: object_id, ..object }
                 }
             };
             let slot_id = object.id.clone();

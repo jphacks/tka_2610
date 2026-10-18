@@ -1,6 +1,7 @@
 //! 写真(JPEG)から展示用の 3D モデル(GLB)を生成する。
 //!
-//! - `Frame` : オークの額縁に入れた写真 (絵画・写真・その他)。額縁は backend/static/frames の GLB (縦長・横長・正方形)
+//! - `Frame` : オークの額縁に入れた写真 (絵画・写真・その他)。額縁は backend/static/frames の GLB (縦長・横長・正方形)。
+//!   ふつうは部屋の壁に掛ける (home.rs の placement "wall")ので、傾けずにまっすぐ立てる
 //! - `Stand` : アクリルスタンド風の立体 (工作)
 //!
 //! 原点は底面中央、+Y が上、作品の正面は +Z。
@@ -42,10 +43,9 @@ const OAK_FRAMES: [(f64, &[u8]); 3] = [
     (1.0, include_bytes!("../static/frames/oak_frame_square.glb")),
     (1.5, include_bytes!("../static/frames/oak_frame_landscape.glb")),
 ];
-/// 額縁で作った GLB の asset.generator。起動時に、これでない額縁の作品を作り直す (artworks::upgrade_frames)
-pub const OAK_FRAME_GENERATOR: &str = "memoria oak frame v1";
-/// 額縁を後ろへ傾ける角度 (度)。棚や机・ピクチャーレッジに立てかけたように見せる
-const OAK_FRAME_TILT_DEG: f64 = 8.0;
+/// 額縁で作った GLB の asset.generator。起動時に、これでない額縁の作品を作り直す (artworks::upgrade_frames)。
+/// v1 は棚に立てかけるよう 8° 傾けていた。v2 は壁に掛けるのでまっすぐ
+pub const OAK_FRAME_GENERATOR: &str = "memoria oak frame v2";
 
 #[derive(Default)]
 struct Primitive {
@@ -246,7 +246,7 @@ fn split_glb(glb: &[u8]) -> Result<(Value, Vec<u8>), String> {
 }
 
 /// オークの額縁に写真を入れた GLB。写真に近い縦横の額縁を選び、写真をその縦横に切り抜いて Photo_Surface に貼る。
-/// 額縁を少し後ろへ傾け、全体の箱の底面の中央が原点に来るよう、親のノード (Artwork_frame) で動かす
+/// 額縁の箱の底面の中央が原点に来るよう、親のノード (Artwork_frame) で動かす (背面は z = −厚さ / 2。壁に付ける側)
 fn build_oak_frame_glb(texture_jpeg: &[u8], width: u32, height: u32) -> Vec<u8> {
     let (aspect, template) = oak_frame_for(width, height);
     let photo = crop_to_aspect(texture_jpeg, aspect);
@@ -279,30 +279,16 @@ fn build_oak_frame_glb(texture_jpeg: &[u8], width: u32, height: u32) -> Vec<u8> 
     let photo_material = doc["meshes"][photo_mesh]["primitives"][0]["material"].as_u64().expect("写真面の材質") as usize;
     doc["materials"][photo_material]["pbrMetallicRoughness"]["baseColorTexture"] = json!({ "index": texture });
 
-    // 額縁本体の箱 (幅・高さは中心から、奥行きは背面 0 から正面まで) を傾けて、底面の中央を原点へ
+    // 額縁本体の箱 (幅・高さは中心から、奥行きは背面 0 から正面まで) の底面の中央を原点へ
     let body_mesh = doc["nodes"][node_named(&doc, "Frame_Body")]["mesh"].as_u64().expect("額縁本体のメッシュ") as usize;
     let accessor = doc["meshes"][body_mesh]["primitives"][0]["attributes"]["POSITION"].as_u64().expect("額縁本体の頂点") as usize;
     let bound = |key: &str, k: usize| doc["accessors"][accessor][key][k].as_f64().expect("額縁本体の min / max");
-    let (min, max) = ([bound("min", 0), bound("min", 1), bound("min", 2)], [bound("max", 0), bound("max", 1), bound("max", 2)]);
-    // x 軸まわりに -tilt 回す (上が奥 -Z へ倒れる)
-    let tilt = -OAK_FRAME_TILT_DEG.to_radians();
-    let (sin, cos) = tilt.sin_cos();
-    let (mut lo, mut hi) = ([f64::MAX; 3], [f64::MIN; 3]);
-    for &y in &[min[1], max[1]] {
-        for &z in &[min[2], max[2]] {
-            let p = [0.0, y * cos - z * sin, y * sin + z * cos];
-            for k in 1..3 {
-                lo[k] = lo[k].min(p[k]);
-                hi[k] = hi[k].max(p[k]);
-            }
-        }
-    }
-    let translation = [-(min[0] + max[0]) / 2.0, -lo[1], -(lo[2] + hi[2]) / 2.0];
+    let center = |k: usize| (bound("min", k) + bound("max", k)) / 2.0;
+    let translation = [-center(0), -bound("min", 1), -center(2)];
     let scene = doc["scene"].as_u64().unwrap_or(0) as usize;
     let children = doc["scenes"][scene]["nodes"].clone();
     let root = push(&mut doc, "nodes", json!({
         "name": "Artwork_frame",
-        "rotation": [(tilt / 2.0).sin(), 0.0, 0.0, (tilt / 2.0).cos()],
         "translation": translation,
         "children": children,
     }));
@@ -735,11 +721,9 @@ mod tests {
     #[test]
     fn measures_generated_glb() {
         let fake_jpeg = vec![0xFFu8, 0xD8, 0xFF, 0xD9];
-        // 額縁: 横長の額縁 (外寸 34.8 × 24.8 cm、厚さ 2.2 cm) を 8° 傾けた箱
+        // 額縁: 横長の額縁の外寸 34.8 × 24.8 cm、厚さ 2.2 cm
         let frame = measure_glb(&build_artwork_glb(&jpeg(800, 600), 800, 600, Style::Frame)).unwrap();
-        let (sin, cos) = OAK_FRAME_TILT_DEG.to_radians().sin_cos();
-        let expected = [0.348, 0.248 * cos + 0.022 * sin, 0.248 * sin + 0.022 * cos];
-        assert!(close3(frame, expected, 1e-5), "{frame:?}");
+        assert!(close3(frame, [0.348, 0.248, 0.022], 1e-5), "{frame:?}");
         // スタンド: 幅は台座 (w/2 + 0.08 の楕円)、高さは板の上端、奥行きは台座の 0.44
         let stand = measure_glb(&build_artwork_glb(&fake_jpeg, 800, 600, Style::Stand)).unwrap();
         assert!(close3(stand, [1.16, 0.845, 0.44], 1e-5), "{stand:?}");

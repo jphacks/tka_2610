@@ -16,7 +16,8 @@
 // ドラッグの置き先（ポインタが動くたびに計算する）：
 //   家具 … 押した点の高さの水平な面（THREE.Plane）との交点。自分の部屋の中（壁から 12 cm）に寄せる（clampToRect）。
 //          上の作品は家具のグループの子なので一緒に動く。
-//          壁の家具は、その点にいちばん近い壁に背中を付けて、壁に沿って動かす（snapToWall。ほかの壁へ移ると向きも変わる）。高さは変えない
+//          壁の家具は、その点にいちばん近い壁に背中を付けて、壁に沿って動かす（snapToWall。ほかの壁へ移ると向きも変わる）。高さは変えない。
+//          壁に掛けた作品（placement 'wall'）も同じく、掛けている高さの面の上で、いちばん近い壁に沿って動かす（snapArtToWall）
 //   作品 … ポインタの先の家具（同じ部屋の FURN_ のグループだけにレイを当てる。作品 ARTWORK_ の当たりは飛ばす）に面があれば、
 //          当たった高さ以下でいちばん高い面（天板・本棚の段）に載せ換える。面の高さの水平な面との交点を、親から見た位置に直し、
 //          面の中へ寄せる（作品の置いた後の寸法で）。家具に当たらなければ（面の無い家具・ラグに当たったときも）床：
@@ -68,10 +69,12 @@ import {
   roomOrigin,
   roomRect,
   sizesFromSlots,
+  snapArtToWall,
   snapToWall,
   surfaceIdOf,
   surfaceOf,
   topRect,
+  wallArtSize,
   worldOf,
   type NameOf,
   type PlaceCheck,
@@ -102,6 +105,8 @@ const GRID = 0.01
 const FLOOR_OVERLAY_Y = 0.03
 /** 天板の上の板の高さ（天板からの距離） */
 const TOP_OVERLAY_Y = 0.004
+/** 壁に掛けた作品の、選んだ印の板の奥行き（壁から部屋の中へ, m）。作品そのものは薄いので、手前の床に敷く */
+const WALL_ART_OVERLAY_DEPTH = 0.4
 /** 出入口の前の板の高さ（選んだ物の板より下） */
 const DOOR_OVERLAY_Y = 0.02
 /** 板を物よりひと回り大きくする幅（m）。物の陰に隠れず縁が見えるように */
@@ -176,6 +181,21 @@ function footprintOf(layout: Layout, catalog: HomeCatalog, object: LayoutObject,
     const [ox, oz] = roomOrigin(house, object.roomId)
     return {
       center: [ox + (r.minX + r.maxX) / 2, FLOOR_OVERLAY_Y, oz + (r.minZ + r.maxZ) / 2] as Vec3,
+      size: [r.maxX - r.minX, r.maxZ - r.minZ] as [number, number],
+      rotationY: 0,
+    }
+  }
+  if (object.placement === 'wall') {
+    // 壁に掛けた作品：作品の幅で、壁から部屋の中へ WALL_ART_OVERLAY_DEPTH の板を、作品の下の床に敷く
+    const [w, , d] = wallArtSize(object, sizeOf)
+    const r = footprint(0, 0, w, WALL_ART_OVERLAY_DEPTH, object.rotationY)
+    const shift = WALL_ART_OVERLAY_DEPTH / 2 - d / 2
+    return {
+      center: [
+        world.position[0] + shift * Math.sin(object.rotationY),
+        FLOOR_OVERLAY_Y,
+        world.position[2] + shift * Math.cos(object.rotationY),
+      ] as Vec3,
       size: [r.maxX - r.minX, r.maxZ - r.minZ] as [number, number],
       rotationY: 0,
     }
@@ -426,6 +446,15 @@ function Editor({
      */
     const moveArtwork = (d: Drag, object: ArtworkObject): LayoutObject | null => {
       const l = latest.current
+      // 壁に掛けた作品は、掛けている高さの面の上でポインタの先を測り、いちばん近い壁に沿って動かす（高さは変えない）
+      if (object.placement === 'wall') {
+        const at = onPlane(object.position[1])
+        if (!at) return null
+        const [rx, rz] = roomOrigin(l.house, d.roomId)
+        const size = wallArtSize(object, l.sizeOf)
+        const snapped = snapArtToWall(l.layout, d.roomId, size, round(at[0] + d.offset[0] - rx), round(at[1] + d.offset[1] - rz), object.position[1])
+        return { ...object, ...snapped }
+      }
       const grabbedOn = object.parentId ? `${object.parentId}/${surfaceIdOf(object)}` : ''
       const offsetOn = (key: string): [number, number] => (key === grabbedOn ? d.offset : [0, 0])
 
@@ -504,8 +533,9 @@ function Editor({
       d.candidate = candidate
       d.check = check
       const [x, , z] = candidate.position
-      // 家具は持ち上げた高さ（壁の家具は掛けている高さから）、作品は持ち上げる分だけ（高さは載せる面で決まる）
-      const lift = candidate.kind === 'furniture' ? candidate.position[1] + LIFT : LIFT
+      // 家具は持ち上げた高さ（壁の家具は掛けている高さから）、作品は持ち上げる分だけ（高さは載せる面で決まる）。
+      // 壁に掛けた作品は掛けている高さから（HomeObjects はこの値を作品の底面の高さに使う）
+      const lift = candidate.kind === 'furniture' || candidate.placement === 'wall' ? candidate.position[1] + LIFT : LIFT
       setPreview({
         id: d.id,
         // 作品は載せ換え先（床なら null と部屋）も渡す。HomeObjects がその家具のグループ（床なら部屋のグループ）の下に描く
@@ -630,7 +660,7 @@ function Editor({
   // ドラッグ中の床の物（家具・床の作品）の部屋の、出入口の前（世界座標）。家具の上へ載せている作品のときは出さない
   const doors = useMemo(() => {
     const candidate = preview?.candidate
-    if (!candidate || (candidate.kind === 'artwork' && candidate.parentId)) return []
+    if (!candidate || (candidate.kind === 'artwork' && (candidate.parentId || candidate.placement === 'wall'))) return []
     const room = roomOf(layout, candidate) ?? HUB
     const [ox, oz] = roomOrigin(house, room)
     return doorZones(house, room).map((r) => ({

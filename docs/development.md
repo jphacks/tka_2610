@@ -263,7 +263,7 @@ PC の広い画面では、スマホの枠をやめてウィンドウいっぱ�
 
 | 作品の種類 | 今の 3D モデル |
 |---|---|
-| 絵画・写真・その他 | オークの額縁に入れた写真（`backend/static/frames` の額縁の GLB。写真の縦横に近い縦長・横長・正方形を選び、写真をその縦横に切り抜く。棚に立てかけたように 8° 後ろへ傾ける） |
+| 絵画・写真・その他 | オークの額縁に入れた写真（`backend/static/frames` の額縁の GLB。写真の縦横に近い縦長・横長・正方形を選び、写真をその縦横に切り抜く。ふつうは部屋の壁に掛ける（配置 JSON の `placement: "wall"`）ので、傾けずにまっすぐ） |
 | 工作 | アクリルスタンド風の板 |
 
 生成処理は `backend/src/glb.rs` にまとまっています。前の額縁（自前で組み立てた木の額縁）の作品は、起動時に今の額縁で作り直します（ログは `[Artwork] frames: upgraded 〇, skipped 〇`。写真か GLB の無い作品は飛ばす）。
@@ -374,7 +374,7 @@ cargo run
 http://localhost:8080 を開くと Web アプリが表示されます。
 初回の起動では、次のことが自動で行われます。ログは、空のデータベースで起動したときのものです。
 
-- マイグレーション（作品の実寸の列 `model_width`・`model_height`・`model_depth`、子どものお誕生日 `museum_settings.child_birthday`（`010_child_birthday.sql`。デモの値 2021-06-01 が入る）、おへやの表 `house_rooms` と作品の列 `artworks.house_room_id`（`011_house_rooms.sql`）もここで作られます。作品のおもいでの表 `artwork_memories`（`012_artwork_memories.sql`）もここで作られます。`008_wider_rooms.sql`・`009_single_room.sql`・`011_house_rooms.sql` は古いサーバーを止める番兵も兼ねます。012 は番兵ではありません）
+- マイグレーション（作品の実寸の列 `model_width`・`model_height`・`model_depth`、子どものお誕生日 `museum_settings.child_birthday`（`010_child_birthday.sql`。デモの値 2021-06-01 が入る）、おへやの表 `house_rooms` と作品の列 `artworks.house_room_id`（`011_house_rooms.sql`）もここで作られます。作品のおもいでの表 `artwork_memories`（`012_artwork_memories.sql`）もここで作られます。`008_wider_rooms.sql`・`009_single_room.sql`・`011_house_rooms.sql`・`013`〜`015`（`015_wall_artworks.sql` は写真の額縁を壁に掛けられるようにした版）は古いサーバーを止める番兵も兼ねます。012 は番兵ではありません）
 - 家の GLB の圧縮。家の建物（`backend/static/models/rooms/hub.glb`）と、前の版の Web 用の `home-empty.glb` を `backend/data/media/museum/` にコピーして gzip 版を作ります（初めてのときだけ `[Museum] Prepared room-hub model: … KB -> … KB (gzip)` のように出ます）
 - 寸法の無い作品の GLB を測って、実寸を入れる（`[Artwork] model sizes: measured 0, skipped 0 (missing file), failed 0` と出ます）
 - 今の年齢（5さい）のおへやを、初期配置（`backend/static/home/default-layout.json`。家具 11 個）で作る（`[Home] 今までの配置をおへやに分けました (5 さい。…)`・`[Home] rooms loaded (1 rooms)` と出ます）
@@ -445,7 +445,7 @@ npm run check:theme
 
 `npm run check:theme` は、壁紙と床材（`theme.ts`）を本物の建物の GLB と `catalog.json` で当ててみて、材質の作り・上下の壁の継ぎ目・連続して切り替えたときの競合を確かめます（ブラウザと GPU は使いません。画像も読みません）。GLB のある部屋だけを調べるので、今は `× 1 部屋（hub）` と出ます。隣の部屋の GLB があるときは、共有する壁の表と裏も確かめます。
 
-`cargo test` では、総当たり表を作り直すテスト 1 件だけを、ふだんは飛ばします（86 件が通り、1 件が ignored）。
+`cargo test` では、総当たり表を作り直すテスト 1 件だけを、ふだんは飛ばします（96 件が通り、1 件が ignored）。
 `npm run check:placement` は、Rust のテストと同じ総当たり表（`backend/src/testdata/placement-cases.json`。リビングだけの家の表で、4,900 件と、重なり・壁・床の台座・壁の家具などの 21 件）を Web の `placement.ts` で計算し直し、置けるかどうか・縁に寄せた位置・作品の倍率が Rust と同じかを確かめます。置き方の決まりを変えたときは、`cargo test` と両方を通してください（表の作り直し方は [AGENTS.md](../AGENTS.md) の「守ること」）。
 開発用の建物 GLB を作り直したとき・本番の GLB に置き換えるときは、`python3 tools/home-rooms/check_rooms.py` でも確かめます（[tools/home-rooms/README.md](../tools/home-rooms/README.md)）。
 
