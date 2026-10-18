@@ -11,16 +11,20 @@ export function Stage({
   children,
   camera,
   frameloop = 'always',
+  shadows = false,
 }: {
   children: ReactNode
   camera: { position: [number, number, number]; fov: number }
-  /** 'demand' にすると、動きがあるときだけ描画する（マップで使う） */
+  /** 'demand' にすると、動きがあるときだけ描画する（ホームの積み上げで使う） */
   frameloop?: 'always' | 'demand'
+  /** 影を有効にする（やわらかい影。影を落とす光は使う画面が足す。ホームの積み上げの DioramaLight） */
+  shadows?: boolean
 }) {
   return (
     <Canvas
       dpr={[1, 1.75]}
       frameloop={frameloop}
+      shadows={shadows ? 'soft' : false}
       camera={{ ...camera, near: 0.1, far: 80 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
@@ -30,25 +34,30 @@ export function Stage({
       }}
     >
       <color attach="background" args={['#efe2d0']} />
-      <HomeLights />
+      <HomeLights dim={shadows} />
       {children}
     </Canvas>
   )
 }
 
-function HomeLights() {
+/**
+ * やわらかく均一に照らす光。dim（影を付ける画面）では、まわりの光を弱めて南東からの主な光を消す
+ * （影を落とす光は使う画面が足す。まわりが明るいままだと、影の所もほとんど暗くならない）
+ */
+function HomeLights({ dim = false }: { dim?: boolean }) {
+  const k = dim ? 0.62 : 1
   return (
     <>
-      <hemisphereLight args={['#fff8ee', '#cbb497', 1.05]} />
+      <hemisphereLight args={['#fff8ee', '#cbb497', 1.05 * k]} />
       {/* 主な光は、はじめのカメラのある南東の斜め上から。そこから見た奥の壁（北・西）の内側がよく照らされる */}
-      <directionalLight position={[4, 8, 5]} intensity={1.4} color="#fff0db" />
+      {!dim && <directionalLight position={[4, 8, 5]} intensity={1.4} color="#fff0db" />}
       {/* 反対側からの弱い光。家具の陰になる面を少し明るくする */}
-      <directionalLight position={[-5, 6, -3]} intensity={0.45} color="#ffe6cc" />
+      <directionalLight position={[-5, 6, -3]} intensity={0.45 * k} color="#ffe6cc" />
       {/* 外部 HDR を読まずに、その場で柔らかい環境光を作る（家の大きさに合わせた天井と左右の明かり） */}
       <Environment resolution={64} frames={1}>
-        <Lightformer form="rect" intensity={2.2} position={[0, 4.5, 0]} rotation-x={Math.PI / 2} scale={[15, 15, 1]} color="#fff6e8" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 1, -7.5]} scale={[15, 2.5, 1]} color="#ffe5c7" />
-        <Lightformer form="rect" intensity={0.9} position={[0, 1, 7.5]} rotation-y={Math.PI} scale={[15, 2.5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={2.2 * k} position={[0, 4.5, 0]} rotation-x={Math.PI / 2} scale={[15, 15, 1]} color="#fff6e8" />
+        <Lightformer form="rect" intensity={0.9 * k} position={[0, 1, -7.5]} scale={[15, 2.5, 1]} color="#ffe5c7" />
+        <Lightformer form="rect" intensity={0.9 * k} position={[0, 1, 7.5]} rotation-y={Math.PI} scale={[15, 2.5, 1]} color="#ffe5c7" />
       </Environment>
     </>
   )

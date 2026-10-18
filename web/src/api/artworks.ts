@@ -2,7 +2,7 @@
 // 変更が成功すると、関係する一覧とおうちの情報を自動で取り直す（useInvalidate）。
 
 import { QueryClient, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
-import { jsonInit, keys, request } from './client'
+import { jsonInit, keys, queryClient, request } from './client'
 import type { Artwork, ArtworkDetail, ArtworkList, ListParams } from './types'
 
 // ---------- 取得 ----------
@@ -41,13 +41,22 @@ export function useArtwork(id: string | undefined) {
     queryFn: () => request<ArtworkDetail>(`/api/artworks/${id}`),
     placeholderData: () => {
       const artwork = id ? findCachedArtwork(client, id) : undefined
-      return artwork ? { artwork, related: [] } : undefined
+      return artwork ? { artwork, related: [], memories: [] } : undefined
     },
   })
 }
 
 export function prefetchArtwork(client: QueryClient, id: string) {
   return client.prefetchQuery({
+    queryKey: keys.artwork(id),
+    queryFn: () => request<ArtworkDetail>(`/api/artworks/${id}`),
+    staleTime: 30_000,
+  })
+}
+
+/** 作品の詳細（おもいでつき）を、画面の外から取る（キャッシュがあればそれ）。鑑賞モードの声の自動再生が使う */
+export function fetchArtworkDetail(id: string) {
+  return queryClient.fetchQuery({
     queryKey: keys.artwork(id),
     queryFn: () => request<ArtworkDetail>(`/api/artworks/${id}`),
     staleTime: 30_000,
@@ -77,6 +86,7 @@ function useStoreArtwork() {
     client.setQueryData<ArtworkDetail>(keys.artwork(artwork.id), (old) => ({
       artwork,
       related: old?.related ?? [],
+      memories: old?.memories ?? [],
     }))
   }
 }

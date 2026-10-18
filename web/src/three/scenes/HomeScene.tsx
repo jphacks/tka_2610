@@ -167,7 +167,7 @@ export function HomeScene({
   return (
     <Stage camera={{ position: START_EYE, fov: FOV }}>
       <HouseShells museum={museum} cutaway="house" onReady={onReady} />
-      <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onSelect={onSelect} />
+      <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onSelect={onSelect} memoryBadges />
       <HomeControls museum={museum} />
       <ClampTarget bounds={bounds} />
       <IdleRotate />

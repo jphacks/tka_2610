@@ -668,7 +668,7 @@ mod tests {
             return;
         };
         let items: Vec<Value> = serde_json::from_str(&text).unwrap();
-        assert_eq!(items.len(), 13);
+        assert_eq!(items.len(), 33);
         for item in items {
             let model = item["model"].as_str().unwrap();
             let expected: Vec<f64> = item["dimensionsMeters"].as_array().unwrap().iter().filter_map(Value::as_f64).collect();

@@ -1,0 +1,189 @@
+/* ⑥ 作品の詳細の「おもいで」（MemorySection）。写真・動画の 3 列のタイルと、声の行、追加のシートの進み具合 */
+
+.memories h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memories-count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+  color: var(--accent);
+}
+
+.memories-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+/* まだ何も無いとき。押すと追加のシート */
+.memories-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 22px 16px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.memories-empty-icons {
+  display: flex;
+  gap: 14px;
+  color: var(--accent);
+}
+
+/* 写真と動画のタイル（正方形） */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.memory-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.memory-tile img,
+.memory-tile video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.memory-tile-fallback {
+  color: var(--ink-3);
+}
+
+/* 動画の「▶ 0:12」 */
+.memory-tile-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+/* 声の行 */
+.memory-voices {
+  margin-top: 12px;
+}
+
+.memory-grid + .memory-voices {
+  margin-top: 16px;
+}
+
+.memory-voice-play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.memory-voice-play.playing {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.memory-voice-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.memory-voice-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.memory-voice-more {
+  flex: none;
+  color: var(--ink-2);
+}
+
+/* 再生中・送っている途中の進み具合 */
+.memory-voice-bar {
+  display: block;
+  height: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.memory-voice-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+
+/* 追加のシートの「写真をとる」「動画をとる」（スマホだけ）。横に並べる */
+.memory-capture {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.memory-capture .btn {
+  padding: 0 12px;
+}
+
+/* 追加のシートの、送っているファイルの一覧 */
+.memory-jobs {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-job-name {
+  display: block;
+  overflow: hidden;
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.memory-job-error {
+  font-size: 12.5px;
+  color: var(--red);
+}

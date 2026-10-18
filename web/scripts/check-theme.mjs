@@ -113,7 +113,7 @@ const FINISH_PACK = new Set(
     .filter(([, m]) => m.baseColor.startsWith('finish-pack/'))
     .map(([id]) => id),
 )
-const UV = { wall_lower: { unit: 1, center: 0.46 }, wall_upper: { unit: 1, center: 2.06 }, floor: { unit: 2, center: null } }
+const UV = { wall_lower: { unit: 1, center: 0.46 }, wall_upper: { unit: 1, center: 2.56 }, floor: { unit: 2, center: null } }
 const PARTS = new Set(Object.keys(UV))
 
 // ---------- 建物の GLB ----------
