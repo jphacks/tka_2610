@@ -1,10 +1,10 @@
 // ⑧ 作品一覧（/collection）。タブ。
-// 上の切り替えボタンで種類を絞り込む（?category=種類）。
-// その下の年のタブ（すべて・作品のある年。新しい年が左）と月のチップ（すべて・選んだ年の、作品のある月）で、見る範囲を選ぶ（?month=）。
-//   ?month=2026-10 … その月の作品だけを 3 列に並べる。省くか、その種類の作品が無い月なら、いちばん新しい月（はじめに開いたとき）
-//   ?month=2026    … その年の作品を、月ごとの見出しで区切って全部並べる（月のチップの「すべて」）
-//   ?month=all     … 全部の作品を、月ごとの見出しで区切って並べる（年のタブの「すべて」。月のチップは出さない）
-// 年のタブを押すと、その年のいちばん新しい月。作品名の下には作ったときの年齢（「5さい 4か月」）を出す。
+// 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のチップで、見る範囲を絞り込む（?month=）。
+//   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで 3 列に並べる（はじめに開いたとき）
+//   2026      … その年の作品を、月ごとの見出しで区切って並べる（年を押したとき・月のチップの「すべて」）
+//   2026-10   … その月の作品だけを 3 列に並べる
+// その種類の作品が無い年・月が URL にあれば、すべてにする（以前の ?month=all も、すべて）。
+// 並びのすぐ上に、いま見ている範囲と点数を 1 行で出す（「工作・2026年 10月　2点」）。作品名の下には作ったときの年齢（「5さい 4か月」）。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -24,9 +24,17 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'other', label: 'その他' },
 ]
 
+interface Month {
+  /** "2026-10" */
+  key: string
+  /** "2026年 10月" */
+  label: string
+  items: Artwork[]
+}
+
 /** 作成日の新しい順の作品を、作った月が変わるところで区切る */
-function byMonth(items: Artwork[]) {
-  const months: { key: string; label: string; items: Artwork[] }[] = []
+function byMonth(items: Artwork[]): Month[] {
+  const months: Month[] = []
   for (const artwork of items) {
     const last = months[months.length - 1]
     if (last?.key === artwork.month_key) last.items.push(artwork)
@@ -41,6 +49,8 @@ function splitLabel(label: string): [string, string] {
   return [year, month]
 }
 
+const yearOf = (key: string) => key.slice(0, 4)
+
 export default function Collection() {
   const [params, setParams] = useSearchParams()
   const nav = useNav()
@@ -48,33 +58,35 @@ export default function Collection() {
   const category = (params.get('category') as Tab | null) ?? 'all'
   const list = useArtworks({ category, sort: 'made' })
 
-  const counts = new Map(list.data?.categories.map((c) => [c.id, c.count]))
   const items = list.data?.items ?? []
-  const current = TABS.find((t) => t.value === category)
   const months = byMonth(items)
-  // 年（"2026"）ごとの、いちばん新しい月。作品のある年だけ、新しい順
-  const yearOf = (key: string) => key.slice(0, 4)
-  const years = months.filter((m, i) => i === 0 || yearOf(months[i - 1].key) !== yearOf(m.key))
-  // 見る範囲：全部・ある年の全部・ある月。URL の値が使えなければ（その種類の作品が無い月・年）、いちばん新しい月
-  const wanted = params.get('month')
-  const showAll = wanted === 'all'
-  const wholeYear = !showAll && years.some((y) => yearOf(y.key) === wanted) ? wanted : null
-  const month = showAll || wholeYear ? null : (months.find((m) => m.key === wanted) ?? months[0])
-  const year = showAll ? null : (wholeYear ?? (month ? yearOf(month.key) : null))
-  const monthsOfYear = months.filter((m) => yearOf(m.key) === year)
-  const shown = showAll ? months : wholeYear ? monthsOfYear : month ? [month] : []
-  const selectedChip = useRef<HTMLButtonElement>(null)
+  // 作品のある年（"2026"）。新しい順
+  const years = [...new Set(months.map((m) => yearOf(m.key)))]
+
+  // 見る範囲。URL の年・月に、この種類の作品が無ければ「すべて」
+  const wanted = params.get('month') ?? ''
+  const month = months.find((m) => m.key === wanted) ?? null
+  const year = month ? yearOf(month.key) : years.includes(wanted) ? wanted : null
+  const monthsOfYear = year ? months.filter((m) => yearOf(m.key) === year) : []
+  const yearCount = monthsOfYear.reduce((n, m) => n + m.items.length, 0)
+  const shownCount = month ? month.items.length : year ? yearCount : items.length
+
+  // いま見ている範囲の名前（「工作・2026年 10月」）
+  const categoryLabel = TABS.find((t) => t.value === category)?.label
+  const scope = month ? month.label : year ? splitLabel(monthsOfYear[0].label)[0] : 'すべての作品'
+  const scopeLabel = category === 'all' ? scope : `${categoryLabel}・${scope}`
 
   // 選んでいる月のチップが見えるようにする（URL で古い月を開いたときなど）
+  const selectedChip = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     selectedChip.current?.scrollIntoView({ block: 'nearest', inline: 'center' })
-  }, [month?.key, wholeYear])
+  }, [month?.key, year])
 
-  /** URL の種類（category）と月（month）を変える。履歴は増やさない */
-  const go = (next: { category?: Tab; month?: string }) => {
+  /** URL の種類（category）と範囲（month）を変える。履歴は増やさない。range が null なら「すべて」 */
+  const go = (next: { category?: Tab; range?: string | null }) => {
     const c = next.category ?? category
-    const m = next.month ?? params.get('month')
-    setParams({ ...(c !== 'all' ? { category: c } : {}), ...(m ? { month: m } : {}) }, { replace: true })
+    const r = next.range === undefined ? params.get('month') : next.range
+    setParams({ ...(c !== 'all' ? { category: c } : {}), ...(r ? { month: r } : {}) }, { replace: true })
   }
 
   return (
@@ -89,114 +101,113 @@ export default function Collection() {
         }
       />
       <div className="page">
-        <Segmented<Tab>
-          label="作品の種類"
-          options={TABS}
-          value={category}
-          onChange={(value) => go({ category: value })}
-        />
-        <p className="count-caption">
-          {current?.label}　{counts.get(category) ?? 0}点
-        </p>
+        <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
 
-        <div style={{ marginTop: 12 }}>
-          {list.isPending ? (
-            <div className="grid-3">
-              <ThumbSkeletons count={9} />
-            </div>
-          ) : items.length === 0 ? (
-            <div className="empty">
-              <p>{category === 'all' ? 'まだ作品がありません。' : 'この種類の作品はまだありません。'}</p>
-              <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
-                作品を追加
+        {list.isPending ? (
+          <div className="grid-3 collection-body">
+            <ThumbSkeletons count={9} />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="empty">
+            <p>{category === 'all' ? 'まだ作品がありません。' : 'この種類の作品はまだありません。'}</p>
+            <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
+              作品を追加
+            </button>
+          </div>
+        ) : (
+          <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'}>
+            {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
+            <div className="collection-years" role="tablist" aria-label="作った年">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!year}
+                className={`collection-year${!year ? ' selected' : ''}`}
+                onClick={() => go({ range: null })}
+              >
+                すべて
               </button>
+              {years.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  role="tab"
+                  aria-selected={y === year}
+                  className={`collection-year num${y === year ? ' selected' : ''}`}
+                  onClick={() => go({ range: y })}
+                >
+                  {y}
+                </button>
+              ))}
             </div>
-          ) : (
-            shown.length > 0 && (
-              <div style={{ opacity: list.isPlaceholderData ? 0.55 : 1, transition: 'opacity .2s' }}>
-                <div className="collection-years" role="tablist" aria-label="作った年">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={showAll}
-                    className={`collection-year${showAll ? ' selected' : ''}`}
-                    onClick={() => go({ month: 'all' })}
-                  >
-                    すべて
-                  </button>
-                  {years.map((y) => {
-                    const selected = yearOf(y.key) === year
-                    return (
-                      <button
-                        key={y.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        className={`collection-year num${selected ? ' selected' : ''}`}
-                        onClick={() => go({ month: y.key })}
-                      >
-                        {splitLabel(y.label)[0]}
-                      </button>
-                    )
-                  })}
-                </div>
-                {year && (
-                  <div className="collection-months" role="tablist" aria-label="作った月">
+
+            {/* 月：年を選んだときだけ。その年の、作品のある月 */}
+            {year && (
+              <div className="collection-months" role="tablist" aria-label="作った月">
+                <button
+                  ref={!month ? selectedChip : undefined}
+                  type="button"
+                  role="tab"
+                  aria-selected={!month}
+                  className={`collection-chip${!month ? ' selected' : ''}`}
+                  onClick={() => go({ range: year })}
+                >
+                  <span className="collection-chip-name">すべて</span>
+                  <span className="collection-chip-count num">{yearCount}点</span>
+                </button>
+                {monthsOfYear.map((m) => {
+                  const selected = m.key === month?.key
+                  return (
                     <button
-                      ref={wholeYear ? selectedChip : undefined}
+                      key={m.key}
+                      ref={selected ? selectedChip : undefined}
                       type="button"
                       role="tab"
-                      aria-selected={!!wholeYear}
-                      className={`collection-chip${wholeYear ? ' selected' : ''}`}
-                      onClick={() => go({ month: year })}
+                      aria-selected={selected}
+                      className={`collection-chip${selected ? ' selected' : ''}`}
+                      onClick={() => go({ range: m.key })}
                     >
-                      すべて
-                      <small className="num">{monthsOfYear.reduce((n, m) => n + m.items.length, 0)}</small>
+                      <span className="collection-chip-name num">{splitLabel(m.label)[1]}</span>
+                      <span className="collection-chip-count num">{m.items.length}点</span>
                     </button>
-                    {monthsOfYear.map((m) => {
-                      const selected = m.key === month?.key
-                      return (
-                        <button
-                          key={m.key}
-                          ref={selected ? selectedChip : undefined}
-                          type="button"
-                          role="tab"
-                          aria-selected={selected}
-                          className={`collection-chip num${selected ? ' selected' : ''}`}
-                          onClick={() => go({ month: m.key })}
-                        >
-                          {splitLabel(m.label)[1]}
-                          <small>{m.items.length}</small>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
+                  )
+                })}
+              </div>
+            )}
 
-                {/* 見る範囲の月ごとに、見出しと 3 列。表示のアニメーションは、月をまたいで順に少しずつずらす */}
-                {shown.map((m, i) => (
+            <p className="collection-scope" aria-live="polite">
+              <span>{scopeLabel}</span>
+              <span className="num">{shownCount}点</span>
+            </p>
+
+            {month || !year ? (
+              // すべて・1 か月：見出し無しで並べる
+              <div key={`${category}-${month?.key ?? 'all'}`} className="grid-3">
+                {(month ? month.items : items).map((a, i) => (
+                  <ArtworkThumb key={a.id} artwork={a} index={i} showBadge meta="age" />
+                ))}
+              </div>
+            ) : (
+              // 1 年分：月ごとに見出しで区切る。表示のアニメーションは、月をまたいで順に少しずつずらす
+              monthsOfYear.map((m, i) => {
+                const before = monthsOfYear.slice(0, i).reduce((n, s) => n + s.items.length, 0)
+                return (
                   <section key={`${category}-${m.key}`} className="collection-month">
-                    <h2 className="collection-month-label num">
-                      {m.label}
-                      <span className="collection-month-count">{m.items.length}点</span>
+                    <h2 className="collection-month-label">
+                      <span className="num">{splitLabel(m.label)[1]}</span>
+                      <small className="num">{m.items.length}点</small>
                     </h2>
                     <div className="grid-3">
                       {m.items.map((a, j) => (
-                        <ArtworkThumb
-                          key={a.id}
-                          artwork={a}
-                          index={shown.slice(0, i).reduce((n, s) => n + s.items.length, 0) + j}
-                          showBadge
-                          meta="age"
-                        />
+                        <ArtworkThumb key={a.id} artwork={a} index={before + j} showBadge meta="age" />
                       ))}
                     </div>
                   </section>
-                ))}
-              </div>
-            )
-          )}
-        </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
 
       <ActionMenu
