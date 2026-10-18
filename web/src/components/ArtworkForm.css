@@ -48,7 +48,10 @@
   border: 0;
 }
 
+/* 枠いっぱいに重ね、写真の全体を収める（枠は grid なので、height: 100% だけでは縦長・正方形の写真が枠からはみ出して切れる） */
 .photo-picker img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -74,4 +77,9 @@
     corner-shape: squircle;
     border-radius: 24px;
   }
+}
+
+/* 写真の代わりに 3D モデルを撮った画像を使うときの説明 */
+.photo-note {
+  margin: -6px 4px 0;
 }

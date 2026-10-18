@@ -1,7 +1,10 @@
 // ③ 作品を追加する / ⑨ 作品の登録 (詳細入力) で共通のフォーム
+// 写真は一覧のサムネイルや詳細の画像に使うので必須。3Dモデル(.glb)だけを選んで写真が無いときは、モデルを撮った画像
+// (three の snapshotModel) を写真の代わりにする。あとから写真を選べば、そちらに置き換わる
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Artwork, Category } from '../api'
 import { CalendarIcon, CameraIcon, ChevronRight } from '../icons'
+import { snapshotModel } from '../three'
 import { GlassButton } from './GlassButton'
 import { Segmented } from './Segmented'
 import './ArtworkForm.css'
@@ -44,6 +47,11 @@ export function ArtworkForm({
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [model, setModel] = useState<File | null>(null)
+  // 写真 (file) が、3Dモデルを撮った画像か。撮っている間は true の snapshotting
+  const [fromModel, setFromModel] = useState(false)
+  const [snapshotting, setSnapshotting] = useState(false)
+  // いちばん新しく選んだモデルの番号 (続けて選び直したとき、古いモデルの画像で上書きしない)
+  const modelTurn = useRef(0)
   const [category, setCategory] = useState<Category>(initial?.category ?? 'drawing')
   const [localError, setLocalError] = useState<string | null>(null)
   const [advanced, setAdvanced] = useState(false)
@@ -61,6 +69,33 @@ export function ArtworkForm({
 
   const shownImage = preview ?? initial?.image_url ?? null
 
+  const choosePhoto = (photo: File | null) => {
+    setFile(photo)
+    setFromModel(false)
+  }
+
+  /** 3Dモデルを選んだ。写真がまだ無い (か、前のモデルを撮った画像) なら、このモデルを撮って写真の代わりにする */
+  const chooseModel = (next: File | null) => {
+    setModel(next)
+    const turn = ++modelTurn.current
+    const needsPhoto = fromModel || (!file && !initial?.image_url)
+    if (!next) {
+      if (fromModel) choosePhoto(null)
+      return
+    }
+    if (!needsPhoto) return
+    setSnapshotting(true)
+    snapshotModel(next)
+      .then((photo) => {
+        if (turn !== modelTurn.current) return
+        setFile(photo)
+        setFromModel(true)
+        setLocalError(null)
+      })
+      .catch(() => turn === modelTurn.current && setLocalError('3Dモデルを読み込めませんでした。写真を撮るか選んでください'))
+      .finally(() => turn === modelTurn.current && setSnapshotting(false))
+  }
+
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
@@ -70,7 +105,9 @@ export function ArtworkForm({
     if (file) data.set('image', file)
     if (model) data.set('model', model)
 
-    if (variant === 'add' && !file) return setLocalError('写真を撮るか選んでください')
+    if (variant === 'add' && !file) {
+      return setLocalError(snapshotting ? '3Dモデルを撮っています。少し待ってから追加してください' : '写真を撮るか選んでください')
+    }
     if (!String(data.get('title') ?? '').trim()) return setLocalError('作品のタイトルを入力してください')
     setLocalError(null)
     onSubmit(data)
@@ -86,7 +123,7 @@ export function ArtworkForm({
         type="file"
         name="image"
         accept="image/*"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        onChange={(e) => choosePhoto(e.target.files?.[0] ?? null)}
       />
 
       {shownImage ? (
@@ -100,11 +137,12 @@ export function ArtworkForm({
         <button type="button" className="photo-picker" onClick={() => fileInput.current?.click()}>
           <span className="inner">
             <CameraIcon size={30} strokeWidth={1.5} />
-            写真を撮る・選ぶ
+            {snapshotting ? '3Dモデルを撮っています…' : '写真を撮る・選ぶ'}
             <small>絵や工作をまっすぐ撮ると、きれいに飾れます</small>
           </span>
         </button>
       )}
+      {fromModel && <p className="hint photo-note">3Dモデルを撮った画像を、写真の代わりに使います。写真を選ぶと置き換わります</p>}
 
       <div className="field">
         <label htmlFor="title">作品のタイトル</label>
@@ -173,15 +211,15 @@ export function ArtworkForm({
         </button>
         {advanced && (
           <div className="field" style={{ marginTop: 10 }}>
-            <input type="file" accept=".glb,model/gltf-binary" onChange={(e) => setModel(e.target.files?.[0] ?? null)} />
-            <p className="hint">指定すると、写真から作る3Dの代わりにこのモデルを展示します。</p>
+            <input type="file" accept=".glb,model/gltf-binary" onChange={(e) => chooseModel(e.target.files?.[0] ?? null)} />
+            <p className="hint">指定すると、写真から作る3Dの代わりにこのモデルを展示します。写真が無ければ、このモデルを撮った画像を写真の代わりに使います。</p>
           </div>
         )}
       </div>
 
       {message && <div className="form-error">{message}</div>}
 
-      <button type="submit" className="btn btn-filled" disabled={busy}>
+      <button type="submit" className="btn btn-filled" disabled={busy || snapshotting}>
         {submitLabel}
       </button>
     </form>
