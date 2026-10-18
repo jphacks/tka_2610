@@ -12,6 +12,7 @@ Web で写真を登録すると Rust のサーバーが 3D モデル（GLB）を
 
 - [docs/frontend.md](./frontend.md)：Web（フロントエンド）の構成と、変更するときの決まり
 - [docs/supabase.md](./supabase.md)：データベースを Supabase に移したときの作業の記録
+- [docs/deploy.md](./deploy.md)：審査員などが見られるよう、サーバーを Render に公開する手順（`Dockerfile`・`render.yaml`）
 - [docs/walk.md](./walk.md)：鑑賞モード（家の中を three.js で一人称で歩く画面）の作り
 - [docs/house-assets.md](./house-assets.md)：家の建物 GLB の仕様（本番の GLB を作ってもらうときに渡す）
 - [tools/home-rooms/README.md](../tools/home-rooms/README.md)：開発用の建物 GLB（今入っているもの）の作り方
@@ -473,6 +474,7 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | `DATABASE_URL` | なし（必須） | PostgreSQL の接続先（Supabase なら Session pooler の接続文字列） |
 | `PORT` | `8080` | サーバーの待ち受けポート |
 | `MEDIA_DIR` | `backend/data/media` | 生成した画像と GLB の保存先 |
+| `STATIC_DIR` | `backend/static`（ビルドした場所） | 家具・建物・サンプルの作品のフォルダ。ビルドした場所と動かす場所が違うとき（Docker・Render。[deploy.md](./deploy.md)）に指定する |
 | `HOME_ROOM_MODELS_DIR` | `backend/static/models/rooms` | 家の建物の GLB を置いたフォルダ。中の `hub.glb`（ファイル名は `home.rs` の `ROOM_DEFS` の `model`）を、`/api/museum` の `house.rooms[].model_url` で配信する。ファイルが無い部屋は `model_url` が null になり、その部屋の建物は描かれない。本番の GLB を別のフォルダのまま試すときに使う |
 | `MUSEUM_MODEL_PATH` | `backend/static/models/home-empty.glb` | リビングだけの家の建物の GLB（部屋ごとの GLB にする前の 8 × 8 m のもの）。`/api/museum` の `model_url` で返す。前の版の Web のために残していて、今の Web は `house` があれば使わない |
 | `WALK_MODEL_PATH` | なし | 鑑賞モードだけで使う別の GLB。指定したときだけ、リビングの建物の代わりに使う。博物館のころの高画質版 `museum-walk.glb` は消した（git の履歴にだけある） |

@@ -83,6 +83,7 @@ Web の構成（画面・共通部品・3D・スタイル）と、変更する�
 - **Web の画面から `web/src/three/scenes/` の中を直接 import しない。** 必ず `import { ... } from '../three'`（`web/src/three/index.tsx`）を使います。直接読むと three.js が最初に読み込まれ、表示が遅くなります。
 - **Web の CSS は、1 か所でだけ使うものはその `.tsx` の隣の同じ名前の `.css` に、2 か所以上で使うものは `web/src/styles/` に書く。** 色は `web/src/styles/tokens.css` の CSS 変数を使い、直接書かない。
 - **おもいでのファイルは、表 `artwork_memories` の `file`・`thumb_file` にあるものだけが正。** `backend/data/media/memories/` に手でファイルを置かないでください（起動時に、表に無いファイルは消えます）。種類と上限は `memories.rs` の `ACCEPTED`・`MemoryKind::max_bytes` と、`web/src/api/memories.ts` の `MEMORY_LIMITS`・`KIND_OF_EXT` を一緒に変えます。
+- **公開（Render）の入れ物はリポジトリ直下の `Dockerfile` と `render.yaml`。** 手順は [docs/deploy.md](docs/deploy.md)。入れ物の中ではファイルの場所を環境変数（`STATIC_DIR`・`WEB_DIST`・`MEDIA_DIR`）で渡すので、サーバーに新しいファイルの読み込みを足すときは、ビルドした場所（`CARGO_MANIFEST_DIR`）に頼らず、これらから辿る。無料プランのディスクは再起動で消える（サンプルの作品は起動のときに作り直される）。
 - **`.env` や接続文字列、パスワードをコミットしない。**
 - **コミットメッセージや PR の説明に、AI ツールの署名（`Co-Authored-By` や「Generated with」など）を入れない。**
 
