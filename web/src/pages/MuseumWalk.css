@@ -385,54 +385,8 @@
 
 /* ---------- 声のおもいで ---------- */
 
-/* 右上の、声の自動再生の入・切。切のときは薄くする */
-.walk-voice-toggle {
-  flex: none;
-  margin-left: 8px;
-  opacity: 0.55;
-}
-
-.walk-voice-toggle.on {
-  opacity: 1;
-  color: var(--accent);
-}
-
 /* 照準の先の作品に声があるときの音符 */
 .walk-aim-voice {
   margin-left: 4px;
   vertical-align: -2px;
-}
-
-/* 流している声（画面の下の真ん中）。止めるボタンだけ押せる */
-.walk-voice-now {
-  position: absolute;
-  left: 50%;
-  bottom: calc(24px + var(--safe-bottom));
-  z-index: 5;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 32px);
-  padding: 6px 6px 6px 14px;
-  border-radius: 999px;
-  transform: translateX(-50%);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.walk-voice-now span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.walk-voice-stop {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink);
 }
