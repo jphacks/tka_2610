@@ -334,7 +334,8 @@ export function HomeObjects({
         key={object.id}
         name={`FURN_${object.id}`}
         userData={{ objectId: object.id }}
-        position={[at.position[0], moving ? moving.position[1] : 0, at.position[2]]}
+        // y は壁の家具の高さ（床の家具は 0）。ドラッグ中は持ち上げた高さ
+        position={[at.position[0], moving ? moving.position[1] : object.position[1], at.position[2]]}
         rotation-y={at.rotationY}
         {...grabbable(object.id)}
       >

@@ -46,7 +46,9 @@ const {
   DOOR_ZONE_DEPTH,
   DOOR_ZONE_WIDTH,
   FLOOR_ART_FIT,
+  WALL_HEIGHT,
   WALL_MARGIN,
+  WALL_MOUNT_MIN,
   artExtent,
   assetOf,
   canPlace,
@@ -113,6 +115,8 @@ const catalog = {
     category: '',
     top_anchor: null,
     layer: null,
+    placement: 'floor',
+    mount_height: null,
     support: (a.surfaces ?? []).length > 0,
     surfaces: [],
     ...a,
@@ -143,6 +147,13 @@ if (fixture.floor_art_fit && !fixture.floor_art_fit.every((v, i) => near(v, FLOO
 }
 if (fixture.wall_margin !== undefined && !near(fixture.wall_margin, WALL_MARGIN, 1e-12)) {
   miss('setup', 'wall_margin', `表 ${fixture.wall_margin} / Web ${WALL_MARGIN}`)
+}
+// 壁の家具の高さの決まり（表にあれば。wall: { height, mount_min }）
+if (fixture.wall?.height !== undefined && !near(fixture.wall.height, WALL_HEIGHT, 1e-12)) {
+  miss('setup', 'wall.height', `表 ${fixture.wall.height} / Web ${WALL_HEIGHT}`)
+}
+if (fixture.wall?.mount_min !== undefined && !near(fixture.wall.mount_min, WALL_MOUNT_MIN, 1e-12)) {
+  miss('setup', 'wall.mount_min', `表 ${fixture.wall.mount_min} / Web ${WALL_MOUNT_MIN}`)
 }
 // ドアの前の大きさ（表にあれば。door_zone: { width, depth }）
 if (fixture.door_zone?.width !== undefined && !near(fixture.door_zone.width, DOOR_ZONE_WIDTH, 1e-12)) {

@@ -5,6 +5,8 @@
 //!   家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見た位置で、世界 = origin + position。
 //!   家具の上の作品は親の家具から決まる (部屋の平行移動は親に 1 回だけ掛かる)。
 //! - 家具の原点は底面の中心、正面は +Z。rotationY θ で +Z は (sinθ, 0, cosθ) を向く (three.js と同じ)。
+//!   壁に掛ける家具 (catalog の placement が "wall") だけは、原点が背面の底の中心で、背面を部屋の壁の内側の面に付ける。
+//!   position の y はその家具の底面の高さ (模様替えで上げ下げできる)。床の家具と作品の y はいつも 0。
 //! - 家具に載せる作品の position は、親の家具の「回す前」の向きで、載せる面 (天板・本棚の段など。surface) の中心からの位置。
 //! - 置けるかどうかの判定は、家のキット (MemoryMuseum_Home の museum-kit.js の canPlace) を書き直したもの。
 //!   Web の `web/src/three/scenes/home/placement.ts` と同じ計算にしておくこと (総当たり表 testdata/placement-cases.json で照合する)。
@@ -12,7 +14,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    f64::consts::{PI, TAU},
+    f64::consts::{FRAC_PI_2, PI, TAU},
     sync::LazyLock,
 };
 
@@ -156,6 +158,12 @@ const MAX_ID_LEN: usize = 40;
 const MAX_COORD: f64 = 15.0;
 /// 壁から家具まで空ける距離 (m)
 const WALL_MARGIN: f64 = 0.12;
+/// 部屋の壁の高さ (m)。Web の house.ts の WALL_TOP と同じ。壁の家具は、上に飾る作品の枠まで含めてこれより下に掛ける
+pub const WALL_HEIGHT: f64 = 3.2;
+/// 壁の家具を掛けられるいちばん低い高さ (底面の y, m)
+pub const WALL_MOUNT_MIN: f64 = 0.3;
+/// 壁の家具の向きの許容 (ラジアン)。90° ごとの向きにだけ掛けられる
+const ANGLE_EPSILON: f64 = 1e-6;
 /// 重なり・はみ出しの許容 (m)。ぴったり接するのは重なりにしない
 const TOLERANCE: f64 = 0.002;
 /// 天板の縁から作品の枠まで空ける距離 (m)
@@ -172,8 +180,9 @@ pub const FLOOR_ART_FIT: [f64; 3] = [0.8, 1.0, 0.8];
 /// 家具の天板の面の id。作品の surface を省いたときはこの面
 pub const TOP_SURFACE: &str = "top";
 
-/// 作品を自動で置くときに探す家具の順番。本棚・ベンチ・スツールは、今までの家具が埋まってから使う
-const SUPPORT_ORDER: [&str; 10] = [
+/// 作品を自動で置くときに探す家具の順番。本棚・ベンチ・スツールは、今までの家具が埋まってから使う。
+/// 壁の家具 (利用者が模様替えで足したときだけある) は最後
+const SUPPORT_ORDER: [&str; 13] = [
     "home_display_shelf",
     "home_console",
     "home_craft_desk",
@@ -184,6 +193,9 @@ const SUPPORT_ORDER: [&str; 10] = [
     "home_bookshelf",
     "bench_oak",
     "home_stool",
+    "wall_floating_shelf_french_oak",
+    "wall_picture_ledge_french_oak",
+    "wall_cabinet_french_oak",
 ];
 
 // =============================
@@ -232,7 +244,7 @@ pub struct Furniture {
     pub asset_id: String,
     /// 置いている部屋 (今は hub だけ)
     pub room_id: String,
-    /// 部屋の中心から見た位置
+    /// 部屋の中心から見た位置。y は壁の家具の底面の高さ (床の家具は 0)
     pub position: [f64; 3],
     pub rotation_y: f64,
 }
@@ -336,8 +348,9 @@ pub fn moved_ids(before: &Layout, after: &Layout) -> HashSet<String> {
 
 fn same_place(a: &LayoutObject, b: &LayoutObject) -> bool {
     let near = |p: f64, q: f64| (p - q).abs() <= MOVE_EPSILON;
+    // y は壁の家具の高さ (上げ下げも動かしたことにする。床の物はいつも 0)
     let same_pose = |p: [f64; 3], r: f64, q: [f64; 3], s: f64| {
-        near(p[0], q[0]) && near(p[2], q[2]) && wrap_angle(r - s).abs() <= MOVE_EPSILON
+        near(p[0], q[0]) && near(p[1], q[1]) && near(p[2], q[2]) && wrap_angle(r - s).abs() <= MOVE_EPSILON
     };
     match (a, b) {
         (LayoutObject::Furniture(x), LayoutObject::Furniture(y)) => {
@@ -401,6 +414,12 @@ pub struct Asset {
     pub name: String,
     pub name_ja: String,
     pub category: String,
+    /// "floor" (床に置く) か "wall" (壁に掛ける)。壁の家具は原点が背面の底の中心で、背面を部屋の壁に付ける
+    #[serde(default = "floor_placement")]
+    pub placement: String,
+    /// 壁の家具を足したときに掛ける高さ (底面の y, m)。模様替えで上げ下げできる
+    #[serde(default)]
+    pub mount_height: Option<f64>,
     /// 幅・高さ・奥行き (m)
     pub dimensions_meters: [f64; 3],
     /// 天板の中心 (家のキットの値)。作品を載せる面は surfaces
@@ -441,9 +460,27 @@ impl Asset {
         self.layer.as_deref() == Some("floor_decor")
     }
 
+    /// 壁に掛ける家具か
+    pub fn is_wall(&self) -> bool {
+        self.placement == "wall"
+    }
+
+    /// 家具が上に場所を取る高さ (底面から, m): 家具の高さか、面に飾る作品の枠の上のどちらか高いほう。
+    /// 壁の家具とその下・上の物が重なるかを、この高さで見る (サイドボードの上の壁に棚を掛けるなら、作品の枠より上)
+    pub fn reach(&self) -> f64 {
+        self.surfaces
+            .iter()
+            .map(|s| s.anchor[1] + art_fit(s)[1])
+            .fold(self.dimensions_meters[1], f64::max)
+    }
+
     pub fn file_name(&self) -> String {
         format!("{}.glb", self.id)
     }
+}
+
+fn floor_placement() -> String {
+    "floor".into()
 }
 
 #[derive(Debug, Deserialize)]
@@ -642,6 +679,53 @@ pub fn yaw_degrees(angle: f64) -> f64 {
 pub fn room_rect(def: &RoomDef) -> Rect {
     let (hx, hz) = (def.size[0] / 2.0 - WALL_MARGIN, def.size[1] / 2.0 - WALL_MARGIN);
     Rect { min_x: -hx, max_x: hx, min_z: -hz, max_z: hz }
+}
+
+/// 部屋の壁の内側の面で囲まれた範囲 (部屋の中心から見た座標)。壁の家具はこの中に収める
+pub fn room_inner_rect(def: &RoomDef) -> Rect {
+    let (hx, hz) = (def.size[0] / 2.0, def.size[1] / 2.0);
+    Rect { min_x: -hx, max_x: hx, min_z: -hz, max_z: hz }
+}
+
+/// 家具の足元 (真上から見た外接長方形、部屋の中の座標)。床の家具は原点が底面の中心。
+/// 壁の家具は原点が背面なので、正面 (+Z を rotation_y で回した (sinθ, cosθ)) の向きへ奥行きの半分ずらした所が中心
+pub fn furniture_rect(f: &Furniture, a: &Asset) -> Rect {
+    let [w, _, d] = a.dimensions_meters;
+    let (mut x, mut z) = (f.position[0], f.position[2]);
+    if a.is_wall() {
+        let (sin, cos) = f.rotation_y.sin_cos();
+        x += d / 2.0 * sin;
+        z += d / 2.0 * cos;
+    }
+    footprint(x, z, w, d, f.rotation_y)
+}
+
+/// 壁の家具の背面が付いている壁。向きが 90° ごとで、背面 (正面の逆) が壁の内側の面にあるときだけ Some。
+/// rotation_y 0 は正面 +Z で北の壁 (z = −奥行き / 2)、π は南の壁、π/2 は正面 +X で西の壁、−π/2 は東の壁
+pub fn wall_side(f: &Furniture, def: &RoomDef) -> Option<Side> {
+    let quarter = (f.rotation_y / FRAC_PI_2).round();
+    if (f.rotation_y - quarter * FRAC_PI_2).abs() > ANGLE_EPSILON {
+        return None;
+    }
+    let (hw, hd) = (def.size[0] / 2.0, def.size[1] / 2.0);
+    let [x, _, z] = f.position;
+    let (side, gap) = match (quarter as i64).rem_euclid(4) {
+        0 => (Side::North, z + hd),
+        2 => (Side::South, z - hd),
+        1 => (Side::West, x + hw),
+        _ => (Side::East, x - hw),
+    };
+    (gap.abs() <= TOLERANCE).then_some(side)
+}
+
+/// 壁の家具を掛けられる高さ (底面の y の下限と上限, m)。上に飾る作品の枠まで壁の高さに収める
+pub fn mount_range(a: &Asset) -> (f64, f64) {
+    (WALL_MOUNT_MIN, WALL_HEIGHT - a.reach())
+}
+
+/// 2 つの高さの範囲 (下, 上) が 2 mm より深く重なっていれば true
+fn span_overlap(a: (f64, f64), b: (f64, f64)) -> bool {
+    a.0 < b.1 - TOLERANCE && a.1 > b.0 + TOLERANCE
 }
 
 /// 出入口の前の、新しく置いたり動かしたりできない場所 (部屋の中心から見た座標)。
@@ -913,7 +997,7 @@ fn parse_object(value: &Value, v1: bool) -> Result<LayoutObject, String> {
     if !valid_id(id) {
         return Err(format!("id「{id}」は 1〜{MAX_ID_LEN} 文字の英数字・-・_ にしてください"));
     }
-    let position = parse_position(o.get("position"))?;
+    let mut position = parse_position(o.get("position"))?;
     let rotation_y = o
         .get("rotationY")
         .and_then(Value::as_f64)
@@ -926,8 +1010,12 @@ fn parse_object(value: &Value, v1: bool) -> Result<LayoutObject, String> {
     match kind {
         "furniture" => {
             let asset_id = o.get("assetId").and_then(Value::as_str).unwrap_or_default();
-            if asset(asset_id).is_none_or(|a| a.category != "furniture") {
+            let Some(a) = asset(asset_id).filter(|a| a.category == "furniture") else {
                 return Err(format!("家具「{asset_id}」はありません"));
+            };
+            // 床の家具は床に置く (高さは壁の家具だけ)
+            if !a.is_wall() {
+                position[1] = 0.0;
             }
             let room_id = parse_room_id(o, None)?;
             Ok(LayoutObject::Furniture(Furniture {
@@ -952,6 +1040,8 @@ fn parse_object(value: &Value, v1: bool) -> Result<LayoutObject, String> {
                 Some(_) => None,
                 None => Some(parse_room_id(o, Some(HUB_ID))?.to_string()),
             };
+            // 作品の高さは、載せている面か床で決まる
+            position[1] = 0.0;
             // 天板 ("top") は省いた形にそろえる。床に置く作品には面が無い
             let surface = match (o.get("surface"), &parent_id) {
                 (None | Some(Value::Null), _) => None,
@@ -982,8 +1072,9 @@ fn parse_position(value: Option<&Value>) -> Result<[f64; 3], String> {
         .and_then(Value::as_array)
         .filter(|a| a.len() == 3)
         .map(|a| a.iter().filter_map(Value::as_f64).filter(|n| n.is_finite()).collect());
+    // y は壁の家具の高さにだけ使う (parse_object が床の物を 0 にする)
     match numbers.as_deref() {
-        Some(&[x, _, z]) if x.abs() <= MAX_COORD && z.abs() <= MAX_COORD => Ok([x, 0.0, z]),
+        Some(&[x, y, z]) if x.abs() <= MAX_COORD && y.abs() <= MAX_COORD && z.abs() <= MAX_COORD => Ok([x, y, z]),
         _ => Err(format!("position は ±{MAX_COORD} m 以内の数 3 つにしてください")),
     }
 }
@@ -1017,10 +1108,15 @@ impl DoorPolicy<'_> {
     }
 }
 
-/// 位置の検証。床の物 (家具と床置きの作品) は、所属する部屋のローカル座標で次を見る:
-/// 1. 部屋の壁から 12 cm 空ける (room_rect。2 mm まで許す)
+/// 位置の検証。床の物 (家具と床置きの作品) と壁の家具は、所属する部屋のローカル座標で次を見る:
+/// 1. 床の物は、部屋の壁から 12 cm 空ける (room_rect。2 mm まで許す)。
+///    壁の家具は、90° ごとの向きで背面を壁の内側の面に付け (wall_side)、壁の内側からはみ出さず (room_inner_rect)、
+///    高さ (底面の y) は WALL_MOUNT_MIN から、上に飾る作品の枠まで壁の高さに収まるところまで (mount_range)
 /// 2. doors が見る物は、その部屋の出入口の前 (door_zone) にかからない (2 mm まで許す)。ラグもここは見る
-/// 3. 同じ部屋の床の物どうしが重ならない (ラグはほかと重なってよい。別の部屋の物とは比べない)
+/// 3. 同じ部屋の物どうしが、足元 (真上から見た外接長方形) と高さの範囲の両方で重ならない
+///    (ラグはほかと重なってよい。別の部屋の物とは比べない)。高さの範囲は、床の家具が 0 から reach (家具の高さか、
+///    面に飾る作品の枠の上)、壁の家具が底面から reach、床置きの作品が 0 から床の枠の高さ。
+///    床の物どうしはどれも 0 から始まるので、足元が重なれば重なる (壁の家具を足す前と同じ)
 ///
 /// 家具の上の作品は、載せている面からはみ出さず、同じ面の作品と重ならない (部屋や出入口は見ない)。
 /// 作品の足元は実寸 (sizes) を枠に収めた大きさ。寸法の分からない作品は枠 (art_fit・FLOOR_ART_FIT) をそのまま使う
@@ -1038,36 +1134,63 @@ pub fn check_placement(layout: &Layout, sizes: &Sizes, doors: DoorPolicy) -> Res
         }
     }
 
-    // 床に置く物 (家具と床置きの作品): 物・部屋・部屋の中の足元・ラグか。ラグ (floor_decor) はほかと重なってよい
-    let mut on_floor: Vec<(&LayoutObject, &RoomDef, Rect, bool)> = Vec::new();
+    // 部屋の中で場所を取る物 (家具・床置きの作品): 物・部屋・部屋の中の足元・高さの範囲・ラグか・壁の家具なら家具と種類。
+    // ラグ (floor_decor) はほかと重なってよい
+    struct Placed<'a> {
+        obj: &'a LayoutObject,
+        room: &'static RoomDef,
+        rect: Rect,
+        span: (f64, f64),
+        decor: bool,
+        wall: Option<(&'a Furniture, &'static Asset)>,
+    }
+    let mut placed: Vec<Placed> = Vec::new();
     for obj in &layout.objects {
-        let (rect, decor) = match obj {
+        let (rect, span, decor, wall) = match obj {
             LayoutObject::Furniture(f) => {
                 let a = asset(&f.asset_id).ok_or_else(|| format!("家具「{}」はありません", f.asset_id))?;
-                let [w, _, d] = a.dimensions_meters;
-                (footprint(f.position[0], f.position[2], w, d, f.rotation_y), a.is_floor_decor())
+                let base = if a.is_wall() { f.position[1] } else { 0.0 };
+                (furniture_rect(f, a), (base, base + a.reach()), a.is_floor_decor(), a.is_wall().then_some((f, a)))
             }
-            LayoutObject::Artwork(a) if a.parent_id.is_none() => (art_rect(a, FLOOR_ART_FIT, sizes), false),
+            LayoutObject::Artwork(a) if a.parent_id.is_none() => {
+                (art_rect(a, FLOOR_ART_FIT, sizes), (0.0, FLOOR_ART_FIT[1]), false, None)
+            }
             LayoutObject::Artwork(_) => continue,
         };
         let room = layout.room_of(obj).ok_or_else(|| format!("{} の部屋がありません", label(obj)))?;
-        on_floor.push((obj, room, rect, decor));
+        placed.push(Placed { obj, room, rect, span, decor, wall });
     }
-    for (i, (obj, room, rect, decor)) in on_floor.iter().enumerate() {
-        // 模様替えは壁ぎりぎり (12 cm) に寄せた位置を送ってくるので、重なりと同じ 2 mm だけ許す
-        // (寸法や三角関数の丸めの違いで、ぴったりの位置がはみ出し扱いにならないように)
-        if !rect_inside(rect, &room_rect(room)) {
-            return Err(format!("{} が {} の壁に近すぎます (壁から 12 cm 空けてください)", label(obj), room.name));
+    for (i, p) in placed.iter().enumerate() {
+        let (obj, room, rect) = (p.obj, p.room, &p.rect);
+        match p.wall {
+            Some((f, a)) => {
+                if wall_side(f, room).is_none() {
+                    return Err(format!("{} は {} の壁に背中を付けて掛けてください", label(obj), room.name));
+                }
+                if !rect_inside(rect, &room_inner_rect(room)) {
+                    return Err(format!("{} が {} の壁からはみ出しています", label(obj), room.name));
+                }
+                let (lo, hi) = mount_range(a);
+                if f.position[1] < lo - TOLERANCE || f.position[1] > hi + TOLERANCE {
+                    return Err(format!("{} の高さは {lo:.2}〜{hi:.2} m にしてください", label(obj)));
+                }
+            }
+            // 模様替えは壁ぎりぎり (12 cm) に寄せた位置を送ってくるので、重なりと同じ 2 mm だけ許す
+            // (寸法や三角関数の丸めの違いで、ぴったりの位置がはみ出し扱いにならないように)
+            None if !rect_inside(rect, &room_rect(room)) => {
+                return Err(format!("{} が {} の壁に近すぎます (壁から 12 cm 空けてください)", label(obj), room.name));
+            }
+            None => {}
         }
         if doors.applies(obj.id()) && room.doors.iter().any(|door| rect_overlap(&door_zone(room, door), rect)) {
             return Err(format!("{} は {} の出入口の前には置けません", label(obj), room.name));
         }
-        if *decor {
+        if p.decor {
             continue;
         }
-        for (other, other_room, other_rect, other_decor) in &on_floor[i + 1..] {
-            if other_room.id == room.id && !*other_decor && rect_overlap(rect, other_rect) {
-                return Err(format!("{} と {} が重なっています", label(obj), label(other)));
+        for other in &placed[i + 1..] {
+            if other.room.id == room.id && !other.decor && rect_overlap(rect, &other.rect) && span_overlap(p.span, other.span) {
+                return Err(format!("{} と {} が重なっています", label(obj), label(other.obj)));
             }
         }
     }
@@ -1104,17 +1227,17 @@ pub fn check_placement(layout: &Layout, sizes: &Sizes, doors: DoorPolicy) -> Res
 // 世界座標・自動配置・置き場所の数
 // =============================
 
-/// 部屋のローカル座標 (x, z) を世界座標に: 部屋の origin を足すだけ (部屋は回さない)
+/// 部屋のローカル座標 (x, z) を世界座標に: 部屋の origin を足すだけ (部屋は回さない)。y はそのまま (壁の家具の高さ。床の物は 0)
 fn room_to_world(room_id: &str, position: [f64; 3]) -> Option<[f64; 3]> {
     let [ox, oz] = room_def(room_id)?.origin;
-    Some([ox + position[0], 0.0, oz + position[2]])
+    Some([ox + position[0], position[1], oz + position[2]])
 }
 
 /// 置いた物の世界座標と向き (ラジアン)。作品なら置く面の中心 (家具の上なら面の高さ、床なら 0)。
 ///
-/// - 家具・床置きの作品: 世界 = (部屋の origin.x + x, 0, origin.z + z)、向き = rotationY
-/// - 親 P (世界 (Px, 0, Pz) は上の式、向き θ、面の中心 (ax, h, az)) の上の作品 (x, 0, z) は、x̂ = ax + x、ẑ = az + z として
-///   x' = x̂·cosθ + ẑ·sinθ、z' = −x̂·sinθ + ẑ·cosθ、世界 = (Px + x', h, Pz + z')、向き = θ + rotationY
+/// - 家具・床置きの作品: 世界 = (部屋の origin.x + x, y, origin.z + z)、向き = rotationY (y は壁の家具の高さ。床の物は 0)
+/// - 親 P (世界 (Px, Py, Pz) は上の式、向き θ、面の中心 (ax, h, az)) の上の作品 (x, 0, z) は、x̂ = ax + x、ẑ = az + z として
+///   x' = x̂·cosθ + ẑ·sinθ、z' = −x̂·sinθ + ẑ·cosθ、世界 = (Px + x', Py + h, Pz + z')、向き = θ + rotationY
 pub fn world_of(layout: &Layout, obj: &LayoutObject) -> Option<([f64; 3], f64)> {
     match obj {
         LayoutObject::Furniture(f) => Some((room_to_world(&f.room_id, f.position)?, f.rotation_y)),
@@ -1124,11 +1247,11 @@ pub fn world_of(layout: &Layout, obj: &LayoutObject) -> Option<([f64; 3], f64)> 
                 return Some((world, a.rotation_y));
             };
             let parent = layout.furniture(parent_id)?;
-            let [px, _, pz] = room_to_world(&parent.room_id, parent.position)?;
+            let [px, py, pz] = room_to_world(&parent.room_id, parent.position)?;
             let [ax, h, az] = asset(&parent.asset_id)?.surface(a.surface.as_deref())?.anchor;
             let (x, z) = (ax + a.position[0], az + a.position[2]);
             let (sin, cos) = parent.rotation_y.sin_cos();
-            let world = [px + x * cos + z * sin, h, pz - x * sin + z * cos];
+            let world = [px + x * cos + z * sin, py + h, pz - x * sin + z * cos];
             Some((world, parent.rotation_y + a.rotation_y))
         }
     }
@@ -1298,6 +1421,15 @@ mod tests {
     fn furniture(id: &str, asset_id: &str, x: f64, z: f64, rotation_y: f64) -> Value {
         furniture_in("hub", id, asset_id, x, z, rotation_y)
     }
+
+    /// 壁の家具 (y は底面の高さ)
+    fn on_wall(id: &str, asset_id: &str, x: f64, y: f64, z: f64, rotation_y: f64) -> Value {
+        json!({ "kind": "furniture", "id": id, "assetId": asset_id, "roomId": "hub", "position": [x, y, z], "rotationY": rotation_y })
+    }
+
+    const CABINET: &str = "wall_cabinet_french_oak";
+    const SHELF: &str = "wall_floating_shelf_french_oak";
+    const LEDGE: &str = "wall_picture_ledge_french_oak";
 
     fn furniture_in(room: &str, id: &str, asset_id: &str, x: f64, z: f64, rotation_y: f64) -> Value {
         json!({ "kind": "furniture", "id": id, "assetId": asset_id, "roomId": room, "position": [x, 0, z], "rotationY": rotation_y })
@@ -1779,6 +1911,130 @@ mod tests {
     }
 
     #[test]
+    fn wall_furniture_hangs_on_a_wall() {
+        // 4 つの壁の向きと位置。背面を壁の内側の面 (±5.0) に付ける
+        for (x, z, rotation) in [(0.0, -5.0, 0.0), (0.0, 5.0, PI), (-5.0, 0.0, FRAC_PI_2), (5.0, 0.0, -FRAC_PI_2)] {
+            assert!(layout_of(json!([on_wall("s", SHELF, x, 1.5, z, rotation)])).is_ok(), "{x} {z} {rotation}");
+        }
+        let side = |x: f64, z: f64, r: f64| {
+            let layout = layout_of(json!([on_wall("s", SHELF, x, 1.5, z, r)])).unwrap();
+            let LayoutObject::Furniture(f) = &layout.objects[0] else { unreachable!() };
+            wall_side(f, &ROOM_DEFS[0])
+        };
+        assert_eq!(side(0.0, -5.0, 0.0), Some(Side::North));
+        assert_eq!(side(5.0, 0.0, -FRAC_PI_2), Some(Side::East));
+        // 壁から離れている・向きが壁に合っていない・45°
+        let err = layout_of(json!([on_wall("s", SHELF, 0.0, 1.5, -4.5, 0.0)])).unwrap_err();
+        assert!(err.contains("壁に背中を付けて"), "{err}");
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 1.5, -5.0, PI)])).is_err());
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 1.5, -5.0, FRAC_PI_4)])).is_err());
+        // 2 mm のずれは許す
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 1.5, -4.999, 0.0)])).is_ok());
+        // 角から横にはみ出す (幅 1.3 なので x は ±4.35 まで)
+        assert!(layout_of(json!([on_wall("s", SHELF, 4.35, 1.5, -5.0, 0.0)])).is_ok());
+        let err = layout_of(json!([on_wall("s", SHELF, 4.5, 1.5, -5.0, 0.0)])).unwrap_err();
+        assert!(err.contains("はみ出して"), "{err}");
+    }
+
+    #[test]
+    fn wall_furniture_height_range() {
+        // 飾り棚: 上に作品の枠 (0.61) を足して 0.706。0.3〜2.494 m に掛けられる
+        let shelf = asset(SHELF).unwrap();
+        let (lo, hi) = mount_range(shelf);
+        assert!(close(lo, WALL_MOUNT_MIN) && close(hi, WALL_HEIGHT - 0.096 - 0.61), "{lo} {hi}");
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, lo, -5.0, 0.0)])).is_ok());
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, hi, -5.0, 0.0)])).is_ok());
+        let err = layout_of(json!([on_wall("s", SHELF, 0.0, 0.2, -5.0, 0.0)])).unwrap_err();
+        assert!(err.contains("高さは 0.30〜2.49 m"), "{err}");
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 2.6, -5.0, 0.0)])).is_err());
+        // キャビネットは天板の作品の枠 (0.46) まで含めて 1.32。上は 1.88 m まで
+        let (_, hi) = mount_range(asset(CABINET).unwrap());
+        assert!(close(hi, WALL_HEIGHT - 0.86 - 0.46), "{hi}");
+    }
+
+    #[test]
+    fn wall_furniture_overlaps_by_height() {
+        // ソファ (高さ 0.985) を北の壁ぎわに。ピクチャーレッジは 1.0 m より上なら掛けられる
+        let sofa_z = -5.0 + WALL_MARGIN + 0.45;
+        let sofa = furniture("sofa", "home_sofa", 0.0, sofa_z, 0.0);
+        assert!(layout_of(json!([sofa, on_wall("l", LEDGE, 0.0, 1.2, -5.0, 0.0)])).is_ok());
+        let err = layout_of(json!([sofa, on_wall("l", LEDGE, 0.0, 0.8, -5.0, 0.0)])).unwrap_err();
+        assert!(err.contains("重なっています"), "{err}");
+        // サイドボード (0.891) の上は、天板の作品の枠 (0.62) の上 = 1.511 m から
+        let console_z = -5.0 + WALL_MARGIN + 0.255;
+        let console = furniture("c", "home_console", 0.0, console_z, 0.0);
+        assert!(layout_of(json!([console, on_wall("l", LEDGE, 0.0, 1.2, -5.0, 0.0)])).is_err());
+        assert!(layout_of(json!([console, on_wall("l", LEDGE, 0.0, 1.52, -5.0, 0.0)])).is_ok());
+        // 壁の家具どうし: 同じ高さで横に重なれば不可、上下に離れていれば同じ所に掛けられる
+        assert!(layout_of(json!([on_wall("a", SHELF, 0.0, 1.0, -5.0, 0.0), on_wall("b", SHELF, 0.5, 1.0, -5.0, 0.0)])).is_err());
+        assert!(layout_of(json!([on_wall("a", SHELF, 0.0, 0.5, -5.0, 0.0), on_wall("b", SHELF, 0.0, 1.3, -5.0, 0.0)])).is_ok());
+        // 別の壁なら同じ x でも重ならない (足元が違う)
+        assert!(layout_of(json!([on_wall("a", SHELF, 0.0, 1.0, -5.0, 0.0), on_wall("b", SHELF, 0.0, 1.0, 5.0, PI)])).is_ok());
+    }
+
+    #[test]
+    fn wall_furniture_footprint_and_world() {
+        // 北の壁の飾り棚: 原点は背面なので、足元は z −5.0〜−4.74
+        let layout = layout_of(json!([
+            on_wall("s", SHELF, 1.0, 1.5, -5.0, 0.0),
+            on_top("art-1", ART_A, "s", 0.2, 0.0, 0.0),
+            on_wall("e", SHELF, 5.0, 1.0, 0.0, -FRAC_PI_2),
+        ]))
+        .unwrap();
+        let LayoutObject::Furniture(f) = &layout.objects[0] else { unreachable!() };
+        assert_rect(furniture_rect(f, asset(SHELF).unwrap()), [0.35, 1.65, -5.0, -4.74]);
+        let LayoutObject::Furniture(e) = &layout.objects[2] else { unreachable!() };
+        assert_rect(furniture_rect(e, asset(SHELF).unwrap()), [4.74, 5.0, -0.65, 0.65]);
+        // 家具の世界座標は高さつき。上の作品は 1.5 + 面の高さ 0.096、面の中心は背面から 0.13 手前
+        let (pos, _) = world_of(&layout, &layout.objects[0]).unwrap();
+        assert_eq!(pos, [1.0, 1.5, -5.0]);
+        let (pos, _) = world_of(&layout, &layout.objects[1]).unwrap();
+        assert!(close(pos[0], 1.2) && close(pos[1], 1.596) && close(pos[2], -4.87), "{pos:?}");
+    }
+
+    #[test]
+    fn heights_are_kept_only_for_wall_furniture() {
+        let layout = layout_of(json!([
+            { "kind": "furniture", "id": "sofa", "assetId": "home_sofa", "roomId": "hub", "position": [0, 0.7, 0], "rotationY": 0 },
+            on_wall("s", SHELF, 0.0, 1.5, -5.0, 0.0),
+            { "kind": "artwork", "id": "art-1", "artworkId": ART_A, "roomId": "hub", "position": [3.0, 0.4, 3.0], "rotationY": 0 },
+        ]))
+        .unwrap();
+        let ys: Vec<f64> = layout
+            .objects
+            .iter()
+            .map(|o| match o {
+                LayoutObject::Furniture(f) => f.position[1],
+                LayoutObject::Artwork(a) => a.position[1],
+            })
+            .collect();
+        assert_eq!(ys, vec![0.0, 1.5, 0.0]);
+        // 上げ下げしただけでも、動かした物になる (出入口の前の判定のため)
+        let mut raised = layout.clone();
+        let LayoutObject::Furniture(f) = &mut raised.objects[1] else { unreachable!() };
+        f.position[1] = 1.6;
+        assert_eq!(moved_ids(&layout, &raised), HashSet::from(["s".to_string()]));
+    }
+
+    #[test]
+    fn auto_placement_uses_wall_shelves_last() {
+        // サイドボードと飾り棚があれば、まずサイドボード。サイドボードが埋まったら飾り棚へ
+        let layout = layout_of(json!([furniture("c", "home_console", 0.0, 2.0, 0.0), on_wall("s", SHELF, 0.0, 1.5, -5.0, 0.0)])).unwrap();
+        assert_eq!(pick_spot(&layout, &Sizes::new(), None, None, None).unwrap().parent_id, "c");
+        let shelf_only = layout_of(json!([on_wall("s", SHELF, 0.0, 1.5, -5.0, 0.0)])).unwrap();
+        let spot = pick_spot(&shelf_only, &Sizes::new(), None, None, None).unwrap();
+        assert_eq!(spot.parent_id, "s");
+        // 飾り棚 2・ピクチャーレッジ 2・キャビネット 1
+        let three = layout_of(json!([
+            on_wall("s", SHELF, 0.0, 1.5, -5.0, 0.0),
+            on_wall("l", LEDGE, 0.0, 1.2, 5.0, PI),
+            on_wall("c", CABINET, -5.0, 1.3, 0.0, FRAC_PI_2),
+        ]))
+        .unwrap();
+        assert_eq!(capacity(&three), 5);
+    }
+
+    #[test]
     fn world_of_adds_room_origin() {
         let layout = layout_of(json!([
             furniture("desk", "home_craft_desk", 1.0, 2.0, 0.0),
@@ -2155,7 +2411,7 @@ mod tests {
         assert!(door_blockers(&layout).is_empty());
         check_placement(&layout, &Sizes::new(), DoorPolicy::OnlyMoved(&moved_ids(&layout, &layout))).unwrap();
 
-        // アトリエの 13 点の実寸でも通り、どれも 1 倍以下で置かれる
+        // アトリエの 33 点の実寸でも通り、どれも 1 倍以下で置かれる
         let sizes = atelier_sizes();
         check_placement(&layout, &sizes, DoorPolicy::Ignore).unwrap();
         for a in layout.artworks() {
@@ -2168,10 +2424,21 @@ mod tests {
     }
 
     #[test]
-    fn catalog_has_fourteen_furniture_with_japanese_names() {
-        assert_eq!(CATALOG.assets.len(), 14);
+    fn catalog_has_seventeen_furniture_with_japanese_names() {
+        assert_eq!(CATALOG.assets.len(), 17);
         assert!(CATALOG.assets.iter().all(|a| a.category == "furniture" && !a.name_ja.is_empty()));
-        assert_eq!(CATALOG.assets.iter().filter(|a| a.is_support()).count(), 10);
+        assert_eq!(CATALOG.assets.iter().filter(|a| a.is_support()).count(), 13);
+        // 壁の家具は 3 つ。どれも高さを決めてあり、掛けられる高さの範囲に入っている。床の家具には高さが無い
+        let walls: Vec<&Asset> = CATALOG.assets.iter().filter(|a| a.is_wall()).collect();
+        assert_eq!(walls.len(), 3);
+        for a in &walls {
+            let (lo, hi) = mount_range(a);
+            let h = a.mount_height.unwrap();
+            assert!(lo <= h && h <= hi, "{}: {h} は {lo}〜{hi} の外", a.id);
+        }
+        assert!(CATALOG.assets.iter().filter(|a| !a.is_wall()).all(|a| a.placement == "floor" && a.mount_height.is_none()));
+        // 作品を自動で置くときに、どの面のある家具も探す
+        assert!(CATALOG.assets.iter().filter(|a| a.is_support()).all(|a| SUPPORT_ORDER.contains(&a.id.as_str())));
         assert_eq!(CATALOG.themes.len(), 9);
         assert_eq!(CATALOG.materials.len(), 16);
     }
@@ -2245,9 +2512,9 @@ mod tests {
     // 作品の実寸での判定
     // =============================
 
-    /// アトリエの 13 点の寸法 (幅・高さ・奥行き)。static/atelier/catalog.json の dimensionsMeters を mm に丸めた値
+    /// アトリエの 33 点の寸法 (幅・高さ・奥行き)。static/atelier/catalog.json の dimensionsMeters を mm に丸めた値
     /// (GLB を測った値とも 1 mm 以内: glb::tests::measures_atelier_models_like_the_kit_catalog)
-    const ATELIER: [(&str, [f64; 3]); 13] = [
+    const ATELIER: [(&str, [f64; 3]); 33] = [
         ("06_starbound_rocket", [0.381, 0.576, 0.3]),
         ("07_rainbow_sailboat", [0.56, 0.582, 0.34]),
         ("08_cardboard_stegosaurus", [0.622, 0.363, 0.34]),
@@ -2261,13 +2528,33 @@ mod tests {
         ("16_little_fire_engine", [0.6, 0.297, 0.34]),
         ("17_little_bakery", [0.466, 0.421, 0.34]),
         ("18_wishwheel", [0.57, 0.525, 0.34]),
+        ("19_cardboard_puppet_theatre", [0.49, 0.521, 0.363]),
+        ("20_patchwork_hot_air_balloon", [0.36, 0.554, 0.3]),
+        ("21_craft_stick_biplane", [0.49, 0.212, 0.44]),
+        ("22_milk_carton_lighthouse", [0.389, 0.544, 0.323]),
+        ("23_tissue_lava_volcano", [0.428, 0.437, 0.371]),
+        ("24_cardboard_treasure_chest", [0.41, 0.325, 0.34]),
+        ("25_egg_carton_crocodile", [0.57, 0.136, 0.3]),
+        ("26_paper_bowl_jellyfish", [0.45, 0.559, 0.405]),
+        ("27_paper_plate_lion", [0.46, 0.431, 0.31]),
+        ("28_clay_hedgehog_hideout", [0.458, 0.241, 0.392]),
+        ("29_cardboard_submarine", [0.63, 0.403, 0.34]),
+        ("30_origami_crane_wetland", [0.54, 0.295, 0.365]),
+        ("31_toadstool_cottage", [0.501, 0.45, 0.378]),
+        ("32_clay_sea_turtle", [0.495, 0.132, 0.442]),
+        ("33_recycled_drum_kit", [0.564, 0.317, 0.412]),
+        ("34_paper_horn_gramophone", [0.403, 0.476, 0.341]),
+        ("35_woven_picnic_basket", [0.393, 0.316, 0.311]),
+        ("36_folded_paper_peacock", [0.499, 0.418, 0.321]),
+        ("37_craft_stick_bridge", [0.714, 0.289, 0.397]),
+        ("38_cardboard_excavator", [0.688, 0.36, 0.368]),
     ];
 
     fn seed_id(asset_id: &str) -> Uuid {
         crate::seed::seed_id(asset_id)
     }
 
-    /// アトリエの 13 点の寸法 (作品 id は seed と同じ)
+    /// アトリエの 33 点の寸法 (作品 id は seed と同じ)
     fn atelier_sizes() -> Sizes {
         ATELIER.iter().map(|(asset_id, size)| (seed_id(asset_id), ArtSize { size: *size, custom: true })).collect()
     }
@@ -2440,7 +2727,7 @@ mod tests {
     /// 表で、新しく置く物 (出入口の前を見る物) の object id
     const CANDIDATE_ID: &str = "cand";
 
-    /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 13 点、仮生成の額縁、寸法の分からない作品
+    /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 33 点、仮生成の額縁、寸法の分からない作品
     fn case_arts() -> Vec<(String, Uuid, Option<ArtSize>)> {
         let mut arts: Vec<_> = ATELIER
             .iter()
@@ -2467,9 +2754,16 @@ mod tests {
             ("plinth_slim", 1.5, 0.5),
             ("home_stool", 2.8, 0.5),
         ];
-        assert_eq!(at.len(), CATALOG.assets.iter().filter(|a| a.is_support()).count());
-        let objects: Vec<Value> =
+        // 壁の家具は北・西・東の壁に掛ける (底面の高さ・向きつき)
+        let walls = [
+            (CABINET, -3.0, 1.3, -5.0, 0.0),
+            (SHELF, -5.0, 1.5, -1.0, FRAC_PI_2),
+            (LEDGE, 5.0, 1.2, 1.0, -FRAC_PI_2),
+        ];
+        assert_eq!(at.len() + walls.len(), CATALOG.assets.iter().filter(|a| a.is_support()).count());
+        let mut objects: Vec<Value> =
             at.iter().map(|(asset_id, x, z)| furniture(&format!("f-{asset_id}"), asset_id, *x, *z, 0.0)).collect();
+        objects.extend(walls.iter().map(|(asset_id, x, y, z, r)| on_wall(&format!("f-{asset_id}"), asset_id, *x, *y, *z, *r)));
         let raw = raw_layout(json!(objects));
         validate_layout(raw.clone()).unwrap();
         raw
@@ -2520,15 +2814,16 @@ mod tests {
     }
 
     /// 表の上の段に書く説明 (Web の check-placement.mjs を書く人向け)
-    const NOTES: [&str; 8] = [
+    const NOTES: [&str; 9] = [
         "配置 JSON は schemaVersion 5 (中央のリビング hub 10 × 10 の 1 部屋。出入口なし)。家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見たローカル座標。部屋は回さない",
         "house は /api/museum の house と同じ形 (model_url は null)。部屋の置ける範囲は ±(size / 2 − wall_margin)、はみ出しは 2 mm (tolerance ではなく home.rs の TOLERANCE = 0.002) まで許す",
         "door_zone: 出入口の前の置けない場所。壁に沿って出入口の中心 (offset) から ±width / 2、壁の内側の面から部屋の中へ depth。重なりと同じく 2 mm より深くかかったら置けない",
-        "layouts.supports = 作品を載せられる家具を hub に 1 つずつ。layouts.floor = 空の家。layouts.rooms = hub の (3.2, 0, 3.2) に白い台座 (f-hub) を置いた家 (床の隅の候補が台座と重なる)",
+        "layouts.supports = 作品を載せられる家具を hub に 1 つずつ (壁の家具は北・西・東の壁に、底面の高さ y つきで)。layouts.floor = 空の家。layouts.rooms = hub の (3.2, 0, 3.2) に白い台座 (f-hub) を置いた家 (床の隅の候補が台座と重なる)",
         "cases: surface が \"floor\" の行は room (house.rooms の部屋。今は hub だけ) の床に layouts.rooms で置く (候補の roomId = room)。それ以外の行は \"<assetId>/<面の id>\" の面に layouts.supports で置く (parentId = \"f-<assetId>\")",
         "cases の target: 面は centre・+x・-z・+x+z の 4 つ、床はそれに -x・+z を足した 6 つ (targets の座標を、面または部屋の矩形へ clamp_to_rect で寄せた位置が position)",
         "cases の候補 (id \"cand\") は新しく置いた物として判定する (DoorPolicy::OnlyMoved({cand}))。床の候補は所属する部屋の出入口の前にかかると ok: false。layouts の家具は保存済みの物なので出入口の前を見ない",
         "extra: layout に objects (保存済みの物) を足して candidate (id \"cand\") を置けるか。moved が true なら候補の出入口の前を見る、false なら見ない (動かしていない保存済みの物と同じ扱い)",
+        "壁の家具 (catalog の placement が \"wall\"): 原点は背面の底の中心。背面を壁の内側の面 (±size / 2) に付け、向きは 90° ごと。高さ (position の y) は wall.mount_min から wall.height − reach まで (reach = 家具の高さと、面の anchor の y + art_fit の高さの大きいほう)。物どうしは足元と高さの範囲の両方が重なると置けない (床の家具は 0〜reach、床の作品は 0〜床の枠の高さ)",
     ];
 
     fn placement_cases() -> Value {
@@ -2672,6 +2967,45 @@ mod tests {
             ),
             // 以前の東の出入口の前 (x 3.85〜5.0、z ±1.27)。出入口が無くなったので、新しく置く物でも置ける
             ("former-door-zone", "floor", vec![], boat_on("hub", 4.3, 0.0), true),
+            // 壁の家具: 北の壁に付ける・壁から離す・45°・高すぎる
+            ("wall-shelf-on-wall", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -5.0, 0.0), true),
+            ("wall-shelf-off-wall", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -4.6, 0.0), true),
+            ("wall-shelf-at-45", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -5.0, FRAC_PI_4), true),
+            ("wall-shelf-too-high", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 2.6, -5.0, 0.0), true),
+            ("wall-shelf-past-corner", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 4.5, 1.5, -5.0, 0.0), true),
+            // 東の壁 (−90°) と南の壁 (180°)
+            ("wall-ledge-east", "floor", vec![], on_wall(CANDIDATE_ID, LEDGE, 5.0, 1.2, 2.0, -FRAC_PI_2), true),
+            ("wall-cabinet-south", "floor", vec![], on_wall(CANDIDATE_ID, CABINET, -2.0, 1.3, 5.0, PI), true),
+            // 壁ぎわのサイドボード (高さ 0.891 + 作品の枠 0.62) の上: 1.2 m は重なる、1.52 m なら掛けられる
+            (
+                "wall-ledge-over-console-low",
+                "floor",
+                vec![furniture("c", "home_console", 0.0, -5.0 + WALL_MARGIN + 0.255, 0.0)],
+                on_wall(CANDIDATE_ID, LEDGE, 0.0, 1.2, -5.0, 0.0),
+                true,
+            ),
+            (
+                "wall-ledge-over-console-high",
+                "floor",
+                vec![furniture("c", "home_console", 0.0, -5.0 + WALL_MARGIN + 0.255, 0.0)],
+                on_wall(CANDIDATE_ID, LEDGE, 0.0, 1.52, -5.0, 0.0),
+                true,
+            ),
+            // 壁の家具どうしは上下に離れていれば同じ所に掛けられる
+            (
+                "wall-shelves-stacked",
+                "floor",
+                vec![on_wall("s", SHELF, 0.0, 0.5, -5.0, 0.0)],
+                on_wall(CANDIDATE_ID, SHELF, 0.0, 1.3, -5.0, 0.0),
+                true,
+            ),
+            (
+                "wall-shelves-overlap",
+                "floor",
+                vec![on_wall("s", SHELF, 0.0, 1.0, -5.0, 0.0)],
+                on_wall(CANDIDATE_ID, SHELF, 0.5, 1.2, -5.0, 0.0),
+                true,
+            ),
         ];
         let extra: Vec<Value> = extra_cases
             .into_iter()
@@ -2695,6 +3029,8 @@ mod tests {
                 json!({
                     "id": a.id,
                     "name_ja": a.name_ja,
+                    "placement": a.placement,
+                    "mount_height": a.mount_height,
                     "dimensions_meters": a.dimensions_meters,
                     "layer": a.layer,
                     "support": a.is_support(),
@@ -2720,6 +3056,7 @@ mod tests {
             "tolerance": { "position": POSITION_TOLERANCE, "scale": SCALE_TOLERANCE },
             "floor_art_fit": FLOOR_ART_FIT,
             "wall_margin": WALL_MARGIN,
+            "wall": { "height": WALL_HEIGHT, "mount_min": WALL_MOUNT_MIN },
             "door_zone": { "width": DOOR_ZONE_WIDTH, "depth": DOOR_ZONE_DEPTH },
             "house": house,
             "catalog": { "assets": catalog },
@@ -2733,12 +3070,13 @@ mod tests {
 
     /// 総当たり表のファイルの中身。上の段の項目は決まった順に、cases・extra などは 1 件 1 行で書く (差分を読みやすく)
     fn placement_cases_text(value: &Value) -> String {
-        const KEYS: [&str; 13] = [
+        const KEYS: [&str; 14] = [
             "generated_by",
             "notes",
             "tolerance",
             "floor_art_fit",
             "wall_margin",
+            "wall",
             "door_zone",
             "house",
             "catalog",
@@ -2819,7 +3157,7 @@ mod tests {
         );
     }
 
-    /// 受け入れ条件: アトリエの 13 点すべてが、どの面の中央にも (どの部屋の床の中央にも) 0° でも 90° でも置ける
+    /// 受け入れ条件: アトリエの 33 点すべてが、どの面の中央にも (どの部屋の床の中央にも) 0° でも 90° でも置ける
     #[test]
     fn every_atelier_artwork_fits_every_surface_at_0_and_90_degrees() {
         let cases = placement_cases();
@@ -2832,9 +3170,9 @@ mod tests {
                 checked += 1;
             }
         }
-        // (面 13 (本棚は段 3 つと天板) + 4 部屋の床) × 13 点 × 2 つの向き
+        // (面 16 (本棚は段 3 つと天板、壁の家具 3 つ) + 部屋の床) × 33 点 × 2 つの向き
         let surfaces: usize = CATALOG.assets.iter().map(|a| a.surfaces.len()).sum();
-        assert_eq!(surfaces, 13);
+        assert_eq!(surfaces, 16);
         assert_eq!(checked, (surfaces + ROOM_DEFS.len()) * ATELIER.len() * 2);
     }
 }

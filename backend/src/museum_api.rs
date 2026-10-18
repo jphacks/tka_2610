@@ -211,6 +211,10 @@ pub struct AssetView {
     name_ja: &'static str,
     file_url: String,
     category: &'static str,
+    /// "floor" (床に置く) か "wall" (壁に掛ける。原点が背面の底の中心で、背面を壁に付ける)
+    placement: &'static str,
+    /// 壁の家具を足したときに掛ける高さ (底面の y, m)。床の家具は None
+    mount_height: Option<f64>,
     dimensions_meters: [f64; 3],
     top_anchor: Option<[f64; 3]>,
     layer: Option<&'static str>,
@@ -347,6 +351,8 @@ pub(crate) static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
                 name_ja: &a.name_ja,
                 file_url: format!("{HOME_ASSETS}/modules/{}", a.file_name()),
                 category: &a.category,
+                placement: &a.placement,
+                mount_height: a.mount_height,
                 dimensions_meters: a.dimensions_meters,
                 top_anchor: a.top_anchor,
                 layer: a.layer.as_deref(),
