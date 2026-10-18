@@ -43,6 +43,11 @@ export const HomeEditScene = lazy(() => load().then((m) => ({ default: m.HomeEdi
 // 型だけなので、three.js は読み込まれない
 export type { WalkStatus } from './scenes/WalkScene'
 
+/** 作品の 3D モデル（GLB のファイル）を撮って、写真の代わりの JPEG にする（登録で写真が無いとき。scenes/snapshot.ts） */
+export function snapshotModel(file: File): Promise<File> {
+  return load().then((m) => m.snapshotModel(file))
+}
+
 const idle = (fn: () => void) => {
   if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout: 2000 })
   else setTimeout(fn, 300)

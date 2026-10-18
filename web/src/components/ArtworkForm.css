@@ -75,3 +75,8 @@
     border-radius: 24px;
   }
 }
+
+/* 写真の代わりに 3D モデルを撮った画像を使うときの説明 */
+.photo-note {
+  margin: -6px 4px 0;
+}
