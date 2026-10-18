@@ -44,6 +44,15 @@ export const MuseumIcon = (p: IconProps) => (
   </Svg>
 )
 
+
+export const RainbowIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 17A9 9 0 0 1 21 17" />
+    <path d="M6.5 17A5.5 5.5 0 0 1 17.5 17" />
+    <path d="M10 17A2 2 0 0 1 14 17" />
+  </Svg>
+)
+
 export const UserIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="8.5" r="3.8" />
