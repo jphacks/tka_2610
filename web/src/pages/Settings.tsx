@@ -1,7 +1,7 @@
 // ⑩ 設定（/settings）。タブ。iOS の設定アプリ風。
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useSettings, useUpdateSettings } from '../api'
-import { NavBar, Screen, Sheet, useToast } from '../components'
+import { InviteSheet, NavBar, Screen, Sheet, useToast } from '../components'
 import { BellIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon,  PersonIcon } from '../icons'
 import './Settings.css'
 // 虹のアイコンは TabBar と同じもの
@@ -64,6 +64,7 @@ export default function Settings() {
   const update = useUpdateSettings()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
+  const [inviting, setInviting] = useState(false)   
 
   const owner = settings.data?.owner_name ?? ''
   const birthday = settings.data?.child_birthday ?? null
@@ -89,6 +90,7 @@ export default function Settings() {
       },
     )
   }
+
 
   return (
     <Screen tabbar>
@@ -121,6 +123,7 @@ export default function Settings() {
           <Row icon={<PersonIcon size={18} />} label="プロフィール編集" onClick={() => setEditing(true)} />
           <Row icon={<FamilyIcon size={18} />} label="家族の管理" onClick={soon} />
           <Row icon={<BellIcon size={18} />} label="通知設定" onClick={soon} />
+          <Row icon={<BellIcon size={18} />} label="招待状発行" onClick={() => setInviting(true)} />
         </div>
 
         <div className="list-group">
@@ -165,6 +168,7 @@ export default function Settings() {
           </form>
         )}
       </Sheet>
+      <InviteSheet Open={inviting} onClose={() => setInviting(false)} /> 
     </Screen>
   )
 }
