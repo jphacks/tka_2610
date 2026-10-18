@@ -429,6 +429,7 @@ pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView
                     let parent = layout.furniture(parent_id)?;
                     home::art_fit(home::asset(&parent.asset_id)?.surface(a.surface.as_deref())?)
                 }
+                None if a.on_wall() => home::WALL_ART_FIT,
                 None => home::FLOOR_ART_FIT,
             };
             let size = home::ArtSize::from_model(row.model_width, row.model_height, row.model_depth, &row.model_kind);

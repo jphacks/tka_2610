@@ -362,9 +362,9 @@ pub async fn place_in_age(
         }
         let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
         let sizes = sizes_of(&load_sizes(&mut **tx, &ids).await?);
-        if let Some(spot) = home::pick_spot(&layout, &sizes, size, None, None) {
-            layout.objects.push(home::artwork_on(artwork_id, spot));
-            // 家具の上にだけ置くので、出入口の前は見ない
+        if let Some(object) = home::pick_place(&layout, &sizes, artwork_id, size, None) {
+            layout.objects.push(object);
+            // 家具の上か壁に置くので、出入口の前は見ない
             return Ok(Some(save_layout(tx, room, layout, DoorPolicy::Ignore).await?));
         }
     }
@@ -384,7 +384,7 @@ pub async fn place_in_age_adding_floors(
     }
     // 空のおへやにも入らない作品のために、使われないおへやを作らない
     let empty = without_artworks(&home::default_layout());
-    if home::pick_spot(&empty, &home::Sizes::new(), size, None, None).is_none()
+    if home::pick_place(&empty, &home::Sizes::new(), artwork_id, size, None).is_none()
         || rooms_of_age(&mut **tx, age).await?.len() as i16 >= MAX_FLOORS
     {
         return Ok(None);
@@ -585,11 +585,11 @@ pub fn reconcile_rooms(rooms: &mut [(RoomRow, Layout)], arts: &[ArtState], sizes
     // 先に飾った作品から順に置き直す (arts はその順)
     for art in arts.iter().filter(|a| a.displayed && !placed.contains(&a.id)) {
         let spot = rooms.iter_mut().filter(|(room, _)| room.age == art.age).find_map(|(room, layout)| {
-            home::pick_spot(layout, sizes, sizes.get(&art.id), None, None).map(|spot| (room.id, layout, spot))
+            home::pick_place(layout, sizes, art.id, sizes.get(&art.id), None).map(|object| (room.id, layout, object))
         });
         match spot {
-            Some((room_id, layout, spot)) => {
-                layout.objects.push(home::artwork_on(art.id, spot));
+            Some((room_id, layout, object)) => {
+                layout.objects.push(object);
                 result.changed.insert(room_id);
                 result.relocated += 1;
             }

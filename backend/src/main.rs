@@ -148,6 +148,10 @@ async fn main() {
     // 配置の判定は作品の実寸を使うので、寸法の無い作品を先に測っておく
     // -----------------------------
 
+    // 写真の作品の額縁を、今の額縁 (backend/static/frames) で作り直す (寸法も測り直す)
+    if let Err(error) = artworks::upgrade_frames(&state).await {
+        println!("[Artwork] frames failed: {}", error.message);
+    }
     if let Err(error) = artworks::backfill_model_sizes(&state).await {
         println!("[Artwork] model sizes failed: {}", error.message);
     }

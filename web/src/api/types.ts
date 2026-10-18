@@ -170,7 +170,8 @@ export interface FurnitureObject {
  * 配置 JSON の作品 1 つ。Rust: home.rs の LayoutObject::Artwork
  * parentId があれば、その家具の面（surface。省くと天板）の上に置く。position は親の家具の「回す前」の向きで、
  * 面の中心（catalog の surfaces[].anchor）を原点にした位置（部屋は親の家具の部屋）。
- * parentId が無ければ床に置く（家具と同じく、roomId の部屋の中心を原点にした位置）
+ * parentId が無ければ床に置く（家具と同じく、roomId の部屋の中心を原点にした位置）。
+ * placement が 'wall' なら壁に掛ける（写真の額縁だけ）。position の (x, z) は足元の中心、y は底面の高さ
  */
 export interface ArtworkObject {
   kind: 'artwork'
@@ -181,6 +182,8 @@ export interface ArtworkObject {
   surface?: string
   /** 床に置く作品の部屋。家具の上の作品には付けない（親の家具の部屋になる） */
   roomId?: RoomId
+  /** 壁に掛ける作品は 'wall'（家具の上と床の作品は省く） */
+  placement?: 'wall'
   position: Vec3
   rotationY: number
 }

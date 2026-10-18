@@ -261,8 +261,10 @@ export default function HomeEdit() {
   // 作品の実寸（置ける大きさの判定に使う。分からない作品は置き場所の枠そのものの大きさとして判定する）
   const sizeOf = useMemo(() => sizesFromSlots(data?.slots ?? []), [data?.slots])
   const selected = (selectedId && draft?.objects.find((o) => o.id === selectedId)) || null
-  // 壁の家具を選んでいれば、「回す」の代わりに「上へ」「下へ」を出す
-  const selectedWall = selected?.kind === 'furniture' && isWallAsset(catalog?.assets.find((a) => a.id === selected.assetId))
+  // 壁の家具・壁に掛けた作品を選んでいれば、「回す」の代わりに「上へ」「下へ」を出す
+  const selectedWall =
+    (selected?.kind === 'furniture' && isWallAsset(catalog?.assets.find((a) => a.id === selected.assetId))) ||
+    (selected?.kind === 'artwork' && selected.placement === 'wall')
   const selectedName = !selected
     ? null
     : selected.kind === 'furniture'

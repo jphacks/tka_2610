@@ -7,10 +7,10 @@
 //   家具：catalog の GLB を複製して、`FURN_<object id>` のグループ（userData.objectId）に置く。影を落とし・受ける。
 //   作品：家具の上に載せる作品は、その家具のグループの子にして、載せている面（天板・本棚の段。catalog の surfaces）の中心に置く。
 //         配置 JSON の作品の位置は「親の家具を回す前の向き」で書いてあるので、子にすれば家具と一緒に回る。
-//         床に置く作品は y = 0。グループの名前は `ARTWORK_<object id>`、userData.artworkId を付ける
+//         床に置く作品は y = 0、壁に掛けた作品（placement 'wall'）は y = 底面の高さ。グループの名前は `ARTWORK_<object id>`、userData.artworkId を付ける
 //         （歩く画面の ArtworkPicker と、おうちの中で作品をクリックしたときに、どの作品かを見分ける）。
 //         モデルの URL・種類・実寸は、Rust が計算した slots（object id で対応する）から取る。
-//         大きさは、実寸（artwork.model_size）を置き場所の枠（面の art_fit、床なら FLOOR_ART_FIT）に作品の向きで収めた
+//         大きさは、実寸（artwork.model_size）を置き場所の枠（面の art_fit、床なら FLOOR_ART_FIT、壁なら WALL_ART_FIT）に作品の向きで収めた
 //         拡縮率（placement.ts の displayScale。Rust の display_scale と同じ式で、slots の scale と一致する）。
 //         下書きの配置で計算するので、模様替えで回した・載せ換えた作品も保存を待たずにその大きさになる。
 //         実寸が分からない作品は、今までどおり枠 fit に収める（FittedModel の対角線の規則）。
@@ -38,7 +38,7 @@ import * as THREE from 'three'
 import type { ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, MemoryCounts, RoomId, SlotView, Vec3 } from '../../../api'
 import { GalleryIcon, NoteIcon, VideoIcon } from '../../../icons'
 import { FittedModel } from '../models'
-import { FLOOR_ART_FIT, HUB, displayScale, roomOrigin, surfaceOf } from './placement'
+import { FLOOR_ART_FIT, HUB, WALL_ART_FIT, artSizeOf, displayScale, roomOrigin, surfaceOf } from './placement'
 import './HomeObjects.css'
 
 /** 作品を置く数の既定値。スマホなど（指で操作する端末）は 6、それ以外は全部 */
@@ -232,7 +232,7 @@ export function HomeObjects({
     layout.objects
       .map(
         (o) =>
-          `${o.id}:${o.roomId ?? ''}:${o.kind === 'artwork' ? `${o.parentId ?? ''}/${o.surface ?? ''}` : o.assetId}:${o.position[0]},${o.position[2]},${o.rotationY}`,
+          `${o.id}:${o.roomId ?? ''}:${o.kind === 'artwork' ? `${o.parentId ?? ''}/${o.surface ?? ''}/${o.placement ?? ''}` : o.assetId}:${o.position.join(',')},${o.rotationY}`,
       )
       .join('|') + `#${house?.rooms.map((r) => `${r.id}@${r.origin[0]},${r.origin[1]}`).join(',') ?? ''}`
   useEffect(() => {
@@ -292,7 +292,7 @@ export function HomeObjects({
   // 置いた後の大きさ（実寸が分からない作品は undefined で、FittedModel が枠 fit に収める）。fit は置き場所の枠
   const scaleOf = ({ slot }: Placed, fit: Vec3, rotationY: number) => {
     const size = slot.artwork.model_size
-    return size ? displayScale({ size, custom: slot.artwork.model_kind === 'custom' }, fit, rotationY) : undefined
+    return size ? displayScale(artSizeOf(size, slot.artwork.model_kind), fit, rotationY) : undefined
   }
 
   const artwork = ({ object, slot }: Placed, position: Vec3, rotationY: number, fit: Vec3, scale: number | undefined) => (
@@ -362,10 +362,16 @@ export function HomeObjects({
     )
   }
 
-  // 床の作品（下書きで床へ移した作品も）は、部屋のグループの中に部屋の中の位置で置き、床置きの枠に収める
+  // 床の作品（下書きで床へ移した作品も）は、部屋のグループの中に部屋の中の位置で置き、床置きの枠に収める。
+  // 壁に掛けた作品は、底面の高さ（ドラッグ中は仮の高さ）に置き、壁の枠に収める
   const renderFloorArtwork = (p: Placed) => {
-    const lift = preview(p.object.id)?.position[1] ?? 0
+    const moving = preview(p.object.id)
     const at = p.object
+    if (at.placement === 'wall') {
+      const y = moving ? moving.position[1] : at.position[1]
+      return artwork(p, [at.position[0], y, at.position[2]], at.rotationY, WALL_ART_FIT, scaleOf(p, WALL_ART_FIT, at.rotationY))
+    }
+    const lift = moving?.position[1] ?? 0
     return artwork(p, [at.position[0], lift, at.position[2]], at.rotationY, FLOOR_ART_FIT, scaleOf(p, FLOOR_ART_FIT, at.rotationY))
   }
 

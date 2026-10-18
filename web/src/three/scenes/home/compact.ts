@@ -5,7 +5,7 @@
 //
 // 寄せ方：
 //   床の物（家具・床の作品）… 位置を s 倍し、縮めた部屋の壁から 12 cm の内側に収まるよう寄せる（壁ぎわの物は壁ぎわのまま）
-//   壁の家具 … 付いている壁を縮めた壁に移し、壁に沿った位置は s 倍して壁からはみ出さないよう寄せる。高さはそのまま
+//   壁の家具・壁に掛けた作品 … 付いている壁を縮めた壁に移し、壁に沿った位置は s 倍して壁からはみ出さないよう寄せる。高さはそのまま
 //   家具の上の作品 … 家具から見た位置なので、そのまま（家具と一緒に動く）
 // どの s にするかは compactScale：小さい方から試して、寄せた配置が置き方の決まり（validateLayout。重なり・壁・壁の家具）に
 // 通る、いちばん小さい s。全部の階を同じ s にする（階ごとに建物の大きさが変わらないように）。
@@ -22,6 +22,7 @@ import {
   furnitureRect,
   isWallAsset,
   validateLayout,
+  wallArtSize,
   wallSideOf,
   type Rect,
   type SizeOf,
@@ -40,6 +41,10 @@ function extentOf(catalog: HomeCatalog, object: LayoutObject, sizeOf?: SizeOf): 
     return asset ? furnitureRect(asset, { position: [0, 0, 0], rotationY: object.rotationY }) : null
   }
   if (object.parentId) return null
+  if (object.placement === 'wall') {
+    const [w, , d] = wallArtSize(object, sizeOf)
+    return footprint(0, 0, w, d, object.rotationY)
+  }
   const [w, d] = artExtent(object.artworkId, FLOOR_ART_FIT, object.rotationY, sizeOf)
   return footprint(0, 0, w, d, object.rotationY)
 }
@@ -72,6 +77,22 @@ export function compactLayout(layout: Layout, catalog: HomeCatalog, s: number, s
           return { ...object, position: [hw, y, along(z, -hd, hd, e.minZ, e.maxZ)] }
         default:
           return object
+      }
+    }
+    if (object.kind === 'artwork' && object.placement === 'wall') {
+      // 壁に掛けた作品：向き（90° ごと）の壁を縮めた壁に移す。足元の中心は壁から奥行きの半分だけ内側
+      const along = (v: number, lo: number, hi: number, min: number, max: number) => clamp(v * s, lo - min, hi - max)
+      const quarter = ((Math.round(object.rotationY / (Math.PI / 2)) % 4) + 4) % 4
+      const depth = quarter % 2 === 0 ? e.maxZ - e.minZ : e.maxX - e.minX
+      switch (quarter) {
+        case 0:
+          return { ...object, position: [along(x, -hw, hw, e.minX, e.maxX), y, -hd + depth / 2] }
+        case 2:
+          return { ...object, position: [along(x, -hw, hw, e.minX, e.maxX), y, hd - depth / 2] }
+        case 1:
+          return { ...object, position: [-hw + depth / 2, y, along(z, -hd, hd, e.minZ, e.maxZ)] }
+        default:
+          return { ...object, position: [hw - depth / 2, y, along(z, -hd, hd, e.minZ, e.maxZ)] }
       }
     }
     // 床の物：s 倍して、縮めた部屋の壁から 12 cm の内側へ

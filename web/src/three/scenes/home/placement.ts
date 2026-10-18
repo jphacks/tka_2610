@@ -46,6 +46,8 @@ const TOLERANCE = 0.002
 export const TOP_SURFACE = 'top'
 /** 床に置く作品の枠（幅・高さ・奥行き）。家具と同じく 0.8 × 0.8 の場所を取る。Rust: FLOOR_ART_FIT */
 export const FLOOR_ART_FIT: Vec3 = [0.8, 1.0, 0.8]
+/** 壁に掛ける作品（写真の額縁）の枠。幅と奥行きを同じにして、どの壁に掛けても同じ大きさにする。Rust: WALL_ART_FIT */
+export const WALL_ART_FIT: Vec3 = [0.9, 0.9, 0.9]
 /** 壁の判定の許容。壁ぎりぎりに寄せた位置が丸めの違いではみ出し扱いにならないよう、重なりと同じ 2 mm（Rust の check_placement と同じ） */
 const EPSILON = TOLERANCE
 /** 自動で置く場所を探すときの間隔（m） */
@@ -226,6 +228,29 @@ export function furnitureRect(asset: CatalogAsset, object: { position: Vec3; rot
   return footprint(x, z, w, d, object.rotationY)
 }
 
+/** 壁に掛けた作品か（配置 JSON の placement が 'wall'） */
+export const isWallArt = (object: LayoutObject | undefined): boolean => object?.kind === 'artwork' && object.placement === 'wall'
+
+/**
+ * 壁に掛けた作品の背面が付いている壁。向きが 90° ごとで、足元（rect）の背面の側が壁の内側の面にあるときだけ返す。
+ * 向きは壁の家具と同じ（0 で北の壁、π で南、π/2 で西、−π/2 で東）。Rust: art_wall_side（wall-frame-* の extra）
+ */
+export function artWallSide(layout: Layout, roomId: RoomId, rotationY: number, rect: Rect): WallSide | null {
+  const quarter = Math.round(rotationY / (Math.PI / 2))
+  if (Math.abs(rotationY - quarter * (Math.PI / 2)) > ANGLE_EPSILON) return null
+  const inner = roomInnerRect(layout, roomId)
+  const k = ((quarter % 4) + 4) % 4
+  const [side, gap]: [WallSide, number] =
+    k === 0
+      ? ['north', rect.minZ - inner.minZ]
+      : k === 2
+        ? ['south', rect.maxZ - inner.maxZ]
+        : k === 1
+          ? ['west', rect.minX - inner.minX]
+          : ['east', rect.maxX - inner.maxX]
+  return Math.abs(gap) <= TOLERANCE ? side : null
+}
+
 /** 壁ごとの、背面を付けたときの向き（rotationY）。正面が部屋の中を向く */
 const WALL_ROTATION: Record<WallSide, number> = { north: 0, south: Math.PI, west: Math.PI / 2, east: -Math.PI / 2 }
 
@@ -272,21 +297,33 @@ export function wrapAngle(angle: number) {
 // 作品の大きさ（実寸と置いた後の寸法）
 // =============================
 
-/** 作品のモデルの実寸（幅・高さ・奥行き, m）と、実寸で作った GLB（model_kind が custom）か。Rust: ArtSize */
+/** 作品のモデルの実寸（幅・高さ・奥行き, m）と、実寸で作った GLB（model_kind が custom）か、写真の額縁（frame。壁に掛けられる）か。Rust: ArtSize */
 export interface ArtSize {
   size: Vec3
   custom: boolean
+  frame: boolean
 }
 
 /** 作品（artworkId）の実寸を返す関数。分からなければ null（枠そのものを足元にする）。Rust: Sizes */
 export type SizeOf = (artworkId: string) => ArtSize | null | undefined
+
+/** 作品の実寸と種類（model_kind）から ArtSize を作る。Rust: ArtSize::from_model */
+export function artSizeOf(size: Vec3, modelKind: string): ArtSize {
+  return { size, custom: modelKind === 'custom', frame: modelKind === 'frame' }
+}
+
+/** 壁に掛けた作品の、置いた後の寸法（WALL_ART_FIT に収めたもの）。寸法が分からなければ枠そのもの */
+export function wallArtSize(object: ArtworkObject, sizeOf?: SizeOf): Vec3 {
+  const art = sizeOf?.(object.artworkId)
+  return art ? placedSize(art, WALL_ART_FIT, object.rotationY) : WALL_ART_FIT
+}
 
 /** 飾っている作品の実寸（slots の artwork.model_size）。作品の id（slot.artwork.id = 配置 JSON の artworkId）で引く */
 export function sizesFromSlots(slots: SlotView[]): SizeOf {
   const sizes = new Map<string, ArtSize>()
   for (const slot of slots) {
     const size = slot.artwork?.model_size
-    if (size) sizes.set(slot.artwork.id, { size, custom: slot.artwork.model_kind === 'custom' })
+    if (size) sizes.set(slot.artwork.id, artSizeOf(size, slot.artwork.model_kind))
   }
   return (artworkId) => sizes.get(artworkId) ?? null
 }
@@ -430,13 +467,14 @@ export function namesFromSlots(slots: SlotView[]): NameOf {
 
 /**
  * 部屋の中で場所を取る物の足元（外接長方形）と高さの範囲。天板の上の作品は場所を取らないので null、無い家具は undefined。
- * 高さの範囲は、床の家具が 0〜reach、壁の家具が底面〜底面 + reach、床置きの作品が 0〜床の枠の高さ（Rust: check_placement の Placed）
+ * 高さの範囲は、床の家具が 0〜reach、壁の家具が底面〜底面 + reach、床置きの作品が 0〜床の枠の高さ、
+ * 壁に掛けた作品が底面〜底面 + 置いた高さ（Rust: check_placement の Placed）
  */
 function floorFootprint(
   catalog: HomeCatalog,
   object: LayoutObject,
   sizeOf?: SizeOf,
-): { rect: Rect; span: [number, number]; decor: boolean; wall: CatalogAsset | null } | null | undefined {
+): { rect: Rect; span: [number, number]; decor: boolean; wall: CatalogAsset | null; wallArt: number | null } | null | undefined {
   if (object.kind === 'furniture') {
     const asset = assetOf(catalog, object.assetId)
     if (!asset) return undefined
@@ -448,12 +486,19 @@ function floorFootprint(
       // ラグ（floor_decor）はほかの物と重ねてよい
       decor: asset.layer === 'floor_decor',
       wall: wall ? asset : null,
+      wallArt: null,
     }
   }
   if (object.parentId) return null
+  if (object.placement === 'wall') {
+    // 壁に掛けた作品は、壁の枠に収めた後の寸法で、底面から上端までの高さを取る（Rust: check_placement の Mount::WallArt）
+    const height = wallArtSize(object, sizeOf)[1]
+    const base = object.position[1]
+    return { rect: artRect(object, WALL_ART_FIT, sizeOf), span: [base, base + height], decor: false, wall: null, wallArt: height }
+  }
   // 床置きの作品は、床置きの枠（0.8 × 0.8）に収めた後の寸法の家具として扱う。実寸が分からなければ枠そのもの
   // （Rust: check_placement の床置き。rejects_furniture_overlap の最後のケース）
-  return { rect: artRect(object, FLOOR_ART_FIT, sizeOf), span: [0, FLOOR_ART_FIT[1]], decor: false, wall: null }
+  return { rect: artRect(object, FLOOR_ART_FIT, sizeOf), span: [0, FLOOR_ART_FIT[1]], decor: false, wall: null, wallArt: null }
 }
 
 /**
@@ -486,7 +531,24 @@ export function canPlace(layout: Layout, catalog: HomeCatalog, candidate: Layout
   // 使えない部屋（古い v2 の配置の、リビング以外）には置けない（Rust: parse_layout の roomId の検証。rejects_resized_rooms_and_unknown_room_ids）
   if (!room || !room.enabled) return fail(`${name(candidate)} は「${roomName(house, roomId) ?? roomId}」に置けません`)
   const where = roomName(house, roomId)
-  if (placed.wall && candidate.kind === 'furniture') {
+  if (placed.wallArt !== null && candidate.kind === 'artwork') {
+    // 壁に掛けた作品：写真の額縁だけ。背面を壁に付け（90° ごとの向き）、壁の内側からはみ出さず、
+    // 底面は WALL_MOUNT_MIN から、上端が壁の高さまで（Rust: check_placement の Mount::WallArt。wall-frame-* の extra）
+    if (!sizeOf?.(candidate.artworkId)?.frame) {
+      return fail(`${name(candidate)} は壁に掛けられません (壁に掛けられるのは写真の額縁だけです)`)
+    }
+    if (!artWallSide(layout, roomId, candidate.rotationY, placed.rect)) {
+      return fail(`${name(candidate)} は${where ? ` ${where} の` : ''}壁に背中を付けて掛けてください`)
+    }
+    if (!insideRoom(placed.rect, roomInnerRect(layout, roomId))) {
+      return fail(`${name(candidate)} が${where ? ` ${where} の` : ''}壁からはみ出しています`)
+    }
+    const [lo, hi] = [WALL_MOUNT_MIN, WALL_HEIGHT - placed.wallArt]
+    const y = candidate.position[1]
+    if (y < lo - TOLERANCE || y > hi + TOLERANCE) {
+      return fail(`${name(candidate)} の高さは ${lo.toFixed(2)}〜${hi.toFixed(2)} m にしてください`)
+    }
+  } else if (placed.wall && candidate.kind === 'furniture') {
     // 壁の家具：背面を壁に付け（90° ごとの向き）、壁の内側からはみ出さず、決まった高さの範囲に掛ける
     // （Rust: wall_furniture_hangs_on_a_wall、wall_furniture_height_range）
     if (!wallSideOf(layout, roomId, candidate)) {
@@ -599,7 +661,8 @@ export function worldOf(
 ): { position: Vec3; rotationY: number } | null {
   if (object.kind === 'furniture' || !object.parentId) {
     const [ox, oz] = roomOrigin(house, object.roomId ?? HUB)
-    const y = object.kind === 'furniture' ? object.position[1] : 0
+    // 壁の家具と壁に掛けた作品は底面の高さ、床の物は 0
+    const y = object.kind === 'furniture' || isWallArt(object) ? object.position[1] : 0
     return { position: [ox + object.position[0], y, oz + object.position[2]], rotationY: object.rotationY }
   }
   const parent = furnitureById(layout, object.parentId)
@@ -683,6 +746,43 @@ export function snapToWall(layout: Layout, asset: CatalogAsset, roomId: RoomId, 
       return { position: [inner.minX, y, along(z, inner.minZ, inner.maxZ)], rotationY }
     case 'east':
       return { position: [inner.maxX, y, along(z, inner.minZ, inner.maxZ)], rotationY }
+  }
+}
+
+/**
+ * 壁に掛ける作品（幅 w・高さ h・奥行き d）を、部屋の中の点 (x, z) にいちばん近い壁に掛ける（背面を壁の内側の面に、正面を部屋の中へ）。
+ * 位置は足元の中心なので、壁から奥行きの半分だけ部屋の中。壁に沿った位置は壁の内側からはみ出さない範囲に、
+ * 高さ y は WALL_MOUNT_MIN から上端が壁の高さまでの範囲に寄せる。模様替えのドラッグで使う（サーバーは寄せずに判定だけする）
+ */
+export function snapArtToWall(
+  layout: Layout,
+  roomId: RoomId,
+  [w, h, d]: Vec3,
+  x: number,
+  z: number,
+  y: number,
+): { position: Vec3; rotationY: number } {
+  const inner = roomInnerRect(layout, roomId)
+  const half = w / 2
+  const along = (v: number, lo: number, hi: number) => (lo + half > hi - half ? (lo + hi) / 2 : Math.min(Math.max(v, lo + half), hi - half))
+  const height = Math.min(Math.max(y, WALL_MOUNT_MIN), Math.max(WALL_MOUNT_MIN, WALL_HEIGHT - h))
+  const distances: [WallSide, number][] = [
+    ['north', z - inner.minZ],
+    ['south', inner.maxZ - z],
+    ['west', x - inner.minX],
+    ['east', inner.maxX - x],
+  ]
+  const [side] = distances.reduce((best, dist) => (dist[1] < best[1] ? dist : best))
+  const rotationY = WALL_ROTATION[side]
+  switch (side) {
+    case 'north':
+      return { position: [along(x, inner.minX, inner.maxX), height, inner.minZ + d / 2], rotationY }
+    case 'south':
+      return { position: [along(x, inner.minX, inner.maxX), height, inner.maxZ - d / 2], rotationY }
+    case 'west':
+      return { position: [inner.minX + d / 2, height, along(z, inner.minZ, inner.maxZ)], rotationY }
+    case 'east':
+      return { position: [inner.maxX - d / 2, height, along(z, inner.minZ, inner.maxZ)], rotationY }
   }
 }
 
@@ -787,6 +887,11 @@ export function clampObject(layout: Layout, catalog: HomeCatalog, object: Layout
     const [w, , d] = asset.dimensions_meters
     return at(...clampToRect(roomRect(layout, object.roomId), w, d, object.rotationY, x0, z0))
   }
+  // 壁に掛けた作品は、いちばん近い壁に掛け直す（高さはそのまま）
+  if (object.placement === 'wall') {
+    const size = wallArtSize(object, sizeOf)
+    return { ...object, ...snapArtToWall(layout, object.roomId ?? HUB, size, x0, z0, object.position[1]) }
+  }
   if (!object.parentId) {
     const [w, d] = artExtent(object.artworkId, FLOOR_ART_FIT, object.rotationY, sizeOf)
     return at(...clampToRect(roomRect(layout, object.roomId ?? HUB), w, d, object.rotationY, x0, z0))
@@ -810,26 +915,31 @@ export function rotateObject(layout: Layout, catalog: HomeCatalog, id: string, d
   if (object.kind === 'furniture' && isWallAsset(assetOf(catalog, object.assetId))) {
     return { ok: false, reason: '壁の家具は回せません。ほかの壁へはドラッグで動かせます' }
   }
+  if (isWallArt(object)) return { ok: false, reason: '壁に掛けた作品は回せません。ほかの壁へはドラッグで動かせます' }
   const rotated = clampObject(layout, catalog, { ...object, rotationY: wrapAngle(object.rotationY + delta) }, ctx.sizeOf)
   const check = canPlace(layout, catalog, rotated, ctx)
   return check.ok ? { ok: true, layout: replaceObject(layout, rotated) } : check
 }
 
-/** 壁の家具を上げ下げするときの 1 回の幅（m） */
+/** 壁の家具・壁に掛けた作品を上げ下げするときの 1 回の幅（m） */
 export const MOUNT_STEP = 0.1
 
 /**
- * 壁の家具を delta（m）だけ上げ下げする。掛けられる高さの範囲（mountRange）に寄せ、1 cm に丸めてから、
- * ほかの物と重ならないかを調べる。壁の家具でなければ、範囲の端でもう動かないときは、その理由を返す
+ * 壁の家具・壁に掛けた作品を delta（m）だけ上げ下げする。掛けられる高さの範囲（壁の家具は mountRange、
+ * 作品は WALL_MOUNT_MIN から上端が壁の高さまで）に寄せ、1 cm に丸めてから、ほかの物と重ならないかを調べる。
+ * 壁の物でなければ、範囲の端でもう動かないときは、その理由を返す
  */
 export function raiseObject(layout: Layout, catalog: HomeCatalog, id: string, delta: number, ctx: PlaceContext = {}): EditResult {
   const object = layout.objects.find((o) => o.id === id)
   const asset = object?.kind === 'furniture' ? assetOf(catalog, object.assetId) : undefined
-  if (!object || object.kind !== 'furniture' || !asset || !isWallAsset(asset)) return { ok: false, reason: '上げ下げできるのは壁の家具だけです' }
-  const [lo, hi] = mountRange(asset)
+  let range: [number, number] | null = null
+  if (object?.kind === 'furniture' && asset && isWallAsset(asset)) range = mountRange(asset)
+  else if (object?.kind === 'artwork' && object.placement === 'wall') range = [WALL_MOUNT_MIN, WALL_HEIGHT - wallArtSize(object, ctx.sizeOf)[1]]
+  if (!object || !range) return { ok: false, reason: '上げ下げできるのは壁に掛けた物だけです' }
+  const [lo, hi] = range
   const y = Math.round(Math.min(Math.max(object.position[1] + delta, lo), hi) * 100) / 100
   if (Math.abs(y - object.position[1]) < 1e-9) return { ok: false, reason: delta > 0 ? 'これより上には掛けられません' : 'これより下には掛けられません' }
-  const raised: FurnitureObject = { ...object, position: [object.position[0], y, object.position[2]] }
+  const raised: LayoutObject = { ...object, position: [object.position[0], y, object.position[2]] }
   const check = canPlace(layout, catalog, raised, ctx)
   return check.ok ? { ok: true, layout: replaceObject(layout, raised) } : check
 }

@@ -178,6 +178,16 @@ const ART_FIT_MIN_SIDE: f64 = 0.5;
 const SHELF_HEADROOM: f64 = 0.04;
 /// 床に置く作品の枠。家具と同じく 0.8 × 0.8 の場所を取る
 pub const FLOOR_ART_FIT: [f64; 3] = [0.8, 1.0, 0.8];
+/// 壁に掛ける作品 (写真の額縁) の枠。幅と奥行きを同じにして、どの壁に掛けても (90° ごとのどの向きでも) 同じ大きさにする
+pub const WALL_ART_FIT: [f64; 3] = [0.9, 0.9, 0.9];
+/// 作品の placement の値 (壁に掛ける)。catalog.json の家具の placement と同じ言葉
+pub const WALL_PLACEMENT: &str = "wall";
+/// 壁に作品を自動で掛けるときの、作品の中心の高さ (m)。1 段目の壁が埋まったら 2 段目
+const WALL_ART_CENTERS: [f64; 2] = [1.6, 2.75];
+/// 壁に作品を自動で掛けるときの、作品どうしの間と、壁の角から空ける距離 (m)
+const WALL_ART_GAP: f64 = 0.3;
+/// 壁に作品を自動で掛けるときに、前をふさぐ家具が無いかを見る、壁から部屋の中への奥行き (m)
+const WALL_ART_VIEW: f64 = 0.8;
 /// 家具の天板の面の id。作品の surface を省いたときはこの面
 pub const TOP_SURFACE: &str = "top";
 
@@ -265,6 +275,10 @@ pub struct ArtworkObject {
     /// 親の家具のどの面に載せるか (本棚の段など)。天板 ("top") のときは省く
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub surface: Option<String>,
+    /// 壁に掛ける作品は "wall" (写真の額縁だけ。家具には載せない)。
+    /// position の (x, z) は足元の中心、y は作品の底面の高さで、背面を壁の内側の面に付ける。家具の上と床の作品は省く
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placement: Option<String>,
     pub position: [f64; 3],
     pub rotation_y: f64,
 }
@@ -273,6 +287,11 @@ impl ArtworkObject {
     /// 載せている面の id (省いていれば天板)
     pub fn surface_id(&self) -> &str {
         self.surface.as_deref().unwrap_or(TOP_SURFACE)
+    }
+
+    /// 壁に掛けている作品か
+    pub fn on_wall(&self) -> bool {
+        self.placement.as_deref() == Some(WALL_PLACEMENT)
     }
 }
 
@@ -362,6 +381,7 @@ fn same_place(a: &LayoutObject, b: &LayoutObject) -> bool {
                 && x.parent_id == y.parent_id
                 && x.room_id == y.room_id
                 && x.surface == y.surface
+                && x.placement == y.placement
                 && same_pose(x.position, x.rotation_y, y.position, y.rotation_y)
         }
         _ => false,
@@ -385,6 +405,7 @@ pub fn artwork_on(artwork_id: Uuid, spot: Spot) -> LayoutObject {
         parent_id: Some(spot.parent_id),
         room_id: None,
         surface: spot.surface,
+        placement: None,
         position: spot.position,
         rotation_y: 0.0,
     })
@@ -561,6 +582,8 @@ pub struct ArtSize {
     pub size: [f64; 3],
     /// 実寸の GLB (model_kind = "custom")。枠より小さくても拡大しない
     pub custom: bool,
+    /// 写真の額縁 (model_kind = "frame")。壁に掛けられるのはこれだけ
+    pub frame: bool,
 }
 
 impl ArtSize {
@@ -569,7 +592,7 @@ impl ArtSize {
         let size = [width?, height?, depth?];
         size.iter()
             .all(|v| v.is_finite() && *v > 0.0)
-            .then_some(ArtSize { size, custom: model_kind == "custom" })
+            .then_some(ArtSize { size, custom: model_kind == "custom", frame: model_kind == "frame" })
     }
 }
 
@@ -715,6 +738,23 @@ pub fn wall_side(f: &Furniture, def: &RoomDef) -> Option<Side> {
         2 => (Side::South, z - hd),
         1 => (Side::West, x + hw),
         _ => (Side::East, x - hw),
+    };
+    (gap.abs() <= TOLERANCE).then_some(side)
+}
+
+/// 壁に掛けた作品の背面が付いている壁。向きが 90° ごとで、足元 (rect) の背面の側が壁の内側の面にあるときだけ Some。
+/// rotation_y 0 は正面 +Z で北の壁、π は南の壁、π/2 は正面 +X で西の壁、−π/2 は東の壁 (壁の家具の wall_side と同じ向き)
+pub fn art_wall_side(rotation_y: f64, rect: &Rect, def: &RoomDef) -> Option<Side> {
+    let quarter = (rotation_y / FRAC_PI_2).round();
+    if (rotation_y - quarter * FRAC_PI_2).abs() > ANGLE_EPSILON {
+        return None;
+    }
+    let inner = room_inner_rect(def);
+    let (side, gap) = match (quarter as i64).rem_euclid(4) {
+        0 => (Side::North, rect.min_z - inner.min_z),
+        2 => (Side::South, rect.max_z - inner.max_z),
+        1 => (Side::West, rect.min_x - inner.min_x),
+        _ => (Side::East, rect.max_x - inner.max_x),
     };
     (gap.abs() <= TOLERANCE).then_some(side)
 }
@@ -1041,8 +1081,16 @@ fn parse_object(value: &Value, v1: bool) -> Result<LayoutObject, String> {
                 Some(_) => None,
                 None => Some(parse_room_id(o, Some(HUB_ID))?.to_string()),
             };
-            // 作品の高さは、載せている面か床で決まる
-            position[1] = 0.0;
+            // 壁に掛けるのは、家具に載せていない作品だけ
+            let placement = match (o.get("placement"), &parent_id) {
+                (None | Some(Value::Null), _) => None,
+                (Some(Value::String(p)), None) if p == WALL_PLACEMENT => Some(p.clone()),
+                _ => return Err(format!("作品の placement は、壁に掛けるときだけ \"{WALL_PLACEMENT}\" にしてください")),
+            };
+            // 作品の高さは、載せている面か床で決まる。壁に掛ける作品だけ y が底面の高さ
+            if placement.is_none() {
+                position[1] = 0.0;
+            }
             // 天板 ("top") は省いた形にそろえる。床に置く作品には面が無い
             let surface = match (o.get("surface"), &parent_id) {
                 (None | Some(Value::Null), _) => None,
@@ -1056,6 +1104,7 @@ fn parse_object(value: &Value, v1: bool) -> Result<LayoutObject, String> {
                 parent_id,
                 room_id,
                 surface,
+                placement,
                 position,
                 rotation_y,
             }))
@@ -1109,14 +1158,16 @@ impl DoorPolicy<'_> {
     }
 }
 
-/// 位置の検証。床の物 (家具と床置きの作品) と壁の家具は、所属する部屋のローカル座標で次を見る:
+/// 位置の検証。床の物 (家具と床置きの作品)・壁の家具・壁に掛けた作品は、所属する部屋のローカル座標で次を見る:
 /// 1. 床の物は、部屋の壁から 12 cm 空ける (room_rect。2 mm まで許す)。
 ///    壁の家具は、90° ごとの向きで背面を壁の内側の面に付け (wall_side)、壁の内側からはみ出さず (room_inner_rect)、
-///    高さ (底面の y) は WALL_MOUNT_MIN から、上に飾る作品の枠まで壁の高さに収まるところまで (mount_range)
+///    高さ (底面の y) は WALL_MOUNT_MIN から、上に飾る作品の枠まで壁の高さに収まるところまで (mount_range)。
+///    壁に掛けた作品は写真の額縁だけ (sizes の frame)。大きさは WALL_ART_FIT に収めたもので、壁の家具と同じく
+///    背面を壁に付け (art_wall_side)、壁の内側からはみ出さず、底面の y は WALL_MOUNT_MIN から、作品の上端が壁の高さまで
 /// 2. doors が見る物は、その部屋の出入口の前 (door_zone) にかからない (2 mm まで許す)。ラグもここは見る
 /// 3. 同じ部屋の物どうしが、足元 (真上から見た外接長方形) と高さの範囲の両方で重ならない
 ///    (ラグはほかと重なってよい。別の部屋の物とは比べない)。高さの範囲は、床の家具が 0 から reach (家具の高さか、
-///    面に飾る作品の枠の上)、壁の家具が底面から reach、床置きの作品が 0 から床の枠の高さ。
+///    面に飾る作品の枠の上)、壁の家具が底面から reach、床置きの作品が 0 から床の枠の高さ、壁に掛けた作品が底面から上端。
 ///    床の物どうしはどれも 0 から始まるので、足元が重なれば重なる (壁の家具を足す前と同じ)
 ///
 /// 家具の上の作品は、載せている面からはみ出さず、同じ面の作品と重ならない (部屋や出入口は見ない)。
@@ -1135,7 +1186,13 @@ pub fn check_placement(layout: &Layout, sizes: &Sizes, doors: DoorPolicy) -> Res
         }
     }
 
-    // 部屋の中で場所を取る物 (家具・床置きの作品): 物・部屋・部屋の中の足元・高さの範囲・ラグか・壁の家具なら家具と種類。
+    // どこに付いているか: 床・壁の家具 (家具と種類)・壁に掛けた作品 (作品と、置いた後の高さ)
+    enum Mount<'a> {
+        Floor,
+        WallFurniture(&'a Furniture, &'static Asset),
+        WallArt(&'a ArtworkObject, f64),
+    }
+    // 部屋の中で場所を取る物 (家具・床置きの作品・壁に掛けた作品): 物・部屋・部屋の中の足元・高さの範囲・ラグか・どこに付いているか。
     // ラグ (floor_decor) はほかと重なってよい
     struct Placed<'a> {
         obj: &'a LayoutObject,
@@ -1143,28 +1200,49 @@ pub fn check_placement(layout: &Layout, sizes: &Sizes, doors: DoorPolicy) -> Res
         rect: Rect,
         span: (f64, f64),
         decor: bool,
-        wall: Option<(&'a Furniture, &'static Asset)>,
+        mount: Mount<'a>,
     }
     let mut placed: Vec<Placed> = Vec::new();
     for obj in &layout.objects {
-        let (rect, span, decor, wall) = match obj {
+        let (rect, span, decor, mount) = match obj {
             LayoutObject::Furniture(f) => {
                 let a = asset(&f.asset_id).ok_or_else(|| format!("家具「{}」はありません", f.asset_id))?;
                 let base = if a.is_wall() { f.position[1] } else { 0.0 };
-                (furniture_rect(f, a), (base, base + a.reach()), a.is_floor_decor(), a.is_wall().then_some((f, a)))
+                let mount = if a.is_wall() { Mount::WallFurniture(f, a) } else { Mount::Floor };
+                (furniture_rect(f, a), (base, base + a.reach()), a.is_floor_decor(), mount)
+            }
+            LayoutObject::Artwork(a) if a.on_wall() => {
+                let Some(size) = sizes.get(&a.artwork_id).filter(|s| s.frame) else {
+                    return Err(format!("{} は壁に掛けられません (壁に掛けられるのは写真の額縁だけです)", label(obj)));
+                };
+                let height = placed_size(size, WALL_ART_FIT, a.rotation_y)[1];
+                let base = a.position[1];
+                (art_rect(a, WALL_ART_FIT, sizes), (base, base + height), false, Mount::WallArt(a, height))
             }
             LayoutObject::Artwork(a) if a.parent_id.is_none() => {
-                (art_rect(a, FLOOR_ART_FIT, sizes), (0.0, FLOOR_ART_FIT[1]), false, None)
+                (art_rect(a, FLOOR_ART_FIT, sizes), (0.0, FLOOR_ART_FIT[1]), false, Mount::Floor)
             }
             LayoutObject::Artwork(_) => continue,
         };
         let room = layout.room_of(obj).ok_or_else(|| format!("{} の部屋がありません", label(obj)))?;
-        placed.push(Placed { obj, room, rect, span, decor, wall });
+        placed.push(Placed { obj, room, rect, span, decor, mount });
     }
     for (i, p) in placed.iter().enumerate() {
         let (obj, room, rect) = (p.obj, p.room, &p.rect);
-        match p.wall {
-            Some((f, a)) => {
+        match p.mount {
+            Mount::WallArt(a, height) => {
+                if art_wall_side(a.rotation_y, rect, room).is_none() {
+                    return Err(format!("{} は {} の壁に背中を付けて掛けてください", label(obj), room.name));
+                }
+                if !rect_inside(rect, &room_inner_rect(room)) {
+                    return Err(format!("{} が {} の壁からはみ出しています", label(obj), room.name));
+                }
+                let (lo, hi) = (WALL_MOUNT_MIN, WALL_HEIGHT - height);
+                if a.position[1] < lo - TOLERANCE || a.position[1] > hi + TOLERANCE {
+                    return Err(format!("{} の高さは {lo:.2}〜{hi:.2} m にしてください", label(obj)));
+                }
+            }
+            Mount::WallFurniture(f, a) => {
                 if wall_side(f, room).is_none() {
                     return Err(format!("{} は {} の壁に背中を付けて掛けてください", label(obj), room.name));
                 }
@@ -1178,10 +1256,10 @@ pub fn check_placement(layout: &Layout, sizes: &Sizes, doors: DoorPolicy) -> Res
             }
             // 模様替えは壁ぎりぎり (12 cm) に寄せた位置を送ってくるので、重なりと同じ 2 mm だけ許す
             // (寸法や三角関数の丸めの違いで、ぴったりの位置がはみ出し扱いにならないように)
-            None if !rect_inside(rect, &room_rect(room)) => {
+            Mount::Floor if !rect_inside(rect, &room_rect(room)) => {
                 return Err(format!("{} が {} の壁に近すぎます (壁から 12 cm 空けてください)", label(obj), room.name));
             }
-            None => {}
+            Mount::Floor => {}
         }
         if doors.applies(obj.id()) && room.doors.iter().any(|door| rect_overlap(&door_zone(room, door), rect)) {
             return Err(format!("{} は {} の出入口の前には置けません", label(obj), room.name));
@@ -1345,6 +1423,91 @@ pub fn pick_spot(
                     surface: (surface.id != TOP_SURFACE).then(|| surface.id.clone()),
                     position: [x, 0.0, z],
                 });
+            }
+        }
+    }
+    None
+}
+
+/// 作品を自動で置く (配置に足す物を返す。いっぱいなら None)。
+/// 写真の額縁 (new.frame) は、家具を指定していなければ先に壁に掛ける場所を探し (pick_wall_spot)、
+/// 壁がいっぱいなら家具の面に置く。ほかの作品は家具の面だけ (pick_spot)
+pub fn pick_place(
+    layout: &Layout,
+    sizes: &Sizes,
+    artwork_id: Uuid,
+    new: Option<&ArtSize>,
+    prefer_parent: Option<&str>,
+) -> Option<LayoutObject> {
+    if prefer_parent.is_none()
+        && let Some(frame) = new.filter(|n| n.frame)
+        && let Some(object) = pick_wall_spot(layout, sizes, artwork_id, frame)
+    {
+        return Some(object);
+    }
+    pick_spot(layout, sizes, new, None, prefer_parent).map(|spot| artwork_on(artwork_id, spot))
+}
+
+/// 写真の額縁を壁に掛ける場所を探す (リビングの壁)。いっぱいなら None。
+///
+/// 壁は北・西・東・南の順 (積み上げの建物でも、おへやに入ったはじめの向きでも見える北と西が先)、高さは WALL_ART_CENTERS の段の順、
+/// 1 つの壁の中は中央から左右へ、作品の幅 + WALL_ART_GAP ずつ (壁の角から WALL_ART_GAP 空ける)。
+/// 置ける (check_placement に通る) うえに、作品の前 (壁から WALL_ART_VIEW) に作品の下端より高い床の家具が無い最初の場所
+fn pick_wall_spot(layout: &Layout, sizes: &Sizes, artwork_id: Uuid, frame: &ArtSize) -> Option<LayoutObject> {
+    let def = room_def(HUB_ID)?;
+    let (hw, hd) = (def.size[0] / 2.0, def.size[1] / 2.0);
+    let mut sizes = sizes.clone();
+    sizes.insert(artwork_id, *frame);
+    // 前をふさぐかを見る床の家具 (ラグは見ない): 足元と高さ
+    let blockers: Vec<(Rect, f64)> = layout
+        .objects
+        .iter()
+        .filter_map(|o| match o {
+            LayoutObject::Furniture(f) => asset(&f.asset_id)
+                .filter(|a| !a.is_wall() && !a.is_floor_decor())
+                .map(|a| (furniture_rect(f, a), a.reach())),
+            _ => None,
+        })
+        .collect();
+
+    let walls = [(Side::North, 0.0), (Side::West, FRAC_PI_2), (Side::East, -FRAC_PI_2), (Side::South, PI)];
+    for center in WALL_ART_CENTERS {
+        for (side, rotation_y) in walls {
+            let [w, h, d] = placed_size(frame, WALL_ART_FIT, rotation_y);
+            let y = (center - h / 2.0).max(WALL_MOUNT_MIN);
+            let length = match side {
+                Side::North | Side::South => def.size[0],
+                Side::West | Side::East => def.size[1],
+            };
+            let limit = length / 2.0 - WALL_ART_GAP - w / 2.0;
+            let step = w + WALL_ART_GAP;
+            // 壁の中央から 0, +1, −1, +2, … 個分
+            let offsets = (0..).map(|i: i32| f64::from((i + 1) / 2) * step * if i % 2 == 1 { 1.0 } else { -1.0 });
+            for along in offsets.take_while(|o| o.abs() <= limit + 1e-9) {
+                let (position, view) = match side {
+                    Side::North => ([along, y, -hd + d / 2.0], footprint(along, -hd + WALL_ART_VIEW / 2.0, w, WALL_ART_VIEW, 0.0)),
+                    Side::South => ([along, y, hd - d / 2.0], footprint(along, hd - WALL_ART_VIEW / 2.0, w, WALL_ART_VIEW, 0.0)),
+                    Side::West => ([-hw + d / 2.0, y, along], footprint(-hw + WALL_ART_VIEW / 2.0, along, WALL_ART_VIEW, w, 0.0)),
+                    Side::East => ([hw - d / 2.0, y, along], footprint(hw - WALL_ART_VIEW / 2.0, along, WALL_ART_VIEW, w, 0.0)),
+                };
+                if blockers.iter().any(|(rect, top)| *top > y + TOLERANCE && rect_overlap(rect, &view)) {
+                    continue;
+                }
+                let object = LayoutObject::Artwork(ArtworkObject {
+                    id: new_object_id("art"),
+                    artwork_id,
+                    parent_id: None,
+                    room_id: Some(HUB_ID.to_string()),
+                    surface: None,
+                    placement: Some(WALL_PLACEMENT.to_string()),
+                    position,
+                    rotation_y,
+                });
+                let mut candidate = layout.clone();
+                candidate.objects.push(object.clone());
+                if check_placement(&candidate, &sizes, DoorPolicy::Ignore).is_ok() {
+                    return Some(object);
+                }
             }
         }
     }
@@ -2557,7 +2720,7 @@ mod tests {
 
     /// アトリエの 33 点の寸法 (作品 id は seed と同じ)
     fn atelier_sizes() -> Sizes {
-        ATELIER.iter().map(|(asset_id, size)| (seed_id(asset_id), ArtSize { size: *size, custom: true })).collect()
+        ATELIER.iter().map(|(asset_id, size)| (seed_id(asset_id), ArtSize { size: *size, custom: true, frame: false })).collect()
     }
 
     /// 実寸で検証した配置
@@ -2587,7 +2750,7 @@ mod tests {
 
     #[test]
     fn display_scale_fits_rotated_extents() {
-        let boat = ArtSize { size: [0.56, 0.582, 0.34], custom: true };
+        let boat = ArtSize { size: [0.56, 0.582, 0.34], custom: true, frame: false };
         let fit = art_fit(top("home_console"));
         assert!(close(fit[0], 0.56) && close(fit[1], 0.62) && close(fit[2], 0.48), "{fit:?}");
         // 帆船 × サイドボード: 0° は実寸、90° は奥行き 0.48 に幅 0.56 を収める、45° は外接長方形 0.9·√½ を 0.48 に
@@ -2602,12 +2765,13 @@ mod tests {
             let r = footprint(0.0, 0.0, w, d, rotation);
             assert!(r.max_x - r.min_x <= fit[0] + 1e-12 && r.max_z - r.min_z <= fit[2] + 1e-12 && h <= fit[1] + 1e-12);
         }
-        // 仮生成の額縁 (800 × 600) は custom でないので、枠に合わせて縮める (サイドボードで 0.56 / 1.35 ≈ 0.415)
-        let frame = ArtSize { size: [1.35, 1.08, 0.28], custom: false };
+        // 写真の額縁 (800 × 600 は横長の額縁。幅 0.348 m) は custom でないので、枠いっぱいまで大きくする
+        // (サイドボードでは幅で決まり 0.56 / 0.348 ≈ 1.609)
+        let frame = generated_frame();
         let scale = display_scale(&frame, fit, 0.0);
-        assert!(close(scale, 0.56 / 1.35) && (scale - 0.415).abs() < 1e-3, "{scale}");
+        assert!(close(scale, 0.56 / frame.size[0]) && (scale - 1.609).abs() < 1e-3, "{scale}");
         // custom でない小さな作品は枠まで大きくする (1 倍の上限なし)。custom は 1 倍まで
-        let small = ArtSize { size: [0.1, 0.1, 0.1], custom: false };
+        let small = ArtSize { size: [0.1, 0.1, 0.1], custom: false, frame: false };
         assert!(close(display_scale(&small, fit, 0.0), 4.8));
         assert!(close(display_scale(&ArtSize { custom: true, ..small }, fit, 0.0), 1.0));
     }
@@ -2615,7 +2779,7 @@ mod tests {
     #[test]
     fn art_size_from_model_needs_all_three() {
         let size = ArtSize::from_model(Some(0.5), Some(0.4), Some(0.3), "custom").unwrap();
-        assert_eq!(size, ArtSize { size: [0.5, 0.4, 0.3], custom: true });
+        assert_eq!(size, ArtSize { size: [0.5, 0.4, 0.3], custom: true, frame: false });
         assert!(!ArtSize::from_model(Some(0.5), Some(0.4), Some(0.3), "frame").unwrap().custom);
         assert_eq!(ArtSize::from_model(Some(0.5), None, Some(0.3), "custom"), None);
         assert_eq!(ArtSize::from_model(Some(0.5), Some(0.0), Some(0.3), "custom"), None);
@@ -2729,14 +2893,105 @@ mod tests {
     const CANDIDATE_ID: &str = "cand";
 
     /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 33 点、仮生成の額縁、寸法の分からない作品
+    #[test]
+    fn frames_hang_on_the_north_wall_first() {
+        let layout = parse_layout(raw_layout(json!([]))).unwrap();
+        let frame = generated_frame();
+        let id = Uuid::from_u128(7);
+        let Some(LayoutObject::Artwork(a)) = pick_place(&layout, &Sizes::new(), id, Some(&frame), None) else {
+            panic!("壁に掛ける場所がありません");
+        };
+        assert!(a.on_wall() && a.parent_id.is_none() && a.rotation_y == 0.0);
+        // 北の壁の中央。背面を壁 (z = −5) に付け、中心を 1.6 m に
+        let [_, h, d] = placed_size(&frame, WALL_ART_FIT, 0.0);
+        assert!(close(a.position[0], 0.0) && close(a.position[2], -5.0 + d / 2.0), "{:?}", a.position);
+        assert!(close(a.position[1] + h / 2.0, 1.6), "{:?}", a.position);
+        // 2 つ目は同じ壁の右隣 (作品の幅 0.9 + 間 0.3)
+        let mut layout = layout;
+        layout.objects.push(LayoutObject::Artwork(a));
+        let sizes = Sizes::from([(id, frame)]);
+        let Some(LayoutObject::Artwork(b)) = pick_place(&layout, &sizes, Uuid::from_u128(8), Some(&frame), None) else {
+            panic!("2 つ目を掛ける場所がありません");
+        };
+        assert!(close(b.position[0], 1.2) && b.rotation_y == 0.0, "{:?}", b.position);
+    }
+
+    #[test]
+    fn frames_skip_walls_behind_tall_furniture() {
+        // 北の壁の中央の前に本棚 (高さ 1.82) があると、その前 (|x| < 本棚の半分 + 作品の半分) には掛けない。
+        // 低いサイドボード (0.891 + 作品の枠) は作品の下端 (約 1.28 m) より低いので、その上には掛ける
+        let shelf = parse_layout(raw_layout(json!([furniture("b", "home_bookshelf", 0.0, -5.0 + WALL_MARGIN + 0.205, 0.0)]))).unwrap();
+        let frame = generated_frame();
+        let Some(LayoutObject::Artwork(a)) = pick_place(&shelf, &Sizes::new(), Uuid::from_u128(7), Some(&frame), None) else {
+            panic!("壁に掛ける場所がありません");
+        };
+        assert!(a.position[0].abs() >= 0.58 + 0.45 - 1e-9 || a.rotation_y != 0.0, "{:?}", a.position);
+    }
+
+    #[test]
+    fn only_frames_hang_on_walls() {
+        let layout = parse_layout(raw_layout(json!([furniture("c", "home_console", 0.0, 0.0, 0.0)]))).unwrap();
+        // 工作 (実寸の GLB) は家具の上
+        let boat = ArtSize { size: [0.56, 0.582, 0.34], custom: true, frame: false };
+        let placed = pick_place(&layout, &Sizes::new(), Uuid::from_u128(7), Some(&boat), None);
+        assert!(matches!(placed, Some(LayoutObject::Artwork(ref a)) if a.parent_id.as_deref() == Some("c")), "{placed:?}");
+        // 家具を指定すれば、額縁も家具の上
+        let placed = pick_place(&layout, &Sizes::new(), Uuid::from_u128(7), Some(&generated_frame()), Some("c"));
+        assert!(matches!(placed, Some(LayoutObject::Artwork(ref a)) if a.parent_id.as_deref() == Some("c")), "{placed:?}");
+        // 家具に載せた作品は壁に掛けられない (placement は床の作品だけ)
+        let mut raw = raw_layout(json!([furniture("c", "home_console", 0.0, 0.0, 0.0)]));
+        raw["objects"].as_array_mut().unwrap().push(json!({
+            "kind": "artwork", "id": "a", "artworkId": Uuid::from_u128(7), "parentId": "c", "placement": "wall",
+            "position": [0.0, 0.0, 0.0], "rotationY": 0.0,
+        }));
+        assert!(parse_layout(raw).unwrap_err().contains("placement"));
+    }
+
+    #[test]
+    fn wall_art_keeps_its_height_and_round_trips() {
+        let frame = generated_frame();
+        let mut raw = raw_layout(json!([]));
+        raw["objects"].as_array_mut().unwrap().push(json!({
+            "kind": "artwork", "id": "a", "artworkId": Uuid::from_u128(7), "roomId": "hub", "placement": "wall",
+            "position": [0.0, 1.3, -5.0 + 0.0285], "rotationY": 0.0,
+        }));
+        let layout = parse_layout(raw).unwrap();
+        let LayoutObject::Artwork(a) = &layout.objects[0] else { panic!() };
+        assert_eq!(a.position[1], 1.3);
+        // 世界座標の y も底面の高さ。保存し直しても placement は残る
+        assert_eq!(world_of(&layout, &layout.objects[0]).unwrap().0[1], 1.3);
+        let again = parse_layout(serde_json::to_value(&layout).unwrap()).unwrap();
+        assert_eq!(again, layout);
+        // 寸法 (額縁かどうか) が分からなければ検証に通らない
+        assert!(check_placement(&layout, &Sizes::new(), DoorPolicy::Ignore).is_err());
+        let [_, _, d] = placed_size(&frame, WALL_ART_FIT, 0.0);
+        let mut fixed = layout.clone();
+        if let LayoutObject::Artwork(a) = &mut fixed.objects[0] {
+            a.position[2] = -5.0 + d / 2.0;
+        }
+        check_placement(&fixed, &Sizes::from([(Uuid::from_u128(7), frame)]), DoorPolicy::Ignore).unwrap();
+        // 上げ下げも「動かした」
+        let mut raised = fixed.clone();
+        if let LayoutObject::Artwork(a) = &mut raised.objects[0] {
+            a.position[1] = 1.5;
+        }
+        assert_eq!(moved_ids(&fixed, &raised), HashSet::from(["a".to_string()]));
+    }
+
+    /// 写真 (800 × 600) から作った額縁の作品の実寸 (glb.rs のオークの額縁。登録のときと同じく GLB を測る)
+    fn generated_frame() -> ArtSize {
+        let glb = crate::glb::build_artwork_glb(&[0xFF, 0xD8, 0xFF, 0xD9], 800, 600, crate::glb::Style::Frame);
+        let [w, h, d] = crate::glb::measure_glb(&glb).unwrap();
+        ArtSize::from_model(Some(w), Some(h), Some(d), "frame").unwrap()
+    }
+
     fn case_arts() -> Vec<(String, Uuid, Option<ArtSize>)> {
         let mut arts: Vec<_> = ATELIER
             .iter()
-            .map(|(asset_id, size)| (asset_id.to_string(), seed_id(asset_id), Some(ArtSize { size: *size, custom: true })))
+            .map(|(asset_id, size)| (asset_id.to_string(), seed_id(asset_id), Some(ArtSize { size: *size, custom: true, frame: false })))
             .collect();
         let fixed = |s: &str| Uuid::parse_str(s).unwrap();
-        let frame = ArtSize { size: [1.35, 1.08, 0.28], custom: false };
-        arts.push(("frame_800x600".into(), fixed("00000000-0000-4000-8000-000000000800"), Some(frame)));
+        arts.push(("frame_800x600".into(), fixed("00000000-0000-4000-8000-000000000800"), Some(generated_frame())));
         arts.push(("unknown".into(), fixed("00000000-0000-4000-8000-0000000000ff"), None));
         arts
     }
@@ -2806,6 +3061,14 @@ mod tests {
         o
     }
 
+    /// 壁に掛ける作品の配置 JSON (リビング。position の y は底面の高さ)
+    fn wall_art(id: &str, artwork: Uuid, x: f64, y: f64, z: f64, rotation: f64) -> Value {
+        json!({
+            "kind": "artwork", "id": id, "artworkId": artwork, "roomId": HUB_ID, "placement": WALL_PLACEMENT,
+            "position": [x, y, z], "rotationY": rotation,
+        })
+    }
+
     /// layout に objects を足した配置が検証に通るか。moved なら id "cand" の物だけ出入口の前を見る (保存済みの物は見ない)
     fn fits(layout: &Value, objects: &[Value], sizes: &Sizes, moved: bool) -> bool {
         let mut raw = layout.clone();
@@ -2815,7 +3078,7 @@ mod tests {
     }
 
     /// 表の上の段に書く説明 (Web の check-placement.mjs を書く人向け)
-    const NOTES: [&str; 9] = [
+    const NOTES: [&str; 10] = [
         "配置 JSON は schemaVersion 5 (中央のリビング hub 10 × 10 の 1 部屋。出入口なし)。家具と床置きの作品の position は、所属する部屋 (roomId) の中心から見たローカル座標。部屋は回さない",
         "house は /api/museum の house と同じ形 (model_url は null)。部屋の置ける範囲は ±(size / 2 − wall_margin)、はみ出しは 2 mm (tolerance ではなく home.rs の TOLERANCE = 0.002) まで許す",
         "door_zone: 出入口の前の置けない場所。壁に沿って出入口の中心 (offset) から ±width / 2、壁の内側の面から部屋の中へ depth。重なりと同じく 2 mm より深くかかったら置けない",
@@ -2825,6 +3088,7 @@ mod tests {
         "cases の候補 (id \"cand\") は新しく置いた物として判定する (DoorPolicy::OnlyMoved({cand}))。床の候補は所属する部屋の出入口の前にかかると ok: false。layouts の家具は保存済みの物なので出入口の前を見ない",
         "extra: layout に objects (保存済みの物) を足して candidate (id \"cand\") を置けるか。moved が true なら候補の出入口の前を見る、false なら見ない (動かしていない保存済みの物と同じ扱い)",
         "壁の家具 (catalog の placement が \"wall\"): 原点は背面の底の中心。背面を壁の内側の面 (±size / 2) に付け、向きは 90° ごと。高さ (position の y) は wall.mount_min から wall.height − reach まで (reach = 家具の高さと、面の anchor の y + art_fit の高さの大きいほう)。物どうしは足元と高さの範囲の両方が重なると置けない (床の家具は 0〜reach、床の作品は 0〜床の枠の高さ)",
+        "壁に掛ける作品 (配置 JSON の placement が \"wall\"。arts の frame が true の作品 = 写真の額縁だけ): 大きさは wall_art_fit に作品の向きで収めたもの。position の (x, z) は足元の中心、y は底面の高さ。足元の背面の側を壁の内側の面に付け (向きは 90° ごと。0 で北の壁、π で南、π/2 で西、−π/2 で東)、壁の内側からはみ出さず、y は wall.mount_min から wall.height − 置いた高さまで。高さの範囲は y〜y + 置いた高さで、ほかの物と足元と高さの範囲の両方が重なると置けない",
     ];
 
     fn placement_cases() -> Value {
@@ -2909,6 +3173,10 @@ mod tests {
         let console_top = top("home_console");
         let [w, _, d] = placed_size(&sizes[&boat], art_fit(console_top), FRAC_PI_4);
         let (left_x, left_z) = clamp_to_rect(&top_rect(console_top), w, d, FRAC_PI_4, -10.0, 0.0);
+        // 壁に掛けた額縁 (横長。壁の枠 0.9 に収めて幅 0.9・高さ約 0.64・奥行き約 0.057) の奥行きの半分
+        let frame = id_of("frame_800x600");
+        let [_, frame_h, frame_d] = placed_size(&sizes[&frame], WALL_ART_FIT, 0.0);
+        let half = frame_d / 2.0;
         // 床の帆船 (1 倍。幅 0.56・奥行き 0.34)
         let boat_on = |room: &'static str, x: f64, z: f64| art_object(CANDIDATE_ID, boat, floor_of(room), x, z, 0.0);
         let extra_cases = [
@@ -2922,7 +3190,7 @@ mod tests {
             ),
             // 床の帆船を x 4.7 に置くと壁から 12 cm 空かない
             ("floor-near-wall", "floor", vec![], boat_on("hub", 4.7, 0.0), true),
-            // 額縁 (幅 1.35) は床の枠 0.8 に縮むので、壁ぎわ (4.08〜4.88) にも置ける。床の帆船 (2.22〜2.78) とも重ならない
+            // 額縁 (幅 0.348) は床の枠 0.8 まで大きくなるので、壁ぎわ (4.08〜4.88) にも置ける。床の帆船 (2.22〜2.78) とも重ならない
             (
                 "frame-on-floor",
                 "floor",
@@ -3007,6 +3275,37 @@ mod tests {
                 on_wall(CANDIDATE_ID, SHELF, 0.5, 1.2, -5.0, 0.0),
                 true,
             ),
+            // 壁に掛ける額縁: 北・西の壁に付ける・壁から離す・壁に背を向ける・高すぎる・角からはみ出す
+            ("wall-frame-north", "floor", vec![], wall_art(CANDIDATE_ID, frame, 0.0, 1.3, -5.0 + half, 0.0), true),
+            ("wall-frame-west", "floor", vec![], wall_art(CANDIDATE_ID, frame, -5.0 + half, 1.3, 1.0, FRAC_PI_2), true),
+            ("wall-frame-off-wall", "floor", vec![], wall_art(CANDIDATE_ID, frame, 0.0, 1.3, -4.7, 0.0), true),
+            ("wall-frame-facing-wall", "floor", vec![], wall_art(CANDIDATE_ID, frame, 0.0, 1.3, -5.0 + half, PI), true),
+            (
+                "wall-frame-too-high",
+                "floor",
+                vec![],
+                wall_art(CANDIDATE_ID, frame, 0.0, WALL_HEIGHT - frame_h + 0.05, -5.0 + half, 0.0),
+                true,
+            ),
+            ("wall-frame-past-corner", "floor", vec![], wall_art(CANDIDATE_ID, frame, 4.7, 1.3, -5.0 + half, 0.0), true),
+            // 壁の棚と高さが重なれば掛けられない。壁ぎわのサイドボードの上には掛けられる (サイドボードは壁から 12 cm 離れている)
+            (
+                "wall-frame-over-shelf",
+                "floor",
+                vec![on_wall("s", SHELF, 0.0, 1.2, -5.0, 0.0)],
+                wall_art(CANDIDATE_ID, frame, 0.3, 1.0, -5.0 + half, 0.0),
+                true,
+            ),
+            (
+                "wall-frame-above-console",
+                "floor",
+                vec![furniture("c", "home_console", 0.0, -5.0 + WALL_MARGIN + 0.255, 0.0)],
+                wall_art(CANDIDATE_ID, frame, 0.0, 1.0, -5.0 + half, 0.0),
+                true,
+            ),
+            // 壁に掛けられるのは写真の額縁だけ (工作の GLB・寸法の分からない作品は掛けられない)
+            ("wall-boat-rejected", "floor", vec![], wall_art(CANDIDATE_ID, boat, 0.0, 1.3, -5.0 + 0.17, 0.0), true),
+            ("wall-unknown-rejected", "floor", vec![], wall_art(CANDIDATE_ID, id_of("unknown"), 0.0, 1.3, -4.6, 0.0), true),
         ];
         let extra: Vec<Value> = extra_cases
             .into_iter()
@@ -3042,7 +3341,12 @@ mod tests {
         let arts_json: Map<String, Value> = arts
             .iter()
             .map(|(name, id, size)| {
-                let value = json!({ "artwork_id": id, "size": size.map(|s| s.size), "custom": size.is_none_or(|s| s.custom) });
+                let value = json!({
+                    "artwork_id": id,
+                    "size": size.map(|s| s.size),
+                    "custom": size.is_none_or(|s| s.custom),
+                    "frame": size.is_some_and(|s| s.frame),
+                });
                 (name.clone(), value)
             })
             .collect();
@@ -3056,6 +3360,7 @@ mod tests {
             "notes": NOTES,
             "tolerance": { "position": POSITION_TOLERANCE, "scale": SCALE_TOLERANCE },
             "floor_art_fit": FLOOR_ART_FIT,
+            "wall_art_fit": WALL_ART_FIT,
             "wall_margin": WALL_MARGIN,
             "wall": { "height": WALL_HEIGHT, "mount_min": WALL_MOUNT_MIN },
             "door_zone": { "width": DOOR_ZONE_WIDTH, "depth": DOOR_ZONE_DEPTH },
@@ -3071,11 +3376,12 @@ mod tests {
 
     /// 総当たり表のファイルの中身。上の段の項目は決まった順に、cases・extra などは 1 件 1 行で書く (差分を読みやすく)
     fn placement_cases_text(value: &Value) -> String {
-        const KEYS: [&str; 14] = [
+        const KEYS: [&str; 15] = [
             "generated_by",
             "notes",
             "tolerance",
             "floor_art_fit",
+            "wall_art_fit",
             "wall_margin",
             "wall",
             "door_zone",
