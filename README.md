@@ -2,8 +2,6 @@
 
 [![IMAGE ALT TEXT HERE](https://jphacks.com/wp-content/uploads/2026/07/IMG_5316.png)](https://www.youtube.com/watch?v=piaNsc6ilBI)
 
-**デモ**：https://memoria-sasu.onrender.com （ブラウザで開くだけで見られます。スマホにも対応しています。しばらく誰も開いていないと、起きるまで 1 分ほどかかります）
-<video controls src="画面録画 2026-10-18 224701.mp4" title="デモ動画"></video>
 
 ## 製品概要
 子どもが作った絵や工作を、3D のおうちの「おへや」に飾って保管できる、家族のための思い出のミュージアムです。作品は「作ったときの年齢」ごとのおへやに並び、作品にまつわるエピソードや写真・動画・声も一緒に残せるので、成長の記録としていつでも振り返れます。
