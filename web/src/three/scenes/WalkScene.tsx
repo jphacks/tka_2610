@@ -97,7 +97,7 @@ const GL_LITE = { antialias: true, powerPreference: 'high-performance' } as cons
 /** 天井の板を部屋（内寸）より大きくする幅（m。両側で）。壁の中まで届かせる（隣の部屋の板とは壁の中で重なるが、同じ材質・同じ高さなので見えない） */
 const CEILING_PAD = 0.6
 /** 家の外形を読み込むまでの影の範囲の高さ（m） */
-const SHADOW_TOP = 3.4
+const SHADOW_TOP = 4.4
 /** 縦長の画面で広げる視野角の上限（度） */
 const MAX_PORTRAIT_FOV = 80
 /** 縦長の画面で、横 / 縦が 1 から 1 減るごとに広げる視野角（度） */

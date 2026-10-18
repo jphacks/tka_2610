@@ -25,7 +25,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_DIR = REPO / 'backend' / 'static' / 'models' / 'rooms'
 
-H = 3.2
+H = 4.2
 T = 0.24
 R = 1.05
 SPRING = 1.55
@@ -40,7 +40,8 @@ HUB_WALL_AT_OPEN: dict[str, str] = {}
 SIDES = ('north', 'south', 'east', 'west')
 ROLES = {'floor', 'foundation', 'wall_lower', 'wall_upper', 'trim_lower', 'trim_upper', 'trim'}
 MATERIALS = {'Wall_Plaster', 'Floor_Oak', 'Trim_Oak', 'Foundation'}
-UV_CENTER = {'wall_lower': 0.46, 'wall_upper': 2.06}
+# 上の壁は 0.92 m から壁の上 H まで。その真ん中
+UV_CENTER = {'wall_lower': 0.46, 'wall_upper': round((0.92 + H) / 2, 4)}
 
 failures: list[str] = []
 
@@ -429,7 +430,7 @@ def check_single(g: Glb):
         check(face == sorted((s, DOOR_TO_ROOM[s]) for s in exp['doors']), f'hub: faceRoom meshes {face}')
         print('  faceRoom (room side of the shared walls): ' + ', '.join(f'{s} -> {r}' for s, r in face))
 
-    # UV の決まり（theme.ts）：壁の表と裏は v = y − 中心（下 0.46・上 2.06）、床の上面は 1 UV = 2 m
+    # UV の決まり（theme.ts）：壁の表と裏は v = y − 中心（下 0.46・上 2.56）、床の上面は 1 UV = 2 m
     uv_bad = 0
     for mesh in g.meshes:
         if mesh['role'] in UV_CENTER and mesh['uv'] and mesh['normal']:
@@ -443,7 +444,7 @@ def check_single(g: Glb):
             if len(offs) != 1:
                 uv_bad += 1
     check(uv_bad == 0, f'{rid}: {uv_bad} vertices break the wall/floor UV convention')
-    print(f'  UV convention (walls v = y - 0.46 / 2.06, floor 2 m per UV): {"ok" if uv_bad == 0 else f"{uv_bad} bad"}')
+    print(f'  UV convention (walls v = y - {UV_CENTER["wall_lower"]} / {UV_CENTER["wall_upper"]}, floor 2 m per UV): {"ok" if uv_bad == 0 else f"{uv_bad} bad"}')
 
     # 開いた側：壁も柱以外の形も無い
     if exp['open']:
@@ -452,7 +453,7 @@ def check_single(g: Glb):
         samples = [(-along + 2 * along * i / 40, 0.02 + (H - 0.04) * k / 40) for i in range(41) for k in range(41)]
         hits = rays_across(g.triangles(), frame, samples, (-0.7, 0.5))
         check(not hits, f'{rid}: {len(hits)} hits on the open side, e.g. {[h[:5] for h in hits[:3]]}')
-        print(f'  open side {exp["open"]}: {len(samples)} rays across |u| <= {along:.2f}, 0.02 <= y <= 3.18 -> {len(hits)} hits')
+        print(f'  open side {exp["open"]}: {len(samples)} rays across |u| <= {along:.2f}, 0.02 <= y <= {H - 0.02:.2f} -> {len(hits)} hits')
 
 
 # ---------- 家全体（部屋を origin に置く） ----------

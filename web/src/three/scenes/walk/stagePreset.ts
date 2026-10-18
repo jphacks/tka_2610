@@ -2,11 +2,13 @@
 //
 // 家の建物の GLB は /api/museum の house.rooms[].model_url（部屋ごと。Rust: home.rs の ROOM_DEFS）から読む
 // （house の無い古いサーバーでは model_url の 1 つ）。
-// 家は中央の 10 × 10 m のリビング（中心が原点）だけ。床が y = 0、天井の高さは 3.2 m。
+// 家は中央の 10 × 10 m のリビング（中心が原点）だけ。床が y = 0、天井の高さは 4.2 m（壁の高さ WALL_TOP）。
 // 部屋の位置と大きさはここに書かず、house.rooms から天井の板とダウンライト（roomDownlights）を部屋ごとに作る。
 // 歩き方の数値は Unity 版の博物館（unity/Assets/MemoryMuseum/Scripts/MuseumWalker.cs）と同じ。
 // 照明の数値は家に合わせて決めたこの画面の値。書き方（Unity の単位）と three.js への換算は lighting.tsx。
 // 将来、部屋を増やしたり照明を動かしたりするときは、この形のデータをサーバーから受け取る想定。
+
+import { WALL_TOP } from '../home/house'
 
 export type Vec3 = [number, number, number]
 
@@ -76,8 +78,8 @@ export interface StagePreset {
   legacyUnityColors: boolean
 }
 
-/** 天井の高さ（m）。家の GLB の壁の高さと同じ。WalkScene はこの高さに部屋ごとの天井の板を張る */
-export const CEILING_HEIGHT = 3.2
+/** 天井の高さ（m）。家の GLB の壁の高さ（WALL_TOP）と同じ。WalkScene はこの高さに部屋ごとの天井の板を張る */
+export const CEILING_HEIGHT = WALL_TOP
 
 /**
  * 部屋ごとのダウンライトの並べ方（roomDownlights が house.rooms から灯の位置を作る）。
@@ -108,15 +110,17 @@ export interface RoomLightSpec {
 // 天井のダウンライト 5 灯（部屋の四隅寄りと中央）。真下に向けた広いスポットライト
 // 強さ（power）2.2・距離（range）7 だと、ダウンライトの真下の床が白く飛んでいた。
 // power は Unity の書き方で「sRGB の色 × power」をリニアに直すので、2.2 → 1.0 でリニアの明るさは約 6.2 → 1.0 になる。
-// lighting.tsx の換算で床（天井から 3.15 m）の直接光を見積もると、白い面がそのままの色に見える明るさを 1 として、
+// lighting.tsx の換算で床（天井が 3.2 m のころ、灯から 3.15 m）の直接光を見積もると、白い面がそのままの色に見える明るさを 1 として、
 // 真ん中の灯の真下（届く灯の合計）で約 2.6 → 約 0.3。部屋全体の明るさは環境光（白い面で約 0.9）と太陽で保ち、ダウンライトは床に淡い光だまりを作る程度にする。
 // range を 7 → 6 にすると、隣の灯の光が重なる所（灯から 4 m ほど）でより早く弱まる。
+// 天井を 4.2 m に上げたときは、灯を天井のすぐ下（4.15 m）にして、床までの距離と range の比を同じに保つよう range を 6 × 4.15 / 3.15 ≈ 7.9 にした
+// （Unity の減衰は距離 / range だけで決まるので、床の明るさは天井が 3.2 m のころと同じ）。
 // リビング（10 × 10）の 5 灯は ±2.5 m（壁から 2.5 m）。
 // 8 × 8 の部屋（以前の左・右・前の部屋の大きさ）は中央と、奥行きの向きに ±2.4 m の 3 灯（壁から 1.6 m）。
 // 軽い表示（スマホ）では、小さい部屋は中央の 1 灯だけ。今の家はリビングだけなので、どちらも 5 灯。
 const ROOM_LIGHTS: RoomLightSpec = {
-  light: { color: [1, 0.93, 0.82], power: 1.0, range: 6, angleDeg: 100 },
-  y: 3.15,
+  light: { color: [1, 0.93, 0.82], power: 1.0, range: 7.9, angleDeg: 100 },
+  y: WALL_TOP - 0.05,
   largeMinSize: 9,
   large: [
     [-2.5, -2.5],

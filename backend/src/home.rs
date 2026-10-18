@@ -158,8 +158,9 @@ const MAX_ID_LEN: usize = 40;
 const MAX_COORD: f64 = 15.0;
 /// 壁から家具まで空ける距離 (m)
 const WALL_MARGIN: f64 = 0.12;
-/// 部屋の壁の高さ (m)。Web の house.ts の WALL_TOP と同じ。壁の家具は、上に飾る作品の枠まで含めてこれより下に掛ける
-pub const WALL_HEIGHT: f64 = 3.2;
+/// 部屋の壁の高さ (m)。建物の GLB (tools/home-rooms/build_rooms.py の H) と Web の house.ts の WALL_TOP と同じ。
+/// 壁の家具は、上に飾る作品の枠まで含めてこれより下に掛ける。キットは 3.2 m だが、積み上げの建物で壁が低く見えないよう 4.2 m にした
+pub const WALL_HEIGHT: f64 = 4.2;
 /// 壁の家具を掛けられるいちばん低い高さ (底面の y, m)
 pub const WALL_MOUNT_MIN: f64 = 0.3;
 /// 壁の家具の向きの許容 (ラジアン)。90° ごとの向きにだけ掛けられる
@@ -1938,16 +1939,16 @@ mod tests {
 
     #[test]
     fn wall_furniture_height_range() {
-        // 飾り棚: 上に作品の枠 (0.61) を足して 0.706。0.3〜2.494 m に掛けられる
+        // 飾り棚: 上に作品の枠 (0.61) を足して 0.706。0.3〜3.494 m に掛けられる
         let shelf = asset(SHELF).unwrap();
         let (lo, hi) = mount_range(shelf);
         assert!(close(lo, WALL_MOUNT_MIN) && close(hi, WALL_HEIGHT - 0.096 - 0.61), "{lo} {hi}");
         assert!(layout_of(json!([on_wall("s", SHELF, 0.0, lo, -5.0, 0.0)])).is_ok());
         assert!(layout_of(json!([on_wall("s", SHELF, 0.0, hi, -5.0, 0.0)])).is_ok());
         let err = layout_of(json!([on_wall("s", SHELF, 0.0, 0.2, -5.0, 0.0)])).unwrap_err();
-        assert!(err.contains("高さは 0.30〜2.49 m"), "{err}");
-        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 2.6, -5.0, 0.0)])).is_err());
-        // キャビネットは天板の作品の枠 (0.46) まで含めて 1.32。上は 1.88 m まで
+        assert!(err.contains("高さは 0.30〜3.49 m"), "{err}");
+        assert!(layout_of(json!([on_wall("s", SHELF, 0.0, 3.6, -5.0, 0.0)])).is_err());
+        // キャビネットは天板の作品の枠 (0.46) まで含めて 1.32。上は 2.88 m まで
         let (_, hi) = mount_range(asset(CABINET).unwrap());
         assert!(close(hi, WALL_HEIGHT - 0.86 - 0.46), "{hi}");
     }
@@ -2971,7 +2972,7 @@ mod tests {
             ("wall-shelf-on-wall", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -5.0, 0.0), true),
             ("wall-shelf-off-wall", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -4.6, 0.0), true),
             ("wall-shelf-at-45", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 1.5, -5.0, FRAC_PI_4), true),
-            ("wall-shelf-too-high", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 2.6, -5.0, 0.0), true),
+            ("wall-shelf-too-high", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 1.0, 3.6, -5.0, 0.0), true),
             ("wall-shelf-past-corner", "floor", vec![], on_wall(CANDIDATE_ID, SHELF, 4.5, 1.5, -5.0, 0.0), true),
             // 東の壁 (−90°) と南の壁 (180°)
             ("wall-ledge-east", "floor", vec![], on_wall(CANDIDATE_ID, LEDGE, 5.0, 1.2, 2.0, -FRAC_PI_2), true),

@@ -14,7 +14,7 @@
   "tolerance": {"position":1e-9,"scale":1e-6},
   "floor_art_fit": [0.8,1.0,0.8],
   "wall_margin": 0.12,
-  "wall": {"height":3.2,"mount_min":0.3},
+  "wall": {"height":4.2,"mount_min":0.3},
   "door_zone": {"depth":1.15,"width":2.54},
   "house": {
     "rooms": [{"cutaway":["south","east"],"doors":[],"id":"hub","model_url":null,"name":"中央のリビング","origin":[0.0,0.0],"size":[10.0,10.0]}],
@@ -4989,7 +4989,7 @@
     {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[1.0,1.5,-5.0],"roomId":"hub","rotationY":0.0},"id":"wall-shelf-on-wall","layout":"floor","moved":true,"objects":[],"ok":true},
     {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[1.0,1.5,-4.6],"roomId":"hub","rotationY":0.0},"id":"wall-shelf-off-wall","layout":"floor","moved":true,"objects":[],"ok":false},
     {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[1.0,1.5,-5.0],"roomId":"hub","rotationY":0.7853981633974483},"id":"wall-shelf-at-45","layout":"floor","moved":true,"objects":[],"ok":false},
-    {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[1.0,2.6,-5.0],"roomId":"hub","rotationY":0.0},"id":"wall-shelf-too-high","layout":"floor","moved":true,"objects":[],"ok":false},
+    {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[1.0,3.6,-5.0],"roomId":"hub","rotationY":0.0},"id":"wall-shelf-too-high","layout":"floor","moved":true,"objects":[],"ok":false},
     {"candidate":{"assetId":"wall_floating_shelf_french_oak","id":"cand","kind":"furniture","position":[4.5,1.5,-5.0],"roomId":"hub","rotationY":0.0},"id":"wall-shelf-past-corner","layout":"floor","moved":true,"objects":[],"ok":false},
     {"candidate":{"assetId":"wall_picture_ledge_french_oak","id":"cand","kind":"furniture","position":[5.0,1.2,2.0],"roomId":"hub","rotationY":-1.5707963267948966},"id":"wall-ledge-east","layout":"floor","moved":true,"objects":[],"ok":true},
     {"candidate":{"assetId":"wall_cabinet_french_oak","id":"cand","kind":"furniture","position":[-2.0,1.3,5.0],"roomId":"hub","rotationY":3.141592653589793},"id":"wall-cabinet-south","layout":"floor","moved":true,"objects":[],"ok":true},
