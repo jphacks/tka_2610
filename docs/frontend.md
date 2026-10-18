@@ -84,7 +84,7 @@ import { HomeScene, StageShell } from '../three'
 | ⑤ | おうちの中 | `/museum`（`?focus=作品ID` / `?room=部屋ID`） | `MuseumView.tsx` / `.css` | push |
 | ⑥ | 作品の詳細（下に「おもいで」：写真・動画・声の記録） | `/artworks/:id` | `ArtworkDetail.tsx` / `.css` | push |
 | ⑦ | おうちのマップ（全部の年齢のおへやの一覧） | `/map` | `MapView.tsx` / `.css` | タブ |
-| ⑧ | 作品一覧 | `/collection`（`?category=種類`） | `Collection.tsx` | タブ |
+| ⑧ | 作品一覧（作った月ごとの見出しで区切り、作品の下に作ったときの年齢「5さい 4か月」） | `/collection`（`?category=種類`） | `Collection.tsx` / `.css` | タブ |
 | ⑨ | 作品を編集 | `/artworks/:id/edit` | `EditArtwork.tsx` | モーダル |
 | ⑩ | 設定 | `/settings` | `Settings.tsx` / `.css` | タブ |
 | ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk`（`?room=おへやID`） | `MuseumWalk.tsx` / `.css` | push（②' の「歩く」、⑤ の「⋯」、⑫ の「鑑賞モードへ」から） |
@@ -116,7 +116,7 @@ import { HomeScene, StageShell } from '../three'
 | `Segmented.tsx` / `.css` | `Segmented` | 切り替えボタン（作品の種類など） |
 | `Toast.tsx` / `.css` | `ToastProvider` / `useToast` | 上から降りてくるお知らせ |
 | `Img.tsx` | `Img` | 画像。読み込みまでは API の `tint` を背景に敷く。見た目（`.thumb`）は `styles/common.css` |
-| `ArtworkThumb.tsx` / `.css` | `ArtworkThumb` / `ThumbSkeletons` | 作品のサムネイルと、読み込み中の仮表示。`onSelect` を渡すと、詳細へのリンクではなく押すとそれを呼ぶボタンになる（⑫ の「追加」のシート） |
+| `ArtworkThumb.tsx` / `.css` | `ArtworkThumb` / `ThumbSkeletons` | 作品のサムネイルと、読み込み中の仮表示。`meta="age"` で、日付の代わりに作ったときの年齢（`age_month_label`。誕生日が無ければ日付）を出す（⑧）。`onSelect` を渡すと、詳細へのリンクではなく押すとそれを呼ぶボタンになる（⑫ の「追加」のシート） |
 | `Loading.tsx` / `.css` | `Spinner` / `Busy` / `StageFallback` | 読み込み中の表示 |
 | `ArtworkForm.tsx` / `.css` | `ArtworkForm` | 作品の登録・編集フォーム（③と⑨で共通） |
 | `MemorySection.tsx` / `.css` | `MemorySection` | ⑥ の「おもいで」。写真と動画は 3 列のタイル（動画は最初のコマと長さ）、声はリストの行（その場で再生）。「＋ 追加」のシートから写真・動画・音声ファイルを選ぶ（1 つずつ順に送り、進み具合を出す）・声を録音する。スマホなど指で操作する端末（`pointer: coarse`）では「写真をとる」「動画をとる」も出し、その場でカメラを開く（`capture="environment"` の入力。PC では効かないので出さない）。「⋯」でひとことを変える・消す |
