@@ -1,6 +1,6 @@
 // ⑩ 設定（/settings）。タブ。iOS の設定アプリ風。
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useAges, useSettings, useUpdateSettings } from '../api'
+import { useSettings, useUpdateSettings } from '../api'
 import { NavBar, Screen, Sheet, useToast } from '../components'
 import { BellIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon,  PersonIcon } from '../icons'
 import './Settings.css'
@@ -61,15 +61,12 @@ const today = () => {
 
 export default function Settings() {
   const settings = useSettings()
-  const ages = useAges()
   const update = useUpdateSettings()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
 
   const owner = settings.data?.owner_name ?? ''
   const birthday = settings.data?.child_birthday ?? null
-  const displayed = ages.data?.ages.reduce((n, a) => n + a.displayed_count, 0) ?? 0
-  const roomCount = ages.data?.ages.reduce((n, a) => n + a.rooms.length, 0) ?? 0
   const soon = () => toast('この機能は準備中です')
 
   const save = (e: FormEvent<HTMLFormElement>) => {
