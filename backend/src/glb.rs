@@ -1,12 +1,15 @@
 //! 写真(JPEG)から展示用の 3D モデル(GLB)を生成する。
 //!
-//! - `Frame` : 額縁に入った絵 (絵画・写真・その他)
+//! - `Frame` : オークの額縁に入れた写真 (絵画・写真・その他)。額縁は backend/static/frames の GLB (縦長・横長・正方形)
 //! - `Stand` : アクリルスタンド風の立体 (工作)
 //!
 //! 原点は底面中央、+Y が上、作品の正面は +Z。
 //! Web(three.js) でそのまま読み込める。
 
+use image::GenericImageView;
 use serde_json::{json, Value};
+
+use crate::media;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Style {
@@ -27,12 +30,22 @@ impl Style {
     }
 }
 
-// マテリアル番号
-const WOOD: usize = 0;
-const MAT_BOARD: usize = 1;
-const ART: usize = 2;
-const ACRYLIC: usize = 3;
-const BASE: usize = 4;
+// マテリアル番号 (スタンド)
+const ART: usize = 0;
+const ACRYLIC: usize = 1;
+const BASE: usize = 2;
+
+/// 写真を入れるオークの額縁 (写真面の幅 / 高さ、GLB)。壁掛けの額縁で、原点は額縁の中心、背面が z = 0、正面が +Z。
+/// 写真の差し込み先は Photo_Surface (UV の原点は左上)。テクスチャは 512px に縮めてある (作品ごとの GLB に入るため)
+const OAK_FRAMES: [(f64, &[u8]); 3] = [
+    (2.0 / 3.0, include_bytes!("../static/frames/oak_frame_portrait.glb")),
+    (1.0, include_bytes!("../static/frames/oak_frame_square.glb")),
+    (1.5, include_bytes!("../static/frames/oak_frame_landscape.glb")),
+];
+/// 額縁で作った GLB の asset.generator。起動時に、これでない額縁の作品を作り直す (artworks::upgrade_frames)
+pub const OAK_FRAME_GENERATOR: &str = "memoria oak frame v1";
+/// 額縁を後ろへ傾ける角度 (度)。棚や机・ピクチャーレッジに立てかけたように見せる
+const OAK_FRAME_TILT_DEG: f64 = 8.0;
 
 #[derive(Default)]
 struct Primitive {
@@ -149,35 +162,6 @@ fn art_size(width: u32, height: u32, long_side: f32) -> (f32, f32) {
     }
 }
 
-fn frame_parts(width: u32, height: u32) -> Vec<(Primitive, usize)> {
-    let (w, h) = art_size(width, height, 1.0);
-    let mat = 0.07; // 白いマット(余白)
-    let frame = 0.075; // 額縁の幅
-    let depth = 0.06;
-    let base_h = 0.04;
-
-    let ox = w / 2.0 + mat;
-    let oy0 = base_h + frame;
-    let oy1 = oy0 + h + mat * 2.0;
-    let fz = depth / 2.0;
-
-    let mut wood = Primitive::default();
-    wood.push_box([-ox - frame, base_h, -fz], [ox + frame, oy0, fz]);
-    wood.push_box([-ox - frame, oy1, -fz], [ox + frame, oy1 + frame, fz]);
-    wood.push_box([-ox - frame, oy0, -fz], [-ox, oy1, fz]);
-    wood.push_box([ox, oy0, -fz], [ox + frame, oy1, fz]);
-
-    let mut base = Primitive::default();
-    base.push_box([-ox - frame - 0.03, 0.0, -0.14], [ox + frame + 0.03, base_h, 0.14]);
-
-    let mut board = Primitive::default();
-    board.push_box([-ox, oy0, -fz + 0.004], [ox, oy1, 0.0]);
-
-    let art = image_quad(-w / 2.0, w / 2.0, oy0 + mat, oy1 - mat, 0.002, true);
-
-    vec![(base, WOOD), (wood, WOOD), (board, MAT_BOARD), (art, ART)]
-}
-
 fn stand_parts(width: u32, height: u32) -> Vec<(Primitive, usize)> {
     let (w, h) = art_size(width, height, 1.0);
     let margin = 0.035;
@@ -205,10 +189,133 @@ fn stand_parts(width: u32, height: u32) -> Vec<(Primitive, usize)> {
 
 /// JPEG を埋め込んだ GLB を生成する
 pub fn build_artwork_glb(texture_jpeg: &[u8], width: u32, height: u32, style: Style) -> Vec<u8> {
-    let parts = match style {
-        Style::Frame => frame_parts(width, height),
-        Style::Stand => stand_parts(width, height),
+    match style {
+        Style::Frame => build_oak_frame_glb(texture_jpeg, width, height),
+        Style::Stand => build_stand_glb(texture_jpeg, width, height),
+    }
+}
+
+/// 写真の縦横に近い額縁 (写真面の幅 / 高さと GLB)
+fn oak_frame_for(width: u32, height: u32) -> (f64, &'static [u8]) {
+    let aspect = (width.max(1) as f64 / height.max(1) as f64).ln();
+    OAK_FRAMES
+        .into_iter()
+        .min_by(|a, b| (a.0.ln() - aspect).abs().total_cmp(&(b.0.ln() - aspect).abs()))
+        .expect("oak frames")
+}
+
+/// 写真を額縁の写真面の縦横に合わせて、真ん中を切り抜く (引き伸ばさない)。読めなければそのまま
+fn crop_to_aspect(jpeg: &[u8], aspect: f64) -> Vec<u8> {
+    let Ok(image) = image::load_from_memory(jpeg) else { return jpeg.to_vec() };
+    let (w, h) = image.dimensions();
+    let (cw, ch) = if (w as f64 / h as f64) > aspect {
+        (((h as f64 * aspect).round() as u32).clamp(1, w), h)
+    } else {
+        (w, ((w as f64 / aspect).round() as u32).clamp(1, h))
     };
+    if (cw, ch) == (w, h) {
+        return jpeg.to_vec();
+    }
+    media::encode_jpeg(&image.crop_imm((w - cw) / 2, (h - ch) / 2, cw, ch), 85)
+}
+
+/// GLB の JSON のチャンクだけを読む (読めなければ None)
+pub fn split_json(glb: &[u8]) -> Option<Value> {
+    split_glb(glb).ok().map(|(doc, _)| doc)
+}
+
+/// GLB を JSON と BIN に分ける
+fn split_glb(glb: &[u8]) -> Result<(Value, Vec<u8>), String> {
+    let chunk = |at: usize| -> Result<(usize, &[u8; 4]), String> {
+        let len = glb.get(at..at + 4).ok_or("GLB が短すぎます")?;
+        let kind = glb.get(at + 4..at + 8).ok_or("GLB が短すぎます")?;
+        Ok((u32::from_le_bytes(len.try_into().unwrap()) as usize, kind.try_into().unwrap()))
+    };
+    let (json_len, kind) = chunk(12)?;
+    if kind != b"JSON" {
+        return Err("GLB の JSON のチャンクがありません".into());
+    }
+    let json_end = 20 + json_len;
+    let doc: Value = serde_json::from_slice(glb.get(20..json_end).ok_or("GLB が短すぎます")?).map_err(|e| e.to_string())?;
+    let (bin_len, kind) = chunk(json_end)?;
+    if kind != b"BIN\0" {
+        return Err("GLB の BIN のチャンクがありません".into());
+    }
+    let bin = glb.get(json_end + 8..json_end + 8 + bin_len).ok_or("GLB が短すぎます")?.to_vec();
+    Ok((doc, bin))
+}
+
+/// オークの額縁に写真を入れた GLB。写真に近い縦横の額縁を選び、写真をその縦横に切り抜いて Photo_Surface に貼る。
+/// 額縁を少し後ろへ傾け、全体の箱の底面の中央が原点に来るよう、親のノード (Artwork_frame) で動かす
+fn build_oak_frame_glb(texture_jpeg: &[u8], width: u32, height: u32) -> Vec<u8> {
+    let (aspect, template) = oak_frame_for(width, height);
+    let photo = crop_to_aspect(texture_jpeg, aspect);
+    let (mut doc, mut bin) = split_glb(template).expect("backend/static/frames の額縁の GLB");
+
+    // 写真を BIN の後ろに足して、Photo_Surface の材質に貼る
+    while bin.len() % 4 != 0 {
+        bin.push(0);
+    }
+    let offset = bin.len();
+    bin.extend_from_slice(&photo);
+    while bin.len() % 4 != 0 {
+        bin.push(0);
+    }
+    let push = |doc: &mut Value, key: &str, item: Value| -> usize {
+        let list = doc[key].as_array_mut().expect("glTF の配列");
+        list.push(item);
+        list.len() - 1
+    };
+    let view = push(&mut doc, "bufferViews", json!({ "buffer": 0, "byteOffset": offset, "byteLength": photo.len() }));
+    let image = push(&mut doc, "images", json!({ "name": "Photo", "bufferView": view, "mimeType": "image/jpeg" }));
+    let sampler = push(&mut doc, "samplers", json!({ "magFilter": 9729, "minFilter": 9987, "wrapS": 33071, "wrapT": 33071 }));
+    let texture = push(&mut doc, "textures", json!({ "source": image, "sampler": sampler }));
+    doc["buffers"][0]["byteLength"] = json!(bin.len());
+
+    let node_named = |doc: &Value, name: &str| {
+        doc["nodes"].as_array().and_then(|nodes| nodes.iter().position(|n| n["name"] == name)).expect("額縁のノード")
+    };
+    let photo_mesh = doc["nodes"][node_named(&doc, "Photo_Surface")]["mesh"].as_u64().expect("写真面のメッシュ") as usize;
+    let photo_material = doc["meshes"][photo_mesh]["primitives"][0]["material"].as_u64().expect("写真面の材質") as usize;
+    doc["materials"][photo_material]["pbrMetallicRoughness"]["baseColorTexture"] = json!({ "index": texture });
+
+    // 額縁本体の箱 (幅・高さは中心から、奥行きは背面 0 から正面まで) を傾けて、底面の中央を原点へ
+    let body_mesh = doc["nodes"][node_named(&doc, "Frame_Body")]["mesh"].as_u64().expect("額縁本体のメッシュ") as usize;
+    let accessor = doc["meshes"][body_mesh]["primitives"][0]["attributes"]["POSITION"].as_u64().expect("額縁本体の頂点") as usize;
+    let bound = |key: &str, k: usize| doc["accessors"][accessor][key][k].as_f64().expect("額縁本体の min / max");
+    let (min, max) = ([bound("min", 0), bound("min", 1), bound("min", 2)], [bound("max", 0), bound("max", 1), bound("max", 2)]);
+    // x 軸まわりに -tilt 回す (上が奥 -Z へ倒れる)
+    let tilt = -OAK_FRAME_TILT_DEG.to_radians();
+    let (sin, cos) = tilt.sin_cos();
+    let (mut lo, mut hi) = ([f64::MAX; 3], [f64::MIN; 3]);
+    for &y in &[min[1], max[1]] {
+        for &z in &[min[2], max[2]] {
+            let p = [0.0, y * cos - z * sin, y * sin + z * cos];
+            for k in 1..3 {
+                lo[k] = lo[k].min(p[k]);
+                hi[k] = hi[k].max(p[k]);
+            }
+        }
+    }
+    let translation = [-(min[0] + max[0]) / 2.0, -lo[1], -(lo[2] + hi[2]) / 2.0];
+    let scene = doc["scene"].as_u64().unwrap_or(0) as usize;
+    let children = doc["scenes"][scene]["nodes"].clone();
+    let root = push(&mut doc, "nodes", json!({
+        "name": "Artwork_frame",
+        "rotation": [(tilt / 2.0).sin(), 0.0, 0.0, (tilt / 2.0).cos()],
+        "translation": translation,
+        "children": children,
+    }));
+    doc["scenes"][scene]["nodes"] = json!([root]);
+    doc["asset"]["generator"] = json!(OAK_FRAME_GENERATOR);
+
+    write_glb(&doc, &bin)
+}
+
+/// 板と台座を組み立てたアクリルスタンドの GLB
+fn build_stand_glb(texture_jpeg: &[u8], width: u32, height: u32) -> Vec<u8> {
+    let parts = stand_parts(width, height);
+    let style = Style::Stand;
 
     let mut bin: Vec<u8> = Vec::new();
     let mut buffer_views: Vec<Value> = Vec::new();
@@ -296,9 +403,6 @@ pub fn build_artwork_glb(texture_jpeg: &[u8], width: u32, height: u32, style: St
     };
 
     let materials = json!([
-        // 詳細画面の額縁と同じ濃いウォルナット
-        solid("Wood", [0.16, 0.11, 0.08, 1.0], 0.5),
-        solid("MatBoard", [0.97, 0.95, 0.90, 1.0], 0.9),
         {
             "name": "Artwork",
             "pbrMetallicRoughness": {
@@ -326,7 +430,12 @@ pub fn build_artwork_glb(texture_jpeg: &[u8], width: u32, height: u32, style: St
         "buffers": [{ "byteLength": bin.len() }],
     });
 
-    let mut json_bytes = serde_json::to_vec(&document).expect("glTF JSON serialization");
+    write_glb(&document, &bin)
+}
+
+/// glTF の JSON と BIN から GLB を書く (BIN は 4 バイトにそろえてあること)
+fn write_glb(document: &Value, bin: &[u8]) -> Vec<u8> {
+    let mut json_bytes = serde_json::to_vec(document).expect("glTF JSON serialization");
     while json_bytes.len() % 4 != 0 {
         json_bytes.push(b' ');
     }
@@ -341,7 +450,7 @@ pub fn build_artwork_glb(texture_jpeg: &[u8], width: u32, height: u32, style: St
     out.extend_from_slice(&json_bytes);
     out.extend_from_slice(&(bin.len() as u32).to_le_bytes());
     out.extend_from_slice(b"BIN\0");
-    out.extend_from_slice(&bin);
+    out.extend_from_slice(bin);
     out
 }
 
@@ -557,21 +666,60 @@ mod tests {
         serde_json::from_slice(&glb[20..20 + json_len]).unwrap()
     }
 
+    /// 単色の JPEG (幅 × 高さ)
+    fn jpeg(width: u32, height: u32) -> Vec<u8> {
+        media::encode_jpeg(&image::DynamicImage::new_rgb8(width, height), 85)
+    }
+
     #[test]
     fn builds_valid_glb_for_both_styles() {
-        let fake_jpeg = vec![0xFFu8, 0xD8, 0xFF, 0xD9, 1, 2, 3];
+        let photo = jpeg(800, 600);
         for style in [Style::Frame, Style::Stand] {
-            let glb = build_artwork_glb(&fake_jpeg, 800, 600, style);
+            let glb = build_artwork_glb(&photo, 800, 600, style);
             validate_glb(&glb).unwrap();
             let doc = parse(&glb);
-            let prims = doc["meshes"][0]["primitives"].as_array().unwrap();
-            assert!(prims.len() >= 4);
             for view in doc["bufferViews"].as_array().unwrap() {
-                assert_eq!(view["byteOffset"].as_u64().unwrap() % 4, 0);
+                assert_eq!(view["byteOffset"].as_u64().unwrap_or(0) % 4, 0);
             }
             let bin_len = doc["buffers"][0]["byteLength"].as_u64().unwrap() as usize;
             assert_eq!(bin_len % 4, 0);
+            let (_, bin) = split_glb(&glb).unwrap();
+            assert_eq!(bin.len(), bin_len);
         }
+        let stand = parse(&build_artwork_glb(&photo, 800, 600, Style::Stand));
+        assert!(stand["meshes"][0]["primitives"].as_array().unwrap().len() >= 4);
+    }
+
+    #[test]
+    fn frame_puts_the_photo_on_the_photo_surface() {
+        let doc = parse(&build_artwork_glb(&jpeg(800, 600), 800, 600, Style::Frame));
+        assert_eq!(doc["asset"]["generator"], OAK_FRAME_GENERATOR);
+        let nodes = doc["nodes"].as_array().unwrap();
+        let photo = nodes.iter().find(|n| n["name"] == "Photo_Surface").unwrap();
+        let material = doc["meshes"][photo["mesh"].as_u64().unwrap() as usize]["primitives"][0]["material"].as_u64().unwrap();
+        let texture = doc["materials"][material as usize]["pbrMetallicRoughness"]["baseColorTexture"]["index"].as_u64().unwrap();
+        let image = doc["textures"][texture as usize]["source"].as_u64().unwrap();
+        assert_eq!(doc["images"][image as usize]["name"], "Photo");
+        // 額縁の 3 つのノードは、傾けて動かす親のノードの下
+        let scene = doc["scenes"][0]["nodes"].as_array().unwrap();
+        assert_eq!(scene.len(), 1);
+        assert_eq!(doc["nodes"][scene[0].as_u64().unwrap() as usize]["children"].as_array().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn frame_is_chosen_by_the_photo_shape() {
+        assert_eq!(oak_frame_for(800, 600).0, 1.5);
+        assert_eq!(oak_frame_for(1000, 1000).0, 1.0);
+        assert_eq!(oak_frame_for(1100, 1000).0, 1.0);
+        assert_eq!(oak_frame_for(300, 900).0, 2.0 / 3.0);
+    }
+
+    #[test]
+    fn photo_is_cropped_to_the_frame_without_stretching() {
+        let size = |bytes: &[u8]| image::load_from_memory(bytes).unwrap().dimensions();
+        assert_eq!(size(&crop_to_aspect(&jpeg(400, 100), 1.5)), (150, 100));
+        assert_eq!(size(&crop_to_aspect(&jpeg(100, 400), 2.0 / 3.0)), (100, 150));
+        assert_eq!(size(&crop_to_aspect(&jpeg(300, 200), 1.5)), (300, 200));
     }
 
     #[test]
@@ -587,12 +735,11 @@ mod tests {
     #[test]
     fn measures_generated_glb() {
         let fake_jpeg = vec![0xFFu8, 0xD8, 0xFF, 0xD9];
-        // 額縁: 幅 2·(w/2 + マット 0.07 + 額 0.075 + 台のはみ出し 0.03)、高さ 台 0.04 + 額 0.075·2 + 絵 h + マット 0.07·2、奥行きは台の 0.28
-        let frame = measure_glb(&build_artwork_glb(&fake_jpeg, 800, 600, Style::Frame)).unwrap();
-        let (w, h) = (1.0, 0.75);
-        let expected = [2.0 * (w / 2.0 + 0.07 + 0.075 + 0.03), 0.04 + 0.15 + h + 0.14, 0.28];
+        // 額縁: 横長の額縁 (外寸 34.8 × 24.8 cm、厚さ 2.2 cm) を 8° 傾けた箱
+        let frame = measure_glb(&build_artwork_glb(&jpeg(800, 600), 800, 600, Style::Frame)).unwrap();
+        let (sin, cos) = OAK_FRAME_TILT_DEG.to_radians().sin_cos();
+        let expected = [0.348, 0.248 * cos + 0.022 * sin, 0.248 * sin + 0.022 * cos];
         assert!(close3(frame, expected, 1e-5), "{frame:?}");
-        assert!(close3(frame, [1.35, 1.08, 0.28], 1e-5), "{frame:?}");
         // スタンド: 幅は台座 (w/2 + 0.08 の楕円)、高さは板の上端、奥行きは台座の 0.44
         let stand = measure_glb(&build_artwork_glb(&fake_jpeg, 800, 600, Style::Stand)).unwrap();
         assert!(close3(stand, [1.16, 0.845, 0.44], 1e-5), "{stand:?}");

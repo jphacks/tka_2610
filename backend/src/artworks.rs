@@ -256,6 +256,74 @@ pub(crate) fn sizes_of(rows: &[SizeRow]) -> home::Sizes {
         .collect()
 }
 
+/// 額縁の作品 (model_kind = frame) のうち、前の額縁 (自前で組み立てた木の額縁) の GLB を、今の額縁
+/// (glb::OAK_FRAME_GENERATOR。backend/static/frames のオークの額縁) で作り直す。起動時に 1 回。
+/// 写真 (image_file) から作り直し、新しい名前のファイルにして、寸法も測り直す。写真か GLB の無い作品 (ほかの PC で登録した作品) は飛ばす
+pub async fn upgrade_frames(state: &AppState) -> AppResult<()> {
+    let rows: Vec<(Uuid, String, String)> =
+        sqlx::query_as("SELECT id, image_file, model_file FROM artworks WHERE model_kind = 'frame' ORDER BY created_at")
+            .fetch_all(&state.pool)
+            .await?;
+
+    let (mut upgraded, mut skipped) = (0, 0);
+    for (id, image_file, model_file) in rows {
+        let (Ok(model), Ok(display)) = (
+            fs::read(state.media_path(MediaKind::Model, &model_file)).await,
+            fs::read(state.media_path(MediaKind::Image, &image_file)).await,
+        ) else {
+            skipped += 1;
+            continue;
+        };
+        let current = glb::split_json(&model).is_some_and(|doc| doc["asset"]["generator"] == glb::OAK_FRAME_GENERATOR);
+        if current {
+            continue;
+        }
+
+        let label = model_file.clone();
+        let built = tokio::task::spawn_blocking(move || {
+            let (texture, w, h) = media::texture_from_display(&display)?;
+            let model = glb::build_artwork_glb(&texture, w, h, Style::Frame);
+            let size = measure_model(&model, &label);
+            Ok::<_, String>((model, size))
+        })
+        .await?;
+        let (model, size) = match built {
+            Ok(built) => built,
+            Err(error) => {
+                println!("[Artwork] {model_file} の額縁を作り直せません ({error})");
+                skipped += 1;
+                continue;
+            }
+        };
+
+        let new_file = format!("{id}-{}.glb", file_tag());
+        write_files(state, &[(MediaKind::Model, new_file.clone(), model.as_slice())]).await?;
+        // ほかの PC の起動と重なったときは、先に作り直した方を残す
+        let [w, h, d] = size.map_or([None; 3], |s| s.map(Some));
+        let done = sqlx::query(
+            "UPDATE artworks SET model_file = $3, model_width = $4, model_height = $5, model_depth = $6, updated_at = NOW() \
+             WHERE id = $1 AND model_file = $2",
+        )
+        .bind(id)
+        .bind(&model_file)
+        .bind(&new_file)
+        .bind(w)
+        .bind(h)
+        .bind(d)
+        .execute(&state.pool)
+        .await?
+        .rows_affected();
+        if done == 1 {
+            remove_files(state, std::iter::once((MediaKind::Model, model_file))).await;
+            upgraded += 1;
+        } else {
+            remove_files(state, std::iter::once((MediaKind::Model, new_file))).await;
+        }
+    }
+    println!("[Artwork] frames: upgraded {upgraded}, skipped {skipped} (missing file)");
+    Ok(())
+}
+
 /// GLB の実寸を測る。測れなければ None (ログだけ出す。登録は止めない)
 pub(crate) fn measure_model(model: &[u8], label: &str) -> Option<[f64; 3]> {
     match glb::measure_glb(model) {

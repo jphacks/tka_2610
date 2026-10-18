@@ -2602,10 +2602,11 @@ mod tests {
             let r = footprint(0.0, 0.0, w, d, rotation);
             assert!(r.max_x - r.min_x <= fit[0] + 1e-12 && r.max_z - r.min_z <= fit[2] + 1e-12 && h <= fit[1] + 1e-12);
         }
-        // 仮生成の額縁 (800 × 600) は custom でないので、枠に合わせて縮める (サイドボードで 0.56 / 1.35 ≈ 0.415)
-        let frame = ArtSize { size: [1.35, 1.08, 0.28], custom: false };
+        // 写真の額縁 (800 × 600 は横長の額縁。幅 0.348 m) は custom でないので、枠いっぱいまで大きくする
+        // (サイドボードでは幅で決まり 0.56 / 0.348 ≈ 1.609)
+        let frame = generated_frame();
         let scale = display_scale(&frame, fit, 0.0);
-        assert!(close(scale, 0.56 / 1.35) && (scale - 0.415).abs() < 1e-3, "{scale}");
+        assert!(close(scale, 0.56 / frame.size[0]) && (scale - 1.609).abs() < 1e-3, "{scale}");
         // custom でない小さな作品は枠まで大きくする (1 倍の上限なし)。custom は 1 倍まで
         let small = ArtSize { size: [0.1, 0.1, 0.1], custom: false };
         assert!(close(display_scale(&small, fit, 0.0), 4.8));
@@ -2729,14 +2730,20 @@ mod tests {
     const CANDIDATE_ID: &str = "cand";
 
     /// 表の作品: 名前・作品 id・寸法 (None は寸法なし)。アトリエの 33 点、仮生成の額縁、寸法の分からない作品
+    /// 写真 (800 × 600) から作った額縁の作品の実寸 (glb.rs のオークの額縁。登録のときと同じく GLB を測る)
+    fn generated_frame() -> ArtSize {
+        let glb = crate::glb::build_artwork_glb(&[0xFF, 0xD8, 0xFF, 0xD9], 800, 600, crate::glb::Style::Frame);
+        let [w, h, d] = crate::glb::measure_glb(&glb).unwrap();
+        ArtSize::from_model(Some(w), Some(h), Some(d), "frame").unwrap()
+    }
+
     fn case_arts() -> Vec<(String, Uuid, Option<ArtSize>)> {
         let mut arts: Vec<_> = ATELIER
             .iter()
             .map(|(asset_id, size)| (asset_id.to_string(), seed_id(asset_id), Some(ArtSize { size: *size, custom: true })))
             .collect();
         let fixed = |s: &str| Uuid::parse_str(s).unwrap();
-        let frame = ArtSize { size: [1.35, 1.08, 0.28], custom: false };
-        arts.push(("frame_800x600".into(), fixed("00000000-0000-4000-8000-000000000800"), Some(frame)));
+        arts.push(("frame_800x600".into(), fixed("00000000-0000-4000-8000-000000000800"), Some(generated_frame())));
         arts.push(("unknown".into(), fixed("00000000-0000-4000-8000-0000000000ff"), None));
         arts
     }
