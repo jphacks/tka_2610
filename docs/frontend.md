@@ -84,7 +84,7 @@ import { HomeScene, StageShell } from '../three'
 | ⑤ | おうちの中 | `/museum`（`?focus=作品ID` / `?room=部屋ID`） | `MuseumView.tsx` / `.css` | push |
 | ⑥ | 作品の詳細（下に「おもいで」：写真・動画・声の記録） | `/artworks/:id` | `ArtworkDetail.tsx` / `.css` | push |
 | ⑦ | おうちのマップ（全部の年齢のおへやの一覧） | `/map` | `MapView.tsx` / `.css` | タブ |
-| ⑧ | 作品一覧（種類・年・月で絞り込む。はじめは「すべて」で、全部の作品を見出し無しで 3 列。年を選ぶと、その年の作品を月ごとの見出しで区切って出し、月のチップが現れる。月を選ぶとその月だけ。並びの上に、見ている範囲と点数。作品の下に作ったときの年齢「5さい 4か月」） | `/collection`（`?category=種類`・`?month=2026`（その年）・`?month=2026-10`（その月）。省くか、その種類の作品が無い年・月ならすべて） | `Collection.tsx` / `.css` | タブ |
+| ⑧ | 作品一覧（種類・年・月で絞り込む。はじめは「すべて」で、全部の作品を見出し無しで 3 列。年を選ぶと、その年の作品を月ごとの見出しで区切って出し、月のダイヤルが現れる（横にスクロールして真ん中の枠に止まった月を選ぶ。押してもよい。`Collection.tsx` の `MonthScroller`）。月を選ぶとその月だけ。並びの上に、見ている範囲と点数。作品の下に作ったときの年齢「5さい 4か月」） | `/collection`（`?category=種類`・`?month=2026`（その年）・`?month=2026-10`（その月）。省くか、その種類の作品が無い年・月ならすべて） | `Collection.tsx` / `.css` | タブ |
 | ⑨ | 作品を編集 | `/artworks/:id/edit` | `EditArtwork.tsx` | モーダル |
 | ⑩ | 設定 | `/settings` | `Settings.tsx` / `.css` | タブ |
 | ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk`（`?room=おへやID`） | `MuseumWalk.tsx` / `.css` | push（②' の「歩く」、⑤ の「⋯」、⑫ の「鑑賞モードへ」から） |
