@@ -145,6 +145,42 @@
   font-size: 13px;
 }
 
+/* おへやが 2 つ以上のとき：どの階に入るか（上の階が左。建物の 3D の階を押しても入れる） */
+.home-floors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.home-floor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px 0 16px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.home-floor small {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  font-size: 11px;
+  text-align: center;
+  color: var(--accent);
+}
+
 .home-hint {
   margin: 0;
   font-size: 12.5px;

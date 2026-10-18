@@ -6,8 +6,11 @@
 
 import type { HouseRoom, Museum, RoomId, Side, Vec3 } from '../../../api/types'
 
-/** 壁の高さ（m。家のキットの値。鑑賞モードの天井の高さ CEILING_HEIGHT と同じ）。カメラに家全体を収めるときの上端 */
-export const WALL_TOP = 3.2
+/**
+ * 壁の高さ（m。建物の GLB の壁の高さ。鑑賞モードの天井の高さ CEILING_HEIGHT もこれ）。カメラに家全体を収めるときの上端。
+ * キットは 3.2 m だが、ホームの積み上げの建物で壁が低い縁のように見えないよう、天井の高い 4.2 m の部屋にした（Rust: WALL_HEIGHT）
+ */
+export const WALL_TOP = 4.2
 /** house が無いときの壁の厚さ（m。今の家の GLB の値） */
 const LEGACY_WALL = 0.24
 

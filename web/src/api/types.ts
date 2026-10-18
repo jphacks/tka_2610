@@ -21,6 +21,12 @@ export interface Artwork {
   made_on: string
   date_short: string
   date_long: string
+  /** 作ったときの年齢（「4さい 3か月」）。子どもの誕生日があるときだけ */
+  age_month_label: string | null
+  /** 作った月（「2026-10」）。作品一覧を月ごとに区切るのに使う */
+  month_key: string
+  /** 作った月の見出し（「2026年 10月」） */
+  month_label: string
   memo: string
   category: Category
   category_label: string
@@ -41,7 +47,43 @@ export interface Artwork {
   /** 飾っているおへやの名前（「4さいのおへや 2」など） */
   room_name: string | null
   floor: string | null
+  /** おもいで（写真・動画・声の記録）の数 */
+  memory_counts: MemoryCounts
   created_at: string
+}
+
+// ---------- おもいで（backend/src/memories.rs） ----------
+
+export type MemoryKind = 'photo' | 'video' | 'audio'
+
+/** 作品ごとの、おもいでの数。Rust: MemoryCounts */
+export interface MemoryCounts {
+  photo: number
+  video: number
+  audio: number
+}
+
+/** 作品に付けた写真・動画・声の記録 1 つ。Rust: MemoryDto */
+export interface Memory {
+  id: string
+  artwork_id: string
+  kind: MemoryKind
+  url: string
+  /** 写真の小さい画像（動画と声は null） */
+  thumb_url: string | null
+  mime: string
+  bytes: number
+  /** 動画と声の長さ（ミリ秒。分からなければ null） */
+  duration_ms: number | null
+  /** 長さの表示（「0:12」。分からなければ null） */
+  duration_label: string | null
+  width: number | null
+  height: number | null
+  /** ひとこと（80 文字まで） */
+  caption: string
+  created_at: string
+  /** 足した日（「2026年10月18日」） */
+  date_label: string
 }
 
 /** 種類ごとの作品数（一覧のタブ用）。Rust: CategoryCount */
@@ -62,6 +104,8 @@ export interface ArtworkList {
 export interface ArtworkDetail {
   artwork: Artwork
   related: Artwork[]
+  /** おもいで（足した順） */
+  memories: Memory[]
 }
 
 /** 作品一覧の絞り込み条件（GET /api/artworks のクエリ） */
@@ -232,7 +276,11 @@ export interface CatalogAsset {
   /** GLB の URL（/home-assets/modules/〇〇.glb） */
   file_url: string
   category: string
-  /** 幅・高さ・奥行き（m）。原点は底面の中心、正面は +Z */
+  /** 'floor'（床に置く）か 'wall'（壁に掛ける。原点は背面の底の中心で、背面を壁に付ける。position の y が底面の高さ） */
+  placement: 'floor' | 'wall'
+  /** 壁の家具を足したときに掛ける高さ（底面の y, m）。床の家具は null */
+  mount_height: number | null
+  /** 幅・高さ・奥行き（m）。原点は底面の中心（壁の家具は背面の底の中心）、正面は +Z */
   dimensions_meters: Vec3
   /** 天板の中心（家のキットの値）。作品を載せる面は surfaces */
   top_anchor: Vec3 | null
@@ -337,6 +385,8 @@ export interface SlotArtwork {
   model_kind: 'frame' | 'stand' | 'custom'
   /** モデルの実寸（幅・高さ・奥行き, m。拡縮する前）。分からない作品は null（枠 fit に合わせて表示する） */
   model_size: Vec3 | null
+  /** おもいでの数（3D の印・鑑賞モードの声） */
+  memory_counts: MemoryCounts
 }
 
 /**

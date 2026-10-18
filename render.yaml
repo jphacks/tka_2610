@@ -1,0 +1,17 @@
+# Render の Blueprint（管理画面の「New → Blueprint」でこのリポジトリを選ぶと、この設定でサーバーを作る）。手順は docs/deploy.md。
+services:
+  - type: web
+    name: memoria
+    runtime: docker
+    plan: free
+    # 日本にいちばん近い場所
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    # main に入ったら作り直す
+    autoDeploy: true
+    branch: main
+    envVars:
+      # Supabase の接続文字列（Session pooler、ポート 5432）。パスワードが入るので、Blueprint を作るときに管理画面で入れる
+      - key: DATABASE_URL
+        sync: false

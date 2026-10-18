@@ -1,0 +1,11 @@
+# docker build に送らないもの（重い・作り直すもの・秘密）
+.git
+.env
+**/.env
+**/node_modules
+backend/target
+backend/data
+web/dist
+web/node_modules/.cache
+tools/home-rooms/.venv
+**/.DS_Store

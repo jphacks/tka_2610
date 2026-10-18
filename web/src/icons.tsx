@@ -44,6 +44,15 @@ export const MuseumIcon = (p: IconProps) => (
   </Svg>
 )
 
+
+export const RainbowIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 17A9 9 0 0 1 21 17" />
+    <path d="M6.5 17A5.5 5.5 0 0 1 17.5 17" />
+    <path d="M10 17A2 2 0 0 1 14 17" />
+  </Svg>
+)
+
 export const UserIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="8.5" r="3.8" />
@@ -215,5 +224,66 @@ export const ThemeIcon = (p: IconProps) => (
     <rect x="4" y="3.5" width="13" height="5" rx="1.5" />
     <path d="M17 6h2.5v5.5H11V14" />
     <rect x="9.75" y="14" width="2.5" height="6.5" rx="1" />
+  </Svg>
+)
+
+/** 声を録る */
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" />
+  </Svg>
+)
+
+/** 再生（塗りの三角） */
+export const PlayIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8 5.5v13l10.5-6.5L8 5.5Z" fill="currentColor" />
+  </Svg>
+)
+
+/** 一時停止 */
+export const PauseIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6.5" y="5" width="3.6" height="14" rx="1" fill="currentColor" stroke="none" />
+    <rect x="13.9" y="5" width="3.6" height="14" rx="1" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
+/** 録音を止める（塗りの四角） */
+export const StopIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
+/** 動画 */
+export const VideoIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="6" width="13" height="12" rx="2.5" />
+    <path d="m16 10.5 5-3v9l-5-3" />
+  </Svg>
+)
+
+/** 声（音符） */
+export const NoteIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 18V5.5l10-2V16" />
+    <circle cx="6.5" cy="18" r="2.5" />
+    <circle cx="16.5" cy="16" r="2.5" />
+  </Svg>
+)
+
+/** 上へ（壁の家具を上げる） */
+export const ArrowUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Svg>
+)
+
+/** 下へ（壁の家具を下げる） */
+export const ArrowDownIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
   </Svg>
 )

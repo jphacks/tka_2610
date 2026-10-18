@@ -14,11 +14,14 @@ export { clearWalkPose } from './walkPose'
 // 一人称で歩く画面の操作の種類（タッチの端末か。開発用の ?input=touch も見る）と、仮想スティックの大きさ（three.js を使わない）。
 // ⑪ 鑑賞モードの画面が操作の説明・スティックの描画に使い、WalkScene に touch で渡す
 export { TOUCH_STICK_RADIUS, isTouchDevice, type TouchStick } from './scenes/walk/inputMode'
-// 模様替えの計算と操作（置けるかどうか・回す・消す・足す）。three.js を使わない純粋な関数なので、
+// 模様替えの計算と操作（置けるかどうか・回す・消す・足す・壁の家具の上げ下げ）。three.js を使わない純粋な関数なので、
 // 最初の読み込みに入っても数 KB。⑫ 模様替えの画面が、ツールバーの操作に使う（sizesFromSlots は作品の実寸）
 export {
+  MOUNT_STEP,
   addFurniture,
+  isWallAsset,
   namesFromSlots,
+  raiseObject,
   removeObject,
   rotateObject,
   sizesFromSlots,

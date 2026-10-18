@@ -1,4 +1,4 @@
-//! 起動時に、アトリエの作品 13 点 (static/atelier) を作品として登録し、おうちに飾る。
+//! 起動時に、アトリエの作品 33 点 (static/atelier) を作品として登録し、おうちに飾る。
 //!
 //! ほかの処理から独立している。要らなくなったら main.rs の呼び出し 1 行とこのファイルを消せばよい。
 //! static/atelier/catalog.json が無ければ何もしない。
@@ -236,7 +236,8 @@ async fn repair_files(
     Ok(files.len())
 }
 
-/// 新しく登録した作品を、作ったときの年齢のおへやの空いている棚や机の上に飾る (その年齢のおへやが無ければ 1 階を作る)
+/// 新しく登録した作品を、作ったときの年齢のおへやの空いている棚や机の上に飾る (その年齢のおへやが無ければ 1 階を作り、
+/// どのおへやもいっぱいなら上の階を足す)
 async fn place(state: &AppState, ids: &[Uuid]) -> Result<usize, String> {
     let message = |e: AppError| e.message;
     let mut tx = state.pool.begin().await.map_err(|e| e.to_string())?;
@@ -253,7 +254,7 @@ async fn place(state: &AppState, ids: &[Uuid]) -> Result<usize, String> {
     for &id in ids {
         let Some((_, made_on, manual)) = rows.iter().find(|r| r.0 == id) else { continue };
         let age = age::artwork_age(birthday, *made_on, *manual);
-        if home_api::place_in_age(&mut tx, id, sizes.get(&id), age).await.map_err(message)?.is_some() {
+        if home_api::place_in_age_adding_floors(&mut tx, id, sizes.get(&id), age).await.map_err(message)?.is_some() {
             placed += 1;
         }
     }
@@ -286,7 +287,7 @@ mod tests {
             return;
         };
         let items: Vec<AtelierItem> = serde_json::from_str(&text).unwrap();
-        assert_eq!(items.len(), 13);
+        assert_eq!(items.len(), 33);
 
         let mut ids: Vec<Uuid> = items.iter().map(|i| seed_id(&i.asset_id)).collect();
         ids.sort();

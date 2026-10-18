@@ -116,10 +116,11 @@
   pointer-events: auto;
 }
 
-/* 追加・テーマ・回す・消す・元に戻す。.glass と一緒に使う */
+/* 追加・テーマ・回す（壁の家具なら上へ・下へ）・消す・元に戻す。.glass と一緒に使う。ボタンの数が変わっても 1 列に並べる */
 .edit-toolbar {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   width: min(100%, 440px);
   padding: 6px;
   border-radius: 22px;

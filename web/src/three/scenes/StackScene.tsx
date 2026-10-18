@@ -1,27 +1,37 @@
 // ホームの積み上げの建物。ある年齢のおへや（/api/ages/{age} の rooms。1 階から）を、実際の 3D のおへや（建物・家具・作品）のまま縦に重ねて、
-// 南東の斜め上から見下ろす。カメラの側の壁はおへやごとにカットするので、どの階も中が見える。
-// 階の左に「4さいのおへや 2（数）›」のラベルを出し、押すと onRoom（その階のおへやへ入る）。
+// 南東の斜め上から見る。上の階は下の階の壁の上にそのまま乗せる（本当の建物と同じ）。部屋の天井が高い（壁 4.2 m）ので、
+// 少し上から（約 26°）見ても、上の階の床の下から下の階の中が見える。カメラの側の壁はおへやごとにカットする。
+// 階を押すと onRoom（その階のおへやへ入る）。3D の上には文字を出さない（どの階かのボタンは Home が建物の下に出す）。
 // 建物・家具・作品を描くのは、ほかの画面と同じ HouseShells・HomeObjects（階ごとに高さをずらしたグループに入れるだけ）。
 // 階が増えるとスマホで重くなるので、動きがあるときだけ描き（frameloop demand）、作品の数はスマホでは HomeObjects の決まり（近い 6 点）に任せる。
-import { useMemo, useRef } from 'react'
-import { useThree } from '@react-three/fiber'
-import { Html, OrbitControls } from '@react-three/drei'
+// 机の上の模型のように見せる仕上げ（暖かい光の影・接地の影・隅の陰・ティルトシフト・周辺減光）は DioramaEffects。
+// 引いて見ると何もない床ばかりにならないよう、ここでは部屋を横方向に縮めて描き（建物のグループを [s, 1, s]）、家具と作品を中へ寄せる
+// （home/compact.ts。重ならない範囲でいちばん小さく。全部の階で同じ s）。家具と作品の大きさと、保存されている配置はそのまま。
+// スマホなど（タッチの端末）では、重い隅の陰を省き、影の解像度を下げる。
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useThree, type ThreeEvent } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { AgeStack, Museum, StackRoom, Vec3 } from '../../api'
 import { CameraFlight, type CameraGoal } from './CameraFlight'
+import { DioramaLight, DioramaPost, useShadowEverything } from './DioramaEffects'
+import { compactLayout, compactScale } from './home/compact'
 import { HomeObjects } from './home/HomeObjects'
 import { HouseShells } from './home/HouseShells'
+import { sizesFromSlots } from './home/placement'
 import { WALL_TOP, cornersOf, fitDistance, frameCenter, roomBounds } from './home/house'
 import { Stage } from './Stage'
-import './StackScene.css'
+import { isTouchDevice } from './walk/inputMode'
 
-/** 1 階分の高さ（m）。壁の高さに、上の階の床の下までのすき間を足す */
-export const FLOOR_PITCH = WALL_TOP + 0.7
-/** 見る先からカメラへの向き（南東の斜め上。各階の中が見えるくらいの角度） */
-const DIRECTION: Vec3 = [1, 0.75, 1]
+/** 1 階分の高さ（m）。壁の高さに、床の下の土台の厚さ（建物の GLB の 0.2 m）を足す。上の階の土台が下の階の壁の上に乗る */
+export const FLOOR_PITCH = WALL_TOP + 0.2
+/** 見る先からカメラへの向き（南東の斜め上。水平から約 26°。部屋の中の床が見渡せて、上の階の床の下から下の階の中も見える角度） */
+const DIRECTION: Vec3 = [1, 0.7, 1]
 const FOV = 38
-/** 建物全体を収めるときの余白 */
-const MARGIN = 1.12
+/** 建物全体を収めるときの余白（1 より小さいので、建物の角が少しだけ画面の外に出るくらいまで寄る） */
+const MARGIN = 0.66
+/** 押したとみなす、押してから離すまでに動いた量（px）。これより動いたら見回すためのドラッグ */
+const TAP_SLOP = 6
 
 const unit = new THREE.Vector3(...DIRECTION).normalize()
 
@@ -48,7 +58,7 @@ function museumOf(stack: AgeStack, floor: StackRoom): Museum {
 }
 
 /** 全部の階が入るように、カメラを置く（階の数や年齢が変わったら、そこへ飛ぶ） */
-function StackCamera({ stack }: { stack: AgeStack }) {
+function StackCamera({ stack, scale }: { stack: AgeStack; scale: number }) {
   const size = useThree((s) => s.size)
   const floors = stack.rooms.length
   const frame = useMemo(() => {
@@ -56,7 +66,8 @@ function StackCamera({ stack }: { stack: AgeStack }) {
     const points: Vec3[] = []
     for (let i = 0; i < Math.max(1, floors); i++) {
       for (const room of stack.house.rooms) {
-        for (const [x, y, z] of cornersOf(roomBounds(room, wall))) points.push([x, y + i * FLOOR_PITCH, z])
+        // 縮めて描いた建物の角（横方向だけ scale 倍）
+        for (const [x, y, z] of cornersOf(roomBounds(room, wall))) points.push([x * scale, y + i * FLOOR_PITCH, z * scale])
       }
     }
     const [tx, , tz] = frameCenter(points, DIRECTION)
@@ -65,7 +76,7 @@ function StackCamera({ stack }: { stack: AgeStack }) {
     return { target, distance }
     // 画面の大きさが変わるたびに測り直すと、見回している途中で距離が変わるので、はじめの大きさで決める
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stack, floors])
+  }, [stack, floors, scale])
 
   const goal = useMemo<CameraGoal>(() => {
     const target = new THREE.Vector3(...frame.target)
@@ -88,50 +99,92 @@ function StackCamera({ stack }: { stack: AgeStack }) {
   )
 }
 
+/** 建物の下の土台の厚さ（m）。建物の GLB の床の下（y = −0.2 まで） */
+const BASE_DEPTH = 0.2
+
+/** 模型の仕上げ。建物や家具が読み込まれるたび（version）に、全部のメッシュに影を付け直す */
+function Diorama({ stack, scale, version, lite }: { stack: AgeStack; scale: number; version: number; lite: boolean }) {
+  useShadowEverything(version)
+  const { center, radius } = useMemo(() => {
+    const room = stack.house.rooms[0]
+    const wall = stack.house.wall_thickness
+    const width = ((room?.size[0] ?? 10) + wall * 2) * scale
+    const depth = ((room?.size[1] ?? 10) + wall * 2) * scale
+    const height = Math.max(1, stack.rooms.length) * FLOOR_PITCH
+    const [ox, oz] = room?.origin ?? [0, 0]
+    return { center: [ox, height / 2 - BASE_DEPTH, oz] as Vec3, radius: Math.hypot(width / 2, depth / 2, height / 2) }
+  }, [stack, scale])
+  return (
+    <>
+      <DioramaLight center={center} radius={radius} floorY={-BASE_DEPTH} lite={lite} />
+      <DioramaPost lite={lite} />
+    </>
+  )
+}
+
 export function StackScene({
   stack,
   onRoom,
   onReady,
 }: {
   stack: AgeStack
-  /** 階のラベルを押したとき（おへやの id） */
+  /** 階を押したとき（おへやの id） */
   onRoom?: (roomId: string) => void
   /** どの階の建物もそろったとき */
   onReady?: () => void
 }) {
   const museums = useMemo(() => stack.rooms.map((floor) => museumOf(stack, floor)), [stack])
-  // ラベルは、建物の南西の角（画面の左手前）から右へ伸ばす。高さは各階の床の少し上
-  const hub = stack.house.rooms[0]
-  const labelX = hub ? -(hub.size[0] / 2 + stack.house.wall_thickness) : -5.2
-  const labelZ = hub ? hub.size[1] / 2 + stack.house.wall_thickness : 5.2
+  // 部屋を縮める倍率と、縮めた部屋に寄せた配置（階ごと）
+  const compact = useMemo(() => {
+    const floors = stack.rooms.map((floor) => ({ layout: floor.layout, sizeOf: sizesFromSlots(floor.slots) }))
+    const scale = compactScale(floors, stack.catalog)
+    return { scale, layouts: floors.map((f) => compactLayout(f.layout, stack.catalog, scale, f.sizeOf)) }
+  }, [stack])
+  // 階を押したとき。見回すためのドラッグの終わりでは入らない（押してから離すまでに動いた量で分ける）
+  const tap = (roomId: string) => (e: ThreeEvent<MouseEvent>) => {
+    if (e.delta > TAP_SLOP) return
+    e.stopPropagation()
+    onRoom?.(roomId)
+  }
+  const hover = (on: boolean) => () => {
+    if (onRoom) document.body.style.cursor = on ? 'pointer' : ''
+  }
+  // 階の上にいるまま画面を移ったときに、指の形のカーソルが残らないように
+  useEffect(() => () => void (document.body.style.cursor = ''), [])
   // 建物がそろった階（おへやの id）。全部の階がそろったら onReady
   const loaded = useRef(new Set<string>())
+  // 建物や家具が読み込まれた回数（影を付け直すきっかけ）
+  const [version, setVersion] = useState(0)
+  const bump = useCallback(() => setVersion((v) => v + 1), [])
+  const [lite] = useState(isTouchDevice)
 
   return (
-    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand">
+    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows>
       {stack.rooms.map((floor, i) => (
-        <group key={floor.room.id} position={[0, i * FLOOR_PITCH, 0]}>
-          <HouseShells
-            museum={museums[i]}
-            cutaway
-            onReady={() => {
-              loaded.current.add(floor.room.id)
-              if (stack.rooms.every((r) => loaded.current.has(r.room.id))) onReady?.()
-            }}
-          />
-          <HomeObjects layout={floor.layout} catalog={stack.catalog} slots={floor.slots} house={stack.house} />
-          <Html position={[labelX, WALL_TOP * 0.35, labelZ]} zIndexRange={[10, 0]}>
-            <button type="button" className="stack-label" onClick={() => onRoom?.(floor.room.id)}>
-              {floor.room.name}
-              <small>{floor.count}</small>
-              <span className="stack-chevron" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </Html>
+        <group
+          key={floor.room.id}
+          position={[0, i * FLOOR_PITCH, 0]}
+          onClick={tap(floor.room.id)}
+          onPointerOver={hover(true)}
+          onPointerOut={hover(false)}
+        >
+          {/* 建物は横方向だけ縮める（壁の高さはそのまま） */}
+          <group scale={[compact.scale, 1, compact.scale]}>
+            <HouseShells
+              museum={museums[i]}
+              cutaway
+              onReady={() => {
+                loaded.current.add(floor.room.id)
+                bump()
+                if (stack.rooms.every((r) => loaded.current.has(r.room.id))) onReady?.()
+              }}
+            />
+          </group>
+          <HomeObjects layout={compact.layouts[i]} catalog={stack.catalog} slots={floor.slots} house={stack.house} onReady={bump} />
         </group>
       ))}
-      <StackCamera stack={stack} />
+      <StackCamera stack={stack} scale={compact.scale} />
+      <Diorama stack={stack} scale={compact.scale} version={version} lite={lite} />
     </Stage>
   )
 }

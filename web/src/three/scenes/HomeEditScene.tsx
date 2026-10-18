@@ -15,7 +15,8 @@
 //
 // ドラッグの置き先（ポインタが動くたびに計算する）：
 //   家具 … 押した点の高さの水平な面（THREE.Plane）との交点。自分の部屋の中（壁から 12 cm）に寄せる（clampToRect）。
-//          上の作品は家具のグループの子なので一緒に動く
+//          上の作品は家具のグループの子なので一緒に動く。
+//          壁の家具は、その点にいちばん近い壁に背中を付けて、壁に沿って動かす（snapToWall。ほかの壁へ移ると向きも変わる）。高さは変えない
 //   作品 … ポインタの先の家具（同じ部屋の FURN_ のグループだけにレイを当てる。作品 ARTWORK_ の当たりは飛ばす）に面があれば、
 //          当たった高さ以下でいちばん高い面（天板・本棚の段）に載せ換える。面の高さの水平な面との交点を、親から見た位置に直し、
 //          面の中へ寄せる（作品の置いた後の寸法で）。家具に当たらなければ（面の無い家具・ラグに当たったときも）床：
@@ -58,6 +59,8 @@ import {
   doorZones,
   footprint,
   furnitureById,
+  furnitureRect,
+  isWallAsset,
   namesFromSlots,
   parentLocalFromWorld,
   replaceObject,
@@ -65,6 +68,7 @@ import {
   roomOrigin,
   roomRect,
   sizesFromSlots,
+  snapToWall,
   surfaceIdOf,
   surfaceOf,
   topRect,
@@ -167,8 +171,14 @@ function footprintOf(layout: Layout, catalog: HomeCatalog, object: LayoutObject,
   if (object.kind === 'furniture') {
     const asset = assetOf(catalog, object.assetId)
     if (!asset) return null
-    const [w, , d] = asset.dimensions_meters
-    return onFloor(w, d)
+    // 足元（壁の家具は原点が背面なので、中心は正面の方へずれる）を床に敷く
+    const r = furnitureRect(asset, object)
+    const [ox, oz] = roomOrigin(house, object.roomId)
+    return {
+      center: [ox + (r.minX + r.maxX) / 2, FLOOR_OVERLAY_Y, oz + (r.minZ + r.maxZ) / 2] as Vec3,
+      size: [r.maxX - r.minX, r.maxZ - r.minZ] as [number, number],
+      rotationY: 0,
+    }
   }
   if (!object.parentId) return onFloor(...artExtent(object.artworkId, FLOOR_ART_FIT, object.rotationY, sizeOf))
   // 家具の上の作品：載せている面の枠に収めた寸法で、親から見た外接長方形を作り、親の向きで回して置く
@@ -395,6 +405,10 @@ function Editor({
       if (!asset || !at) return null
       const [w, , depth] = asset.dimensions_meters
       const [ox, oz] = roomOrigin(l.house, d.roomId)
+      if (isWallAsset(asset)) {
+        const snapped = snapToWall(l.layout, asset, d.roomId, round(at[0] + d.offset[0] - ox), round(at[1] + d.offset[1] - oz), object.position[1])
+        return { ...object, ...snapped }
+      }
       const [x, z] = clampToRect(
         roomRect(l.layout, d.roomId),
         w,
@@ -490,13 +504,15 @@ function Editor({
       d.candidate = candidate
       d.check = check
       const [x, , z] = candidate.position
+      // 家具は持ち上げた高さ（壁の家具は掛けている高さから）、作品は持ち上げる分だけ（高さは載せる面で決まる）
+      const lift = candidate.kind === 'furniture' ? candidate.position[1] + LIFT : LIFT
       setPreview({
         id: d.id,
         // 作品は載せ換え先（床なら null と部屋）も渡す。HomeObjects がその家具のグループ（床なら部屋のグループ）の下に描く
         ...(candidate.kind === 'artwork'
           ? { parentId: candidate.parentId ?? null, surface: candidate.surface ?? null, roomId: candidate.roomId }
           : {}),
-        position: [x, LIFT, z],
+        position: [x, lift, z],
         rotationY: candidate.rotationY,
         ok: check.ok,
         candidate,

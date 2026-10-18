@@ -136,6 +136,31 @@ pub fn process(bytes: &[u8]) -> Result<ProcessedImage, String> {
     })
 }
 
+/// おもいでの写真 (作品の写真と同じ大きさの表示用画像と正方形の小さい画像。テクスチャと背景色は作らない)
+pub struct ProcessedPhoto {
+    pub display_jpeg: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub thumb_jpeg: Vec<u8>,
+}
+
+pub fn process_photo(bytes: &[u8]) -> Result<ProcessedPhoto, String> {
+    let original = DynamicImage::ImageRgb8(decode(bytes)?);
+    let (w, h) = original.dimensions();
+    if w < 16 || h < 16 {
+        return Err("画像が小さすぎます".into());
+    }
+    let display = fit_within(&original, DISPLAY_MAX);
+    drop(original);
+    let thumb = display.resize_to_fill(THUMB_SIZE, THUMB_SIZE, FilterType::Triangle);
+    Ok(ProcessedPhoto {
+        width: display.width(),
+        height: display.height(),
+        display_jpeg: encode_jpeg(&display, 86),
+        thumb_jpeg: encode_jpeg(&thumb, 80),
+    })
+}
+
 /// 保存済みの表示用 JPEG からテクスチャだけ作り直す (カテゴリ変更時)
 pub fn texture_from_display(bytes: &[u8]) -> Result<(Vec<u8>, u32, u32), String> {
     let image = DynamicImage::ImageRgb8(decode(bytes)?);

@@ -22,7 +22,9 @@ use crate::{
     error::{AppError, AppResult},
     glb::{self, Style},
     home::{self, ArtworkObject, DoorPolicy, LayoutObject},
-    home_api, media, museum, museum_api,
+    home_api, media,
+    memories::{self, MemoryCounts, MemoryDto},
+    museum, museum_api,
     state::{media_url, AppState, MediaKind},
 };
 
@@ -91,6 +93,12 @@ pub struct ArtworkDto {
     pub date_short: String,
     /// 例: "2024年5月12日"
     pub date_long: String,
+    /// 作ったときの年齢 (例: "4さい 3か月")。子どもの誕生日があるときだけ (作品一覧に出す)
+    pub age_month_label: Option<String>,
+    /// 作った月 (例: "2024-05")。作品一覧を月ごとに区切るのに使う
+    pub month_key: String,
+    /// 作った月の見出し (例: "2024年 5月")
+    pub month_label: String,
     pub memo: String,
     pub category: String,
     pub category_label: &'static str,
@@ -111,6 +119,8 @@ pub struct ArtworkDto {
     /// 飾っているおへやの名前 (例: "4さいのおへや 2")
     pub room_name: Option<String>,
     pub floor: Option<&'static str>,
+    /// おもいで (写真・動画・声の記録) の数
+    pub memory_counts: MemoryCounts,
     pub displayed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -124,23 +134,29 @@ pub fn date_long(date: NaiveDate) -> String {
     format!("{}年{}月{}日", date.year(), date.month(), date.day())
 }
 
-/// 作品の DTO を作るのに使う値: 子どもの誕生日 (作ったときの年齢を計算する) と、おへやの名前
+/// 作品の DTO を作るのに使う値: 子どもの誕生日 (作ったときの年齢を計算する)、おへやの名前、おもいでの数
 pub struct DtoContext {
     pub birthday: Option<NaiveDate>,
     pub rooms: HashMap<Uuid, String>,
+    pub memories: HashMap<Uuid, MemoryCounts>,
 }
 
 impl DtoContext {
     pub async fn load(pool: &PgPool) -> AppResult<Self> {
-        let (birthday, rooms) = tokio::try_join!(museum_api::child_birthday(pool), home_api::room_names(pool))?;
-        Ok(DtoContext { birthday, rooms })
+        let (birthday, rooms, memories) = tokio::try_join!(
+            museum_api::child_birthday(pool),
+            home_api::room_names(pool),
+            memories::counts(pool)
+        )?;
+        Ok(DtoContext { birthday, rooms, memories })
     }
 
     /// トランザクションの中で読む
     pub async fn load_in(tx: &mut Transaction<'_, Postgres>) -> AppResult<Self> {
         let birthday = museum_api::child_birthday(&mut **tx).await?;
         let rooms = home_api::room_names(&mut **tx).await?;
-        Ok(DtoContext { birthday, rooms })
+        let memories = memories::counts(&mut **tx).await?;
+        Ok(DtoContext { birthday, rooms, memories })
     }
 }
 
@@ -171,6 +187,9 @@ impl ArtworkDto {
             made_on: row.made_on.format("%Y-%m-%d").to_string(),
             date_short: date_short(row.made_on),
             date_long: date_long(row.made_on),
+            age_month_label: birthday.map(|b| age::age_month_label(b, row.made_on)),
+            month_key: row.made_on.format("%Y-%m").to_string(),
+            month_label: format!("{}年 {}月", row.made_on.year(), row.made_on.month()),
             memo: row.memo.clone(),
             category: row.category.clone(),
             category_label: museum::category_label(&row.category),
@@ -188,6 +207,7 @@ impl ArtworkDto {
             room_id: row.house_room_id,
             room_name,
             floor: displayed.then_some(home::FLOOR_ID),
+            memory_counts: ctx.memories.get(&row.id).copied().unwrap_or_default(),
             displayed_at: row.displayed_at,
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -381,6 +401,8 @@ pub async fn list_artworks(
 pub struct ArtworkDetail {
     pub artwork: ArtworkDto,
     pub related: Vec<ArtworkDto>,
+    /// おもいで (写真・動画・声の記録。足した順)
+    pub memories: Vec<MemoryDto>,
 }
 
 pub async fn get_artwork(
@@ -388,7 +410,7 @@ pub async fn get_artwork(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ArtworkDetail>> {
     let row = fetch_row(&state.pool, id).await?;
-    let ctx = DtoContext::load(&state.pool).await?;
+    let (ctx, memories) = tokio::try_join!(DtoContext::load(&state.pool), memories::of_artwork(&state.pool, id))?;
 
     // 同じカテゴリ → 同じ子ども → 制作日が近い順
     let related = sqlx::query_as::<_, ArtworkRow>(&format!(
@@ -406,6 +428,7 @@ pub async fn get_artwork(
     Ok(Json(ArtworkDetail {
         artwork: ArtworkDto::new(&row, &ctx),
         related: related.iter().map(|r| ArtworkDto::new(r, &ctx)).collect(),
+        memories,
     }))
 }
 
@@ -838,6 +861,8 @@ pub async fn delete_artwork(
         }
         None => None,
     };
+    // おもいでの行は作品と一緒に CASCADE で消えるので、ファイル名を先に集めておく
+    let memory_files = memories::files_of(&mut *tx, id).await?;
 
     let (image_file, thumb_file, model_file) = sqlx::query_as::<_, (String, String, String)>(
         "DELETE FROM artworks WHERE id = $1 RETURNING image_file, thumb_file, model_file",
@@ -861,7 +886,8 @@ pub async fn delete_artwork(
             (MediaKind::Thumb, thumb_file),
             (MediaKind::Model, model_file),
         ]
-        .into_iter(),
+        .into_iter()
+        .chain(memory_files),
     )
     .await;
 

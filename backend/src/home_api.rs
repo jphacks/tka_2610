@@ -371,6 +371,29 @@ pub async fn place_in_age(
     Ok(None)
 }
 
+/// place_in_age と同じ。ただし、その年齢のどのおへやもいっぱいなら、いちばん上に初期配置の家具でおへやを足して置く
+/// (MAX_FLOORS まで)。起動時のサンプルの登録 (seed) だけが使う。利用者が飾るときは足さずに 409 にする
+pub async fn place_in_age_adding_floors(
+    tx: &mut Transaction<'_, Postgres>,
+    artwork_id: Uuid,
+    size: Option<&ArtSize>,
+    age: i16,
+) -> AppResult<Option<SavedLayout>> {
+    if let Some(saved) = place_in_age(tx, artwork_id, size, age).await? {
+        return Ok(Some(saved));
+    }
+    // 空のおへやにも入らない作品のために、使われないおへやを作らない
+    let empty = without_artworks(&home::default_layout());
+    if home::pick_spot(&empty, &home::Sizes::new(), size, None, None).is_none()
+        || rooms_of_age(&mut **tx, age).await?.len() as i16 >= MAX_FLOORS
+    {
+        return Ok(None);
+    }
+    let room = create_room(&mut **tx, age, &empty).await?;
+    println!("[Home] {} を足しました (サンプルの作品を飾るため)", room.name());
+    place_in_age(tx, artwork_id, size, age).await
+}
+
 // =============================
 // API
 // =============================
