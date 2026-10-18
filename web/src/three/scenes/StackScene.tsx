@@ -30,9 +30,9 @@ export const FLOOR_PITCH = WALL_TOP + 0.2
 const DIRECTION: Vec3 = [1, 0.4, 1]
 const FOV = 38
 /** 建物全体を収めるときの余白（1 より小さいので、建物の角が少しだけ画面の外に出るくらいまで寄る） */
-const MARGIN = 0.9
+const MARGIN = 0.78
 /** 階のラベルの位置（西の角から中心までのうち、角の側からどれだけ残すか） */
-const LABEL_INSET = 0.6
+const LABEL_INSET = 0.25
 
 const unit = new THREE.Vector3(...DIRECTION).normalize()
 
