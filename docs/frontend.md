@@ -88,7 +88,7 @@ import { HomeScene, StageShell } from '../three'
 | ⑨ | 作品を編集 | `/artworks/:id/edit` | `EditArtwork.tsx` | モーダル |
 | ⑩ | 設定 | `/settings` | `Settings.tsx` / `.css` | タブ |
 | ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk`（`?room=おへやID`） | `MuseumWalk.tsx` / `.css` | push（②' の「歩く」、⑤ の「⋯」、⑫ の「鑑賞モードへ」から） |
-| ⑫ | 模様替え（家具と作品を動かす・回す・消す・足す、テーマを選ぶ） | `/home/edit`（`?room=おへやID`） | `HomeEdit.tsx` / `.css` | push（②' の「模様替え」、⑤ の「⋯」から） |
+| ⑫ | 模様替え（家具と作品を動かす・回す・消す・足す、壁の家具を上げ下げする、テーマを選ぶ） | `/home/edit`（`?room=おへやID`） | `HomeEdit.tsx` / `.css` | push（②' の「模様替え」、⑤ の「⋯」から） |
 
 - 「開き方」は画面遷移アニメーションの種類です（後述の「画面遷移」）。
 - 各ファイルの先頭に、番号・URL・開き方を書いています。
@@ -158,7 +158,7 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 - `/api/museum` の `slots` は、配置 JSON から Rust が計算した世界座標です（飾っている作品だけ。部屋の中心込み）。カメラを作品に寄せる、作品を照らす、近い作品を選ぶ、などに使います。家具は `layout` と `catalog` から `HomeObjects` が置きます。家具の上の作品は、配置 JSON の位置（載せている面の中心から。面は `catalog` の `surfaces`）に置きます。
 - `/api/museum` の `house` は家の形（部屋ごとの `origin`・`size`・`doors`・`cutaway`・建物の GLB の `model_url`、壁の厚さ）です。今の `rooms` は hub の 1 件で、`doors` は `[]` です。部屋の位置や大きさが要るときは、必ずここから読みます（`house.ts`・`placement.ts` の `roomOrigin`・`doorZones`）。`house` の無い古いサーバーのときだけ、`model_url` のリビング 1 部屋として扱います（`houseRoomsOf`）。今のサーバーの `model_url` はリビングだけの `home-empty.glb` で、前の版の Web のために返しているだけです。
 - 家の中の作品の大きさは、実寸（`slots[].artwork.model_size`。登録時に Rust が GLB から測った値）× 倍率です。倍率は、作品の向き（配置 JSON の `rotationY`）で回した縦横と高さが置き場所の枠 `fit` に収まる、いちばん大きい値です（`placement.ts` の `displayScale`。Rust の `display_scale` と同じ式で、`slots[].scale` と一致する）。枠は、家具の上なら載せている面の `art_fit`（本棚の段では上の棚板にぶつからない高さ）、床なら 0.8 × 1.0 × 0.8 m です。
-- `model_kind` が `custom` の作品（登録時に渡した GLB と、サンプルの作品 13 点。実寸のモデル）は 1 倍まで（拡大しない）、それ以外（写真から作った額縁・スタンド）は枠いっぱいの大きさにします。置けるかどうかの判定も、この置いた後の大きさ（`placedSize`・`artRect`）で調べます。
+- `model_kind` が `custom` の作品（登録時に渡した GLB と、サンプルの作品 33 点。実寸のモデル）は 1 倍まで（拡大しない）、それ以外（写真から作った額縁・スタンド）は枠いっぱいの大きさにします。置けるかどうかの判定も、この置いた後の大きさ（`placedSize`・`artRect`）で調べます。
 - 実寸が分からない作品（`model_size` が null）は、`FittedModel` が範囲 `fit` に収めます（水平方向は対角線の長さで合わせる。`custom` なら `noUpscale` で縮めるだけ）。判定では枠そのものを作品の大きさとして扱います。④ 3D プレビューも `FittedModel` で、台座の上の範囲に収めます。
 
 ### 模様替えの仕組み（⑫）
@@ -284,7 +284,7 @@ iOS 風のアニメーションは、ブラウザの View Transitions API で作
 
 - 型チェックとビルド：`cd web && npm run build`
 - 置けるかどうかの判定が Rust と同じか：`cd web && npm run check:placement`。`tsc -p tsconfig.check.json` で `placement.ts` だけを `node_modules/.cache/placement-check/` に出力し、`scripts/check-placement.mjs` が Rust の総当たり表（`backend/src/testdata/placement-cases.json`）を計算し直して、寄せた位置・倍率・置けるかどうかを比べます。違いがあれば最初の 20 件を出して、終了コード 1 で終わります。TypeScript を直接読む機能は使わないので、Node 20.19 でも動きます。環境変数 `PLACEMENT_CASES` で別の表を渡せます
-  - 今の表はリビングだけ（配置は v5。出入口なし）の表です。`cases` は 1,740 件（面 13 × 作品 15 × 2 つの向き × 寄せる先 4 = 1,560 件と、hub の床 × 作品 15 × 2 × 寄せる先 6 = 180 件。床の行には `room` がある）、`extra` は重なり・壁・床の枠・寸法の分からない作品・45°・床の台座（(3.2, 3.2)）との重なり・台座の上のラグ・以前の出入口の前に置けることの 10 件です。部屋の定義は表の `house`（`/api/museum` の `house` と同じ形。hub だけで `doors: []`）、出入口の前の大きさは `door_zone` から読み、`placement.ts` の `DOOR_ZONE_WIDTH`・`DOOR_ZONE_DEPTH` と比べます。
+  - 今の表はリビングだけ（配置は v5。出入口なし）の表です。`cases` は 4,900 件（面 16 × 作品 35 × 2 つの向き × 寄せる先 4 = 4,480 件と、hub の床 × 作品 35 × 2 × 寄せる先 6 = 420 件。床の行には `room` がある）、`extra` は重なり・壁・床の枠・寸法の分からない作品・45°・床の台座（(3.2, 3.2)）との重なり・台座の上のラグ・以前の出入口の前に置けることの 10 件と、壁の家具の 11 件です。表の `wall`（壁の高さ・掛けられるいちばん低い高さ）を `placement.ts` の `WALL_HEIGHT`・`WALL_MOUNT_MIN` と比べます。部屋の定義は表の `house`（`/api/museum` の `house` と同じ形。hub だけで `doors: []`）、出入口の前の大きさは `door_zone` から読み、`placement.ts` の `DOOR_ZONE_WIDTH`・`DOOR_ZONE_DEPTH` と比べます。
   - 候補（id `cand`）は「新しく置いた物」として、出入口の前も調べます（`canPlace` に `house` を渡す。今は出入口が無いので何も止まらない）。`extra[].moved` が `false` の行は、動かしていない保存済みの物の扱いで、出入口の前を調べません（今の表には無い）。
   - 終わりに `表の形: 部屋ごと（床のケースに room あり）・床のケースの部屋: hub・部屋の定義: 表の house` と `cases 1740 件・extra 10 件・world 0 件 → 違い 0 件` が出れば OK です。リビングだけの v2 の表も読めます（そのときは出入口を調べない）
 - 開発中の表示：サーバー（`cd backend && cargo run`）を起動したうえで、`cd web && npm run dev` → http://localhost:5173
