@@ -500,7 +500,7 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |
 | GET | `/healthz` | 死活確認 |
 
-作品の項目（`/api/artworks` の一覧・詳細など）の `model_size` は、GLB から測った実寸（`[幅, 高さ, 奥行き]`、m）です。測れなかった作品は null です。`age_at_made` は作ったときの子どもの年齢（お誕生日と作成日から。お誕生日が無ければ手入力の `age`）です。`room_id`・`room_name` は、飾っているおへやの id と名前（「4さいのおへや 2」）で、飾っていなければ null です。`memory_counts` はおもいでの数（`{ photo, video, audio }`。`/api/museum` の `slots[].artwork` にもある）です。作品の詳細（`/api/artworks/:id`）は `memories` におもいでを足した順で返します（`kind`・`url`・写真の小さい画像 `thumb_url`・`duration_ms` と表示用の `duration_label`（「0:12」）・`caption`・足した日 `date_label` など）。
+作品の項目（`/api/artworks` の一覧・詳細など）の `model_size` は、GLB から測った実寸（`[幅, 高さ, 奥行き]`、m）です。測れなかった作品は null です。`age_at_made` は作ったときの子どもの年齢（お誕生日と作成日から。お誕生日が無ければ手入力の `age`）です。`age_month_label` は作ったときの年齢を月まで出した文字（「4さい 3か月」。お誕生日が無ければ null。`age.rs` の `months_on`。月の記念日がその月に無いとき（1/31 生まれの 2 月など）は翌月 1 日に数える）、`month_key`・`month_label` は作った月（「2026-10」・「2026年 10月」。作品一覧の見出し）です。`room_id`・`room_name` は、飾っているおへやの id と名前（「4さいのおへや 2」）で、飾っていなければ null です。`memory_counts` はおもいでの数（`{ photo, video, audio }`。`/api/museum` の `slots[].artwork` にもある）です。作品の詳細（`/api/artworks/:id`）は `memories` におもいでを足した順で返します（`kind`・`url`・写真の小さい画像 `thumb_url`・`duration_ms` と表示用の `duration_label`（「0:12」）・`caption`・足した日 `date_label` など）。
 
 `/api/museum` の `house`（家の形。`home.rs` の `ROOM_DEFS` をそのまま出す。Web は部屋の位置・大きさ・出入口・建物の GLB をここから読む）：
 

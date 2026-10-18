@@ -93,6 +93,12 @@ pub struct ArtworkDto {
     pub date_short: String,
     /// 例: "2024年5月12日"
     pub date_long: String,
+    /// 作ったときの年齢 (例: "4さい 3か月")。子どもの誕生日があるときだけ (作品一覧に出す)
+    pub age_month_label: Option<String>,
+    /// 作った月 (例: "2024-05")。作品一覧を月ごとに区切るのに使う
+    pub month_key: String,
+    /// 作った月の見出し (例: "2024年 5月")
+    pub month_label: String,
     pub memo: String,
     pub category: String,
     pub category_label: &'static str,
@@ -181,6 +187,9 @@ impl ArtworkDto {
             made_on: row.made_on.format("%Y-%m-%d").to_string(),
             date_short: date_short(row.made_on),
             date_long: date_long(row.made_on),
+            age_month_label: birthday.map(|b| age::age_month_label(b, row.made_on)),
+            month_key: row.made_on.format("%Y-%m").to_string(),
+            month_label: format!("{}年 {}月", row.made_on.year(), row.made_on.month()),
             memo: row.memo.clone(),
             category: row.category.clone(),
             category_label: museum::category_label(&row.category),
