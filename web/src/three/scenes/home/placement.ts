@@ -53,7 +53,7 @@ const SEARCH_STEP = 0.5
 /** 中央の部屋（リビング）。床の作品で roomId を省いたときと、古い配置の家具の部屋 */
 export const HUB: RoomId = 'hub'
 /** 部屋の壁の高さ（m）。壁の家具は、上に飾る作品の枠まで含めてこれより下に掛ける。Rust: WALL_HEIGHT（house.ts の WALL_TOP と同じ） */
-export const WALL_HEIGHT = 3.2
+export const WALL_HEIGHT = 4.2
 /** 壁の家具を掛けられるいちばん低い高さ（底面の y, m）。Rust: WALL_MOUNT_MIN */
 export const WALL_MOUNT_MIN = 0.3
 /** 壁の家具の向きの許容（ラジアン）。90° ごとの向きにだけ掛けられる。Rust: ANGLE_EPSILON */

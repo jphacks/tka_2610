@@ -25,8 +25,8 @@ const SHELF_LIGHT_FORWARD = 1.2
 const SHELF_LIGHT_UP = 0.6
 /** 枠の高さがこれより低い作品は棚の段にある（Rust の art_fit：棚の段では「すき間 − 4 cm」で 0.62 m より低くなる） */
 const SHELF_FIT_HEIGHT = 0.6
-/** 照明を置く高さの上限（天井 3.2 m より下。本棚の天板の作品で天井を突き抜けないように） */
-const LIGHT_MAX_Y = 3.0
+/** 照明を置く高さの上限（天井 4.2 m より下。本棚の天板や壁の棚の作品で天井を突き抜けないように） */
+const LIGHT_MAX_Y = 4.0
 /** 作品の照明の明るさ（three.js の単位）と色（少し暖かい白） */
 const INTENSITY = 6
 const COLOR = new THREE.Color().setRGB(1, 0.94, 0.86, THREE.SRGBColorSpace)
