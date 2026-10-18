@@ -4,16 +4,20 @@
 // 階の左に「4さいのおへや 2（数）›」のラベルを出し、押すと onRoom（その階のおへやへ入る）。
 // 建物・家具・作品を描くのは、ほかの画面と同じ HouseShells・HomeObjects（階ごとに高さをずらしたグループに入れるだけ）。
 // 階が増えるとスマホで重くなるので、動きがあるときだけ描き（frameloop demand）、作品の数はスマホでは HomeObjects の決まり（近い 6 点）に任せる。
-import { useMemo, useRef } from 'react'
+// 机の上の模型のように見せる仕上げ（暖かい光の影・接地の影・隅の陰・ティルトシフト・周辺減光）は DioramaEffects。
+// スマホなど（タッチの端末）では、重い隅の陰を省き、影の解像度を下げる。
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Html, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { AgeStack, Museum, StackRoom, Vec3 } from '../../api'
 import { CameraFlight, type CameraGoal } from './CameraFlight'
+import { DioramaLight, DioramaPost, useShadowEverything } from './DioramaEffects'
 import { HomeObjects } from './home/HomeObjects'
 import { HouseShells } from './home/HouseShells'
 import { WALL_TOP, cornersOf, fitDistance, frameCenter, roomBounds } from './home/house'
 import { Stage } from './Stage'
+import { isTouchDevice } from './walk/inputMode'
 import './StackScene.css'
 
 /** 1 階分の高さ（m）。壁の高さに、床の下の土台の厚さ（建物の GLB の 0.2 m）を足す。上の階の土台が下の階の壁の上に乗る */
@@ -89,6 +93,29 @@ function StackCamera({ stack }: { stack: AgeStack }) {
   )
 }
 
+/** 建物の下の土台の厚さ（m）。建物の GLB の床の下（y = −0.2 まで） */
+const BASE_DEPTH = 0.2
+
+/** 模型の仕上げ。建物や家具が読み込まれるたび（version）に、全部のメッシュに影を付け直す */
+function Diorama({ stack, version, lite }: { stack: AgeStack; version: number; lite: boolean }) {
+  useShadowEverything(version)
+  const { center, radius } = useMemo(() => {
+    const room = stack.house.rooms[0]
+    const wall = stack.house.wall_thickness
+    const width = (room?.size[0] ?? 10) + wall * 2
+    const depth = (room?.size[1] ?? 10) + wall * 2
+    const height = Math.max(1, stack.rooms.length) * FLOOR_PITCH
+    const [ox, oz] = room?.origin ?? [0, 0]
+    return { center: [ox, height / 2 - BASE_DEPTH, oz] as Vec3, radius: Math.hypot(width / 2, depth / 2, height / 2) }
+  }, [stack])
+  return (
+    <>
+      <DioramaLight center={center} radius={radius} floorY={-BASE_DEPTH} lite={lite} />
+      <DioramaPost lite={lite} />
+    </>
+  )
+}
+
 export function StackScene({
   stack,
   onRoom,
@@ -107,9 +134,13 @@ export function StackScene({
   const labelZ = hub ? hub.size[1] / 2 + stack.house.wall_thickness : 5.2
   // 建物がそろった階（おへやの id）。全部の階がそろったら onReady
   const loaded = useRef(new Set<string>())
+  // 建物や家具が読み込まれた回数（影を付け直すきっかけ）
+  const [version, setVersion] = useState(0)
+  const bump = useCallback(() => setVersion((v) => v + 1), [])
+  const [lite] = useState(isTouchDevice)
 
   return (
-    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand">
+    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows>
       {stack.rooms.map((floor, i) => (
         <group key={floor.room.id} position={[0, i * FLOOR_PITCH, 0]}>
           <HouseShells
@@ -117,10 +148,11 @@ export function StackScene({
             cutaway
             onReady={() => {
               loaded.current.add(floor.room.id)
+              bump()
               if (stack.rooms.every((r) => loaded.current.has(r.room.id))) onReady?.()
             }}
           />
-          <HomeObjects layout={floor.layout} catalog={stack.catalog} slots={floor.slots} house={stack.house} />
+          <HomeObjects layout={floor.layout} catalog={stack.catalog} slots={floor.slots} house={stack.house} onReady={bump} />
           <Html position={[labelX, WALL_TOP * 0.35, labelZ]} zIndexRange={[10, 0]}>
             <button type="button" className="stack-label" onClick={() => onRoom?.(floor.room.id)}>
               {floor.room.name}
@@ -133,6 +165,7 @@ export function StackScene({
         </group>
       ))}
       <StackCamera stack={stack} />
+      <Diorama stack={stack} version={version} lite={lite} />
     </Stage>
   )
 }
