@@ -21,6 +21,12 @@ export interface Artwork {
   made_on: string
   date_short: string
   date_long: string
+  /** 作ったときの年齢（「4さい 3か月」）。子どもの誕生日があるときだけ */
+  age_month_label: string | null
+  /** 作った月（「2026-10」）。作品一覧を月ごとに区切るのに使う */
+  month_key: string
+  /** 作った月の見出し（「2026年 10月」） */
+  month_label: string
   memo: string
   category: Category
   category_label: string

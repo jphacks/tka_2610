@@ -9,18 +9,22 @@ import './ArtworkThumb.css'
 export function ArtworkThumb({
   artwork,
   showBadge = false,
+  meta = 'date',
   index = 0,
   onSelect,
 }: {
   artwork: Artwork
   /** 展示中の作品に緑の点を付ける */
   showBadge?: boolean
+  /** 作品名の下に出すもの。'age' は作ったときの年齢（「4さい 3か月」。誕生日が無ければ日付）。作品一覧で使う */
+  meta?: 'date' | 'age'
   /** 並び順。表示アニメーションを少しずつずらすのに使う */
   index?: number
   /** 渡すと、詳細画面へのリンクではなく、押すとこれを呼ぶボタンになる（模様替えの「追加」のシート） */
   onSelect?: () => void
 }) {
   const client = useQueryClient()
+  const metaText = (meta === 'age' && artwork.age_month_label) || artwork.date_short
   if (onSelect) {
     return (
       <button
@@ -31,7 +35,7 @@ export function ArtworkThumb({
       >
         <Img src={artwork.thumb_url} tint={artwork.tint} alt={artwork.title} />
         <p className="thumb-title">{artwork.title}</p>
-        <p className="thumb-meta">{artwork.date_short}</p>
+        <p className="thumb-meta">{metaText}</p>
       </button>
     )
   }
@@ -49,7 +53,7 @@ export function ArtworkThumb({
       <p className="thumb-title">{artwork.title}</p>
       <p className="thumb-meta">
         {showBadge && artwork.displayed && <span className="on-view" title="展示中" aria-label="展示中" />}
-        {artwork.date_short}
+        {metaText}
       </p>
     </TLink>
   )

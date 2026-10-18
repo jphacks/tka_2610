@@ -1,0 +1,14 @@
+/* ⑧ 作品一覧（Collection）。作った月ごとの見出しと、その月の作品の 3 列 */
+
+.collection-month + .collection-month {
+  margin-top: 28px;
+}
+
+.collection-month-label {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
