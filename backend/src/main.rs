@@ -61,7 +61,11 @@ async fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest_dir.join("data").join("media"));
 
-    let static_dir = manifest_dir.join("static");
+    // 家具・建物・サンプルの作品のフォルダ (backend/static)。既定はビルドしたときの場所なので、
+    // ビルドした場所と動かす場所が違うとき (Docker・Render) は STATIC_DIR で指定する
+    let static_dir = env::var("STATIC_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| manifest_dir.join("static"));
 
     // 家の建物 (壁と床だけ。8 × 8 m のリビング)。家具と作品は配置 JSON から別に置く
     let museum_source = env::var("MUSEUM_MODEL_PATH")
