@@ -76,6 +76,11 @@
   margin-top: 18px;
 }
 
+/* 全部・1 年分を出すときの、月と月の間 */
+.collection-month + .collection-month {
+  margin-top: 28px;
+}
+
 .collection-month-label {
   display: flex;
   align-items: baseline;
