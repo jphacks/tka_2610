@@ -1,4 +1,6 @@
+
 import { Sheet } from './Sheet'
+import { QRCodeSVG } from 'qrcode.react'
 import './InviteSheet.css'
 
 interface InviteSheetProps {
@@ -7,51 +9,136 @@ interface InviteSheetProps {
 }
 
 export function InviteSheet({ Open, onClose }: InviteSheetProps) {
-  // チーム確認用のダミーURL
-  const dummyUrl = `${window.location.origin}/museum?invite=demo`
+  // 招待先のURL
+  const inviteUrl = `${window.location.origin}/museum?invite=demo`
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(dummyUrl)
-    alert('招待リンクをコピーしました！（モック）')
-  }
+  const handleCopy = async () => {
+     try {
+       await navigator.clipboard.writeText(inviteUrl)
+       alert('招待リンクをコピーしました！')
+     } catch {
+       window.prompt('この招待リンクをコピーしてください', inviteUrl)
+     }
+   }
 
   return (
     <Sheet open={Open} onClose={onClose}>
       <div className="invite-card-wrapper">
-        {/* 上部のメッセージ */}
-        <div className="invite-header-text">
-          <h2>私たちのアトリエにようこそ</h2>
+        {/* 上部の水彩風イラスト */}
+        <div className="invite-sky" aria-hidden="true">
+          <div className="invite-blue-paint" />
+          <div className="invite-rainbow">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className="invite-sky-star">✿</span>
+        </div>
+
+        {/* 招待メッセージ */}
+        <header className="invite-header-text">
+          <h2>
+            あなたを、わたしの
+            <br />
+            memoriaにご招待します
+          </h2>
+
           <p>
-            はるのミュージアムへようこそ。<br />
-            大切な家族の思い出の品々を、<br />
-            一つひとつ大切に並べました。<br />
-            どうぞ、ゆっくりとご覧ください。
+            子どもが作った作品や、たくさんの思い出を
+            <br />
+            デジタルの空間に飾りました。
+            <br />
+            ぜひ、見にきてください。
           </p>
-        </div>
+        </header>
 
-        {/* おうちのプレビュー画像部分 */}
-        <div className="invite-image-frame">
-          {/* 画像を差し込む場所（publicフォルダ等に画像を置くか、仮の背景にできます） */}
-          <div className="invite-house-art"></div>
-        </div>
+        {/* 手描き風の装飾 */}
+        <span className="invite-spark invite-spark-left" aria-hidden="true">
+          ✳
+        </span>
+        <span className="invite-spark invite-spark-right" aria-hidden="true">
+          ✳
+        </span>
 
-        {/* 「ここに見に来てね」ボタン */}
-        <button type="button" className="invite-visit-btn" onClick={handleCopy}>
-          <span className="icon">🏠</span> ここに見に来てね
+        {/* QRコードと手描き風の案内 */}
+        <section className="invite-qr-layout">
+          <div className="invite-side-note invite-side-note-left">
+            <span>
+              スマホのカメラで
+              <br />
+              こちらのQRコードを
+              <br />
+              読み取ってね！
+              <br />
+              ☺
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="invite-qr-frame"
+            onClick={handleCopy}
+            aria-label="招待リンクをコピー"
+            title="クリックして招待リンクをコピー"
+          >
+            <div className="invite-qr-paper">
+              <QRCodeSVG
+                value={inviteUrl}
+                size={148}
+                level="H"
+                bgColor="#ffffff"
+                fgColor="#365b75"
+                marginSize={1}
+              />
+            </div>
+          </button>
+
+          <div className="invite-side-note invite-side-note-right">
+            <span>
+              家族みんなで
+              <br />
+              見にきてね！
+              <br />
+              ♡
+            </span>
+          </div>
+        </section>
+
+        {/* URLコピー */}
+        <button
+          type="button"
+          className="invite-copy-btn"
+          onClick={handleCopy}
+        >
+          <span aria-hidden="true">♡</span>
+          招待リンクをコピー
         </button>
 
-        {/* URL表示 */}
-        <div className="invite-url-text">
-          {dummyUrl}
-        </div>
+        {/* ブランドロゴ風の文字 */}
+        <footer className="invite-footer">
+          <h3>memoria</h3>
+          <p>作品と一緒に、思い出も残す。</p>
+          <span className="invite-footer-underline" />
+        </footer>
 
-        {/* QRコード風の案内 */}
-        <div className="invite-qr-section">
-          <span className="qr-label">QRコードでアクセス</span>
-          {/* ダミーのQRコード枠（実際のQR画像を貼ることも可能です） */}
-          <div className="invite-qr-box">
-            <div className="dummy-qr-grid"></div>
+        {/* 下部の家・草原・花のイラスト */}
+        <div className="invite-garden" aria-hidden="true">
+          <div className="invite-house">
+            <div className="invite-house-roof" />
+            <div className="invite-house-body">
+              <div className="invite-house-window">✳</div>
+              <div className="invite-house-door" />
+            </div>
           </div>
+
+          <span className="invite-flower invite-flower-one">🌼</span>
+          <span className="invite-flower invite-flower-two">🌷</span>
+          <span className="invite-flower invite-flower-three">🌻</span>
+          <span className="invite-flower invite-flower-four">🌸</span>
+
+          <div className="invite-grass" />
         </div>
       </div>
     </Sheet>
