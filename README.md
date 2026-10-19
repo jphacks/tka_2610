@@ -6,7 +6,7 @@
 ## デモ動画
 [memoria デモ動画](https://youtu.be/Oy5noKDOwr4)
 
-**デモ**：https://memoria-sasu.onrender.com （ブラウザで開くだけで見られます。スマホにも対応しています。しばらく誰も開いていないと、起きるまで 1 分ほどかかります）
+**デモアプリ**：https://memoria-sasu.onrender.com （ブラウザで開くだけで見られます。スマホにも対応しています。しばらく誰も開いていないと、起きるまで 1 分ほどかかります）
 <video controls src="画面録画 2026-10-18 224701.mp4" title="デモ動画"></video>
 
 ## 製品概要
