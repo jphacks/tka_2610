@@ -36,6 +36,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, MemoryCounts, RoomId, SlotView, Vec3 } from '../../../api'
+import { ErrorBoundary } from '../../../components/ErrorBoundary'
 import { GalleryIcon, NoteIcon, VideoIcon } from '../../../icons'
 import { FittedModel } from '../models'
 import { FLOOR_ART_FIT, HUB, WALL_ART_FIT, artSizeOf, displayScale, roomOrigin, surfaceOf } from './placement'
@@ -305,16 +306,20 @@ export function HomeObjects({
       {...clickable(slot.artwork.id)}
       {...grabbable(object.id)}
     >
-      <Suspense fallback={null}>
-        <FittedModel
-          url={slot.artwork.model_url}
-          fit={fit}
-          scale={scale}
-          noUpscale={slot.artwork.model_kind === 'custom'}
-          shadows
-          onMount={notify}
-        />
-      </Suspense>
+      {/* 作品の GLB が読めない（ほかの PC で登録してファイルが無い・公開サーバーの再起動で消えたなど）ときは、その作品だけ描かない。
+          ここで受け止めないと、部屋全体（積み上げの建物・歩く画面も）が読み込みのエラーになる */}
+      <ErrorBoundary fallback={() => null}>
+        <Suspense fallback={null}>
+          <FittedModel
+            url={slot.artwork.model_url}
+            fit={fit}
+            scale={scale}
+            noUpscale={slot.artwork.model_kind === 'custom'}
+            shadows
+            onMount={notify}
+          />
+        </Suspense>
+      </ErrorBoundary>
       {memoryBadges && (
         <MemoryBadge
           counts={slot.artwork.memory_counts}
