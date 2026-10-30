@@ -1,8 +1,10 @@
-/* ---------- ボタン ----------
-   .btn に種類を足して使う：主な操作は .btn-filled、次の操作は .btn-outline。
-   紙の上のアイコンだけのボタンは .icon-btn（3D や画像の上なら GlassButton）。 */
 
-/* 紙の上のアイコンボタン (ガラスにしない) */
+/* =========================================================
+   memoria Buttons
+   Natural Album × Airy Museum
+   ========================================================= */
+
+/* 紙の上のアイコンボタン */
 .icon-btn {
   display: grid;
   place-items: center;
@@ -18,7 +20,7 @@
   transform: scale(0.9);
 }
 
-/* 押したときに少し縮む（カードなど） */
+/* カードなどの押下アニメーション */
 .pressable {
   transition: transform 0.4s var(--spring), opacity 0.2s;
 }
@@ -28,6 +30,7 @@
   opacity: 0.8;
 }
 
+/* 共通ボタン */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -40,7 +43,13 @@
   font-size: 15.5px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  transition: transform 0.4s var(--spring), opacity 0.2s, background 0.2s;
+
+  transition:
+    transform 0.4s var(--spring),
+    opacity 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+
   user-select: none;
 }
 
@@ -54,30 +63,43 @@
   transform: none;
 }
 
+/* メインボタン：Cの透明感あるブルー */
 .btn-filled {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--accent);
+  color: #FFFFFF;
+
+  box-shadow:
+    0 4px 12px rgba(101, 150, 180, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .btn-filled:active {
-  background: #3a312b;
+  background: #527F9D;
+  box-shadow:
+    0 2px 6px rgba(101, 150, 180, 0.12);
 }
 
+/* サブボタン：淡い水色 */
 .btn-outline {
-  background: transparent;
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
+  background: #EDF7FC;
+  color: #315F7B;
+
+  box-shadow:
+    inset 0 0 0 1px #C7DFED,
+    0 2px 8px rgba(101, 150, 180, 0.06);
 }
 
 .btn-outline:active {
-  background: var(--fill);
+  background: #DCEEF8;
 }
 
+/* グレー系：白クリーム */
 .btn-gray {
   background: var(--paper-2);
   color: var(--ink);
 }
 
+/* テキストボタン */
 .btn-plain {
   width: auto;
   min-height: 0;
@@ -87,11 +109,13 @@
   font-weight: 500;
 }
 
+/* 削除などの注意が必要な操作 */
 .btn-destructive {
   background: var(--paper-2);
   color: var(--red);
 }
 
+/* 小さいボタン */
 .btn-small {
   width: auto;
   min-height: 38px;

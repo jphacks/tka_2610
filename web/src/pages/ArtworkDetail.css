@@ -172,3 +172,24 @@
     max-height: 138px;
   }
 }
+
+
+/* 作品情報とおもいでの間隔を縮める */
+
+.memory-artwork-info {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.memory-detail-body {
+  padding-top: 0;
+}
+
+.memory-detail-body .memories {
+  margin-top: 0;
+}
+
+.memory-detail-body .memories .section-head {
+  margin-top: 0;
+  margin-bottom: 10px;
+}

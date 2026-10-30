@@ -1,45 +1,124 @@
+
 /* =========================================================
-   おもいでミュージアム
-   美術館の図録のような紙とインクの配色。
-   ガラス素材 (Liquid Glass) は、3D や画像の上に浮かぶ操作部品だけに使う。
+
+   Aの温かみを残しながら、Cの透明感をプラス。
+   ベースは白クリーム、ボタンは柔らかなブルー。
    ========================================================= */
 
 :root {
-  --paper: #f7f0e4;
-  --paper-2: #f0e7d8;
-  --surface: #fffcf6;
-  --ink: #2f4a63;
-  --ink-2: rgba(47, 74, 99, 0.64);
-  --ink-3: rgba(47, 74, 99, 0.4);
-  --line: rgba(47, 74, 99, 0.1);
-  --line-strong: rgba(47, 74, 99, 0.2);
-  --fill: rgba(47, 74, 99, 0.06);
-  --accent: #3f6d92;
-  --accent-soft: rgba(63, 109, 146, 0.14);
-  --sky: #d3e3ee;
-  --sun: #f6dfa4;
-  --peach: #f0b794;
-  --sage: #a3bd9d;
-  --green: #5f8f74;
-  --red: #c4402f;
+  /* 背景・カード */
+  --paper: #FFFDF7;
+  --paper-2: #FFFDF7;
+  --surface: #FFFFFF;
 
+  /* 文字 */
+  --ink: #405D70;
+  --ink-2: rgba(64, 93, 112, 0.68);
+  --ink-3: rgba(64, 93, 112, 0.43);
+
+  /* 境界線・薄い背景 */
+  --line: rgba(64, 93, 112, 0.10);
+  --line-strong: rgba(64, 93, 112, 0.20);
+  --fill: rgba(64, 93, 112, 0.055);
+
+ /* =========================================================
+
+   Aの温かみを残しながら、Cの透明感をプラス。
+   ベースは白クリーム、ボタンは柔らかなブルー。
+   ========================================================= */
+
+:root {
+  /* 背景・カード */
+  --paper: #FFFDF7;
+  --paper-2: #FFFDF7;
+  --surface: #FFFFFF;
+
+  /* 文字 */
+  --ink: #405D70;
+  --ink-2: rgba(64, 93, 112, 0.68);
+  --ink-3: rgba(64, 93, 112, 0.43);
+
+  /* 境界線・薄い背景 */
+  --line: rgba(64, 93, 112, 0.10);
+  --line-strong: rgba(64, 93, 112, 0.20);
+  --fill: rgba(64, 93, 112, 0.055);
+
+  /* 少し明るい色にしました */
+--sky: #DCECF2;
+--sun: #F9E9C9;
+--peach: #F5D9CC;
+--sage: #D9E5D8;
+
+/* 透明感ある水色のボタンに変更 */
+--accent: #6596B4;
+--accent-soft: rgba(101, 150, 180, 0.14);
+  /* 状態表示 */
+  --green: #5F8F74;
+  --red: #C4402F;
+
+  /* アニメーション */
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
+  /* 画面の余白 */
   --tabbar-space: 96px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --sans: 'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', system-ui, sans-serif;
-  --serif: var(--sans);
+  /* フォント */
+  --sans: 'Noto Sans JP', 'Hiragino Sans',
+    'Hiragino Kaku Gothic ProN', 'Yu Gothic UI',
+    system-ui, sans-serif;
 
+  --serif: 'Zen Maru Gothic', 'Noto Sans JP',
+    'Hiragino Sans', system-ui, sans-serif;
+
+  /* アプリ全体 */
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.5;
   color: var(--ink);
   background: var(--paper-2);
+
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  font-feature-settings: 'palt' 1;
+}
+
+
+  /* 状態表示 */
+  --green: #5F8F74;
+  --red: #C4402F;
+
+  /* アニメーション */
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* 画面の余白 */
+  --tabbar-space: 96px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* フォント */
+  --sans: 'Noto Sans JP', 'Hiragino Sans',
+    'Hiragino Kaku Gothic ProN', 'Yu Gothic UI',
+    system-ui, sans-serif;
+
+  --serif: 'Zen Maru Gothic', 'Noto Sans JP',
+    'Hiragino Sans', system-ui, sans-serif;
+
+  /* アプリ全体 */
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper-2);
+
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   text-size-adjust: 100%;
