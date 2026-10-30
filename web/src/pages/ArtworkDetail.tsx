@@ -1,10 +1,26 @@
 // ⑥ 作品の詳細（/artworks/:id）。一覧などから push で開く。
 // 額縁に入った作品とキャプション。3D で見る・おうちに飾る・編集・削除ができる。
 // その下の「おもいで」（MemorySection）に、作品に付けた写真・動画・声の記録を並べ、足す・消すができる。
+
+
+
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useArtwork, useDeleteArtwork, useDisplay, useFavorite } from '../api'
-import { ActionMenu, ArtworkThumb, GlassButton, MemorySection, Screen, Sheet, useToast } from '../components'
+import {
+  useArtwork,
+  useDeleteArtwork,
+  useDisplay,
+  useFavorite,
+} from '../api'
+import {
+  ActionMenu,
+  ArtworkThumb,
+  GlassButton,
+  MemorySection,
+  Screen,
+  Sheet,
+  useToast,
+} from '../components'
 import {
   BackIcon,
   CloseIcon,
@@ -22,20 +38,64 @@ export default function ArtworkDetail() {
   const { id = '' } = useParams()
   const nav = useNav()
   const toast = useToast()
+
   const detail = useArtwork(id)
   const favorite = useFavorite()
   const display = useDisplay()
   const remove = useDeleteArtwork()
+
   const [menu, setMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const artwork = detail.data?.artwork
   const related = detail.data?.related ?? []
 
-  // 「3Dで見る」をすぐ開けるようにモデルを先読み
   useEffect(() => {
-    if (artwork) warmUp3D(null, [artwork.model_url])
-  }, [artwork?.model_url]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (artwork?.model_url) {
+      warmUp3D(null, [artwork.model_url])
+    }
+  }, [artwork?.model_url])
+
+  const share = async () => {
+    if (!artwork) return
+
+    const url = window.location.href
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: artwork.title,
+          text: `${artwork.author_label}の作品「${artwork.title}」`,
+          url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast('リンクをコピーしました')
+      }
+    } catch {
+      // 共有をキャンセルした場合
+    }
+  }
+
+  const toggleDisplay = () => {
+    if (!artwork) return
+
+    display.mutate(
+      {
+        id: artwork.id,
+        display: !artwork.displayed,
+      },
+      {
+        onSuccess: (a) =>
+          toast(
+            a.displayed
+              ? `${a.room_name ?? 'おうち'}に飾りました`
+              : '飾るのをやめました',
+          ),
+        onError: (e) => toast(e.message),
+      },
+    )
+  }
 
   if (detail.isError) {
     return (
@@ -43,7 +103,10 @@ export default function ArtworkDetail() {
         <div className="page" style={{ paddingTop: 90 }}>
           <div className="empty">
             <p>作品が見つかりませんでした。</p>
-            <button className="btn btn-outline btn-small" onClick={() => nav.tab('/collection')}>
+            <button
+              className="btn btn-outline btn-small"
+              onClick={() => nav.tab('/collection')}
+            >
               作品一覧へ
             </button>
           </div>
@@ -52,157 +115,205 @@ export default function ArtworkDetail() {
     )
   }
 
-  const share = async () => {
-    if (!artwork) return
-    const url = window.location.href
-    try {
-      if (navigator.share) await navigator.share({ title: artwork.title, text: `${artwork.author_label}の作品「${artwork.title}」`, url })
-      else {
-        await navigator.clipboard.writeText(url)
-        toast('リンクをコピーしました')
-      }
-    } catch {
-      /* 共有をキャンセルした */
-    }
-  }
-
-  const toggleDisplay = () => {
-    if (!artwork) return
-    display.mutate(
-      { id: artwork.id, display: !artwork.displayed },
-      {
-        onSuccess: (a) => toast(a.displayed ? `${a.room_name ?? 'おうち'}に飾りました` : '飾るのをやめました'),
-        // 飾る場所がいっぱいのとき（409）なども、Rust が返す日本語のメッセージをそのまま出す
-        onError: (e) => toast(e.message),
-      },
-    )
-  }
-
   return (
     <Screen>
+      {/* ===== 作品画像 ===== */}
       <div className="detail-stage">
         <div className="stage-top">
-          <GlassButton label="戻る" onClick={() => nav.back('/collection', artwork?.id)}>
+          <GlassButton
+            label="戻る"
+            onClick={() =>
+              nav.back('/collection', artwork?.id)
+            }
+          >
             <BackIcon size={20} strokeWidth={2.2} />
           </GlassButton>
+
           <div className="stage-actions">
             <GlassButton label="共有" onClick={share}>
               <ShareIcon size={18} />
             </GlassButton>
-            <GlassButton label="メニュー" onClick={() => setMenu(true)}>
+
+            <GlassButton
+              label="メニュー"
+              onClick={() => setMenu(true)}
+            >
               <MoreIcon size={20} />
             </GlassButton>
           </div>
         </div>
+
         {artwork && (
           <div className="framed" data-share={artwork.id}>
-            {/* 大きい画像が届くまでは、一覧で読み込み済みのサムネイルを敷いておく */}
             <img
               src={artwork.image_url}
               alt={artwork.title}
               decoding="async"
               width={artwork.image_width}
               height={artwork.image_height}
-              style={{ background: `${artwork.tint} url(${artwork.thumb_url}) center / cover no-repeat` }}
+              style={{
+                background: `${artwork.tint} url(${artwork.thumb_url}) center / cover no-repeat`,
+              }}
             />
           </div>
         )}
       </div>
 
+      {/* ===== 作品情報 ===== */}
       {artwork && (
-        <section className="caption">
+        <section className="caption memory-artwork-info">
           <div className="eyebrow num">
             <span>{artwork.catalog_label}</span>
             <span>{artwork.category_label}</span>
           </div>
+
           <div className="caption-head">
             <h2>{artwork.title}</h2>
+
             <button
               className={`heart${artwork.favorite ? ' on' : ''}`}
-              aria-label={artwork.favorite ? 'お気に入りを外す' : 'お気に入りにする'}
+              aria-label={
+                artwork.favorite
+                  ? 'お気に入りを外す'
+                  : 'お気に入りにする'
+              }
               aria-pressed={artwork.favorite}
-              onClick={() => favorite.mutate({ id: artwork.id, favorite: !artwork.favorite })}
+              onClick={() =>
+                favorite.mutate({
+                  id: artwork.id,
+                  favorite: !artwork.favorite,
+                })
+              }
             >
-              <HeartIcon size={24} filled={artwork.favorite} />
+              <HeartIcon
+                size={24}
+                filled={artwork.favorite}
+              />
             </button>
           </div>
-          {artwork.author_label && <p className="author">{artwork.author_label}</p>}
-          {artwork.memo && <p className="memo">{artwork.memo}</p>}
 
-          <dl className="spec">
-            <div>
-              <dt>制作日</dt>
-              <dd className="num">{artwork.date_long}</dd>
-            </div>
-            <div>
-              <dt>飾る場所</dt>
-              <dd>
-                {artwork.displayed ? (
-                  <>
-                    <span className="on-view" />
-                    {artwork.room_name}
-                  </>
-                ) : (
-                  <span style={{ color: 'var(--ink-2)' }}>まだ飾っていません</span>
-                )}
-              </dd>
-            </div>
-          </dl>
+          {artwork.author_label && (
+            <p className="author">
+              {artwork.author_label}
+            </p>
+          )}
+
+          <p className="memory-date num">
+            {artwork.date_long}
+          </p>
         </section>
       )}
 
-      <div className="page">
+      <div className="page memory-detail-body">
+        {/* ===== 写真・動画・声・メモ ===== */}
         {artwork && (
-          <div className="btn-stack" style={{ marginTop: 24 }}>
-            <button className="btn btn-filled" onClick={() => nav.modal(`/artworks/${artwork.id}/preview`)}>
+          <MemorySection
+            artworkId={artwork.id}
+            memories={detail.data?.memories ?? []}
+            memo={artwork.memo}
+          />
+        )}
+
+        {/* ===== 3D表示・展示 ===== */}
+        {artwork && (
+          <div className="memory-detail-actions">
+            <button
+              className="btn btn-filled"
+              onClick={() =>
+                nav.modal(`/artworks/${artwork.id}/preview`)
+              }
+            >
               3Dで見る
             </button>
+
             {artwork.displayed ? (
-              <button className="btn btn-outline" onClick={() => nav.push(`/museum?room=${artwork.room_id}&focus=${artwork.id}`)}>
+              <button
+                className="btn btn-outline"
+                onClick={() =>
+                  nav.push(
+                    `/museum?room=${artwork.room_id}&focus=${artwork.id}`,
+                  )
+                }
+              >
                 おうちで見る
               </button>
             ) : (
-              <button className="btn btn-outline" onClick={toggleDisplay} disabled={display.isPending}>
+              <button
+                className="btn btn-outline"
+                onClick={toggleDisplay}
+                disabled={display.isPending}
+              >
                 おうちに飾る
               </button>
             )}
           </div>
         )}
 
-        {artwork && <MemorySection artworkId={artwork.id} memories={detail.data?.memories ?? []} />}
-
+        {/* ===== 関連作品 ===== */}
         {related.length > 0 && (
-          <>
+          <section className="memory-related">
             <div className="section-head">
               <h2>関連する作品</h2>
             </div>
+
             <div className="grid-3">
               {related.slice(0, 3).map((a, i) => (
-                <ArtworkThumb key={a.id} artwork={a} index={i} />
+                <ArtworkThumb
+                  key={a.id}
+                  artwork={a}
+                  index={i}
+                />
               ))}
             </div>
-          </>
+          </section>
         )}
       </div>
 
+      {/* ===== 作品メニュー ===== */}
       <ActionMenu
         open={menu}
         onClose={() => setMenu(false)}
         items={[
-          { label: '編集', icon: <DocIcon size={19} />, onSelect: () => nav.modal(`/artworks/${id}/edit`) },
           {
-            label: artwork?.displayed ? '飾るのをやめる' : 'おうちに飾る',
+            label: '編集',
+            icon: <DocIcon size={19} />,
+            onSelect: () =>
+              nav.modal(`/artworks/${id}/edit`),
+          },
+          {
+            label: artwork?.displayed
+              ? '飾るのをやめる'
+              : 'おうちに飾る',
             icon: <MuseumIcon size={19} />,
             onSelect: toggleDisplay,
           },
-          { label: '削除', icon: <CloseIcon size={19} />, destructive: true, onSelect: () => setConfirmDelete(true) },
+          {
+            label: '削除',
+            icon: <CloseIcon size={19} />,
+            destructive: true,
+            onSelect: () => setConfirmDelete(true),
+          },
         ]}
       />
 
-      <Sheet open={confirmDelete && !!artwork} onClose={() => setConfirmDelete(false)} title={`「${artwork?.title ?? ''}」を削除しますか？`}>
-        <p className="hint" style={{ textAlign: 'center', margin: '4px 8px 0' }}>
-          写真と3Dモデルも削除され、おうちからも外れます。この操作は取り消せません。
+      {/* ===== 削除確認 ===== */}
+      <Sheet
+        open={confirmDelete && !!artwork}
+        onClose={() => setConfirmDelete(false)}
+        title={`「${artwork?.title ?? ''}」を削除しますか？`}
+      >
+        <p
+          className="hint"
+          style={{
+            textAlign: 'center',
+            margin: '4px 8px 0',
+          }}
+        >
+          写真と3Dモデルも削除され、
+          おうちからも外れます。
+          この操作は取り消せません。
         </p>
+
         <div className="sheet-body">
           <button
             className="btn btn-destructive"
@@ -221,7 +332,11 @@ export default function ArtworkDetail() {
           >
             作品を削除
           </button>
-          <button className="btn btn-gray" onClick={() => setConfirmDelete(false)}>
+
+          <button
+            className="btn btn-gray"
+            onClick={() => setConfirmDelete(false)}
+          >
             キャンセル
           </button>
         </div>

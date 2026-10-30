@@ -1,43 +1,70 @@
-/* ⑥ 作品の詳細の「おもいで」（MemorySection）。写真・動画の 3 列のタイルと、声の行、追加のシートの進み具合 */
+
+
+/* ===== 思い出セクション ===== */
+
+.memories {
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.memories .section-head {
+  margin-bottom: 9px;
+}
 
 .memories h2 {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  margin: 0;
+
+  color: #365b78;
+  font-size: 17px;
 }
 
 .memories-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   min-width: 24px;
-  padding: 1px 8px;
-  border-radius: 8px;
-  background: var(--accent-soft);
+  padding: 2px 7px;
+
+  border-radius: 999px;
+
+  background: #e6eff4;
+  color: #547a95;
+
   font-family: var(--sans);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0;
-  text-align: center;
-  color: var(--accent);
 }
 
 .memories-add {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+
+  color: #557f9d;
   font-weight: 600;
 }
 
-/* まだ何も無いとき。押すと追加のシート */
+/* ===== 思い出がない場合 ===== */
+
 .memories-empty {
   display: grid;
   justify-items: center;
   gap: 10px;
+
   width: 100%;
   padding: 22px 16px;
+
   border: 1.5px dashed var(--line-strong);
   border-radius: 18px;
-  font-size: 13.5px;
-  line-height: 1.6;
+
   color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .memories-empty-icons {
@@ -46,29 +73,71 @@
   color: var(--accent);
 }
 
-/* 写真と動画のタイル（正方形） */
+/* ===== 写真・動画の横スクロール ===== */
+
 .memory-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  padding: 5px 2px 12px;
+
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+
+  -webkit-overflow-scrolling: touch;
+
+  scrollbar-width: thin;
+  scrollbar-color: #d6c5b5 transparent;
 }
 
-.memory-tile {
+/* 3枚が画面に収まる */
+
+.memory-grid .memory-tile {
   position: relative;
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
+  display: block;
+
+  flex: 0 0 calc((100% - 24px) / 3);
+  width: calc((100% - 24px) / 3);
+  min-width: 0;
+
+  aspect-ratio: 4 / 5;
+
+  margin: 0;
+  padding: 0;
+
   overflow: hidden;
-  border-radius: 12px;
-  background: var(--paper-2);
+
+  border: 4px solid #fff;
+  border-radius: 13px;
+
+  background: #eee5da;
+
+  box-shadow:
+    0 3px 10px rgba(80, 61, 45, 0.12);
+
+  scroll-snap-align: start;
+  cursor: pointer;
+
+  transition: transform 0.2s;
 }
 
 .memory-tile img,
 .memory-tile video {
   position: absolute;
   inset: 0;
+
+  display: block;
+
   width: 100%;
   height: 100%;
+
   object-fit: cover;
   pointer-events: none;
 }
@@ -77,85 +146,192 @@
   color: var(--ink-3);
 }
 
-/* 動画の「▶ 0:12」 */
 .memory-tile-badge {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  right: 4px;
+  bottom: 4px;
+
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 7px;
+
+  padding: 3px 6px;
+
   border-radius: 999px;
-  background: var(--ink-2);
-  font-size: 11px;
+
+  background: rgba(42, 55, 66, 0.75);
+  color: #fff;
+
+  font-size: 10px;
   font-weight: 700;
-  color: var(--paper);
 }
 
-/* 声の行 */
-.memory-voices {
+.memory-tile:active {
+  transform: scale(0.97);
+}
+
+.memory-tile:focus-visible {
+  outline: 3px solid #7aa9c7;
+  outline-offset: 2px;
+}
+
+.memory-grid::-webkit-scrollbar {
+  height: 3px;
+}
+
+.memory-grid::-webkit-scrollbar-thumb {
+  background: #d6c5b5;
+  border-radius: 999px;
+}
+
+/* ===== 声とメモを横並び ===== */
+
+.memory-keepsakes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
   margin-top: 12px;
+  align-items: stretch;
 }
 
-.memory-grid + .memory-voices {
-  margin-top: 16px;
+/* 声のカード */
+
+.memory-voices {
+  margin: 0;
+  min-width: 0;
+
+  border-radius: 16px;
+  overflow: hidden;
+
+  background: #fffdf8;
+
+  box-shadow:
+    0 4px 14px rgba(84, 67, 48, 0.07);
+}
+
+.memory-voices .memory-voice {
+  min-width: 0;
+  padding: 12px 8px;
+  gap: 6px;
+}
+
+.memory-voices .memory-voice .grow {
+  min-width: 0;
 }
 
 .memory-voice-play {
   display: grid;
   place-items: center;
+
   flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+
+  width: 33px;
+  height: 33px;
+
+  border-radius: 50%;
+
+  background: #dceaf2;
+  color: #537d9b;
 }
 
 .memory-voice-play.playing {
-  background: var(--accent);
-  color: var(--paper);
+  background: #6c9cb8;
+  color: #fff;
 }
 
 .memory-voice-title {
   margin: 0;
   overflow: hidden;
-  font-size: 14.5px;
-  font-weight: 600;
+
+  color: #3d5b72;
+  font-size: 12px;
+  font-weight: 700;
+
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .memory-voice-meta {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--ink-2);
+  margin: 3px 0 0;
+
+  color: #8a9da9;
+  font-size: 10px;
 }
 
 .memory-voice-more {
   flex: none;
-  color: var(--ink-2);
+  color: #7590a4;
 }
 
-/* 再生中・送っている途中の進み具合 */
 .memory-voice-bar {
   display: block;
+
   height: 3px;
   margin-top: 6px;
+
   overflow: hidden;
-  border-radius: 2px;
-  background: var(--line-strong);
+  border-radius: 999px;
+
+  background: #e5eaf0;
 }
 
 .memory-voice-bar > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+
+  background: #82abc4;
+
   transition: width 0.2s linear;
 }
 
-/* 追加のシートの「写真をとる」「動画をとる」（スマホだけ）。横に並べる */
+/* メモのカード */
+
+.memory-note {
+  min-width: 0;
+
+  padding: 13px 12px;
+
+  border-radius: 16px;
+  background: #fffaf0;
+
+  box-shadow:
+    0 4px 14px rgba(84, 67, 48, 0.07);
+}
+
+.memory-note-label {
+  display: inline-block;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  background: #f7ebd2;
+  color: #997c55;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.memory-note p {
+  margin: 9px 0 0;
+
+  color: #665d53;
+  font-size: 12px;
+  line-height: 1.65;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 声だけ・メモだけなら横幅を使う */
+
+.memory-keepsakes > :only-child {
+  grid-column: 1 / -1;
+}
+
+/* ===== 写真・動画の追加 ===== */
+
 .memory-capture {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -166,18 +342,22 @@
   padding: 0 12px;
 }
 
-/* 追加のシートの、送っているファイルの一覧 */
+/* ===== アップロード状況 ===== */
+
 .memory-jobs {
   display: grid;
   gap: 12px;
+
   margin: 0;
   padding: 0;
+
   list-style: none;
 }
 
 .memory-job-name {
   display: block;
   overflow: hidden;
+
   font-size: 13.5px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -186,4 +366,37 @@
 .memory-job-error {
   font-size: 12.5px;
   color: var(--red);
+}
+
+/* ===== 小さいスマホ ===== */
+
+@media (max-width: 360px) {
+  .memory-grid {
+    gap: 7px;
+  }
+
+  .memory-grid .memory-tile {
+    flex-basis: calc((100% - 18px) / 3);
+    width: calc((100% - 18px) / 3);
+    border-width: 3px;
+  }
+
+  .memory-keepsakes {
+    gap: 7px;
+  }
+
+  .memory-voice-play {
+    width: 30px;
+    height: 30px;
+  }
+
+  .memory-voice-more {
+    padding: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-grid .memory-tile {
+    transition: none;
+  }
 }

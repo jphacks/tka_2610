@@ -1,36 +1,137 @@
-/* ⑥ 作品の詳細（ArtworkDetail）。額縁に入った作品と、作品情報の表・お気に入りのハート。
-   キャプションの共通部分は styles/caption.css */
+
+/* 作品画像と写真を同じ画面に収める */
 
 .detail-stage {
   position: relative;
   display: grid;
   place-items: center;
-  height: 380px;
-  padding: calc(66px + var(--safe-top)) 36px 40px;
-  background: radial-gradient(ellipse 80% 70% at 50% 35%, #f3ede4 0%, #e3d9cb 100%);
+
+  height: 260px;
+  min-height: 0;
+
+  padding:
+    calc(58px + var(--safe-top))
+    24px
+    18px;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 28%,
+      #fff7e9 0%,
+      #eadfce 100%
+    );
 }
 
-/* 額縁（作品の GLB の額縁と同じ濃いウォルナット） */
+/* 作品のフレーム */
+
 .framed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   max-width: 100%;
   max-height: 100%;
-  padding: 12px;
-  background: #fbf8f2;
-  border: 9px solid #3b2f27;
+
+  padding: 7px;
+
+  background: #fffaf2;
+  border: 5px solid #fffaf2;
+  border-radius: 14px;
+
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.4) inset,
-    0 16px 30px rgba(40, 26, 14, 0.28),
-    0 2px 6px rgba(40, 26, 14, 0.16);
+    0 10px 24px rgba(66, 48, 33, 0.17);
 }
 
 .framed img {
+  display: block;
+
   width: auto;
   height: auto;
+
   max-width: 100%;
-  max-height: 210px;
+  max-height: 155px;
+
+  object-fit: contain;
+  border-radius: 6px;
 }
 
-/* 作品情報の表（制作日・飾る場所） */
+/* 作品タイトル・制作日 */
+
+.memory-artwork-info {
+  padding-top: 12px;
+  padding-bottom: 6px;
+}
+
+.memory-artwork-info .eyebrow {
+  margin-bottom: 5px;
+}
+
+.memory-artwork-info .caption-head h2 {
+  font-size: 21px;
+}
+
+.memory-artwork-info .author {
+  margin-top: 2px;
+}
+
+.memory-date {
+  margin: 6px 0 0;
+
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* 思い出セクション */
+
+.memory-detail-body {
+  padding-top: 0;
+}
+
+/* 3D・おうちに飾る */
+
+.memory-detail-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* 関連作品 */
+
+.memory-related {
+  margin-top: 28px;
+}
+
+/* お気に入り */
+
+.heart {
+  display: grid;
+  place-items: center;
+
+  flex: none;
+
+  width: 40px;
+  height: 40px;
+
+  margin: 2px -8px 0 0;
+
+  border-radius: 50%;
+  color: var(--ink-3);
+
+  transition:
+    transform 0.2s,
+    color 0.2s;
+}
+
+.heart.on {
+  color: var(--accent);
+}
+
+.heart:active {
+  transform: scale(0.85);
+}
+
+/* 制作情報の表 */
+
 .spec {
   margin: 22px 0 0;
   border-top: 0.5px solid var(--line-strong);
@@ -40,8 +141,10 @@
   display: grid;
   grid-template-columns: 84px 1fr;
   gap: 12px;
+
   padding: 11px 0;
   border-bottom: 0.5px solid var(--line);
+
   font-size: 13.5px;
 }
 
@@ -52,35 +155,20 @@
 
 .spec dd {
   margin: 0;
+
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
-/* お気に入りのハート */
-.heart {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
-  height: 40px;
-  margin: 2px -8px 0 0;
-  border-radius: 50%;
-  color: var(--ink-3);
-  transition: transform 0.45s var(--spring), color 0.2s;
-}
+/* 小さいスマホ */
 
-.heart.on {
-  color: var(--accent);
-  animation: heart-pop 0.5s var(--spring);
-}
+@media (max-width: 360px) {
+  .detail-stage {
+    height: 238px;
+  }
 
-.heart:active {
-  transform: scale(0.82);
-}
-
-@keyframes heart-pop {
-  40% {
-    transform: scale(1.25);
+  .framed img {
+    max-height: 138px;
   }
 }
