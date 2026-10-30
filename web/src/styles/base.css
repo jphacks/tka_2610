@@ -11,10 +11,12 @@ body,
   height: 100%;
 }
 
+
 body {
   overflow: hidden;
-  background: #e9dfcf
+  background: var(--paper);
 }
+
 
 button,
 input,
