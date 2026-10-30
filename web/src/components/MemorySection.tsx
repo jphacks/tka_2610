@@ -68,15 +68,28 @@ function useVoicePlayer(onError: () => void) {
   return { playing, progress, toggle, stop }
 }
 
-export function MemorySection({ artworkId, memories }: { artworkId: string; memories: Memory[] }) {
+
+
+
+export function MemorySection({
+  artworkId,
+  memories,
+  memo,
+}: {
+  artworkId: string
+  memories: Memory[]
+  memo?: string | null
+}) {
   const toast = useToast()
   const upload = useUploadMemory(artworkId)
   const update = useUpdateMemory(artworkId)
   const remove = useDeleteMemory(artworkId)
-  const voice = useVoicePlayer(() => toast('この端末では、この声を再生できません'))
+  const voice = useVoicePlayer(() =>
+    toast('この端末では、この声を再生できません')
+  )
+
   const visuals = memories.filter((m) => m.kind !== 'audio')
   const voices = memories.filter((m) => m.kind === 'audio')
-
   const [adding, setAdding] = useState(false)
   const [recording, setRecording] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -215,37 +228,85 @@ export function MemorySection({ artworkId, memories }: { artworkId: string; memo
         </div>
       )}
 
-      {voices.length > 0 && (
-        <div className="list-group memory-voices">
-          {voices.map((m) => {
-            const playing = voice.playing === m.id
-            return (
-              <div key={m.id} className="list-item memory-voice">
-                <button
-                  type="button"
-                  className={`memory-voice-play${playing ? ' playing' : ''}`}
-                  aria-label={playing ? '止める' : '声をきく'}
-                  onClick={() => voice.toggle(m)}
-                >
-                  {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-                </button>
-                <div className="grow">
-                  <p className="memory-voice-title">{m.caption || '声の記録'}</p>
-                  <p className="memory-voice-meta num">{[m.duration_label, m.date_label].filter(Boolean).join('・')}</p>
-                  {playing && (
-                    <span className="memory-voice-bar">
-                      <span style={{ width: `${voice.progress * 100}%` }} />
-                    </span>
-                  )}
-                </div>
-                <button type="button" className="icon-btn memory-voice-more" aria-label="メニュー" onClick={() => setTarget({ memory: m, mode: 'menu' })}>
-                  <MoreIcon size={18} />
-                </button>
+      
+{/* 声と作品メモを横並びに表示 */}
+{(voices.length > 0 || memo) && (
+  <div className="memory-keepsakes">
+    {voices.length > 0 && (
+      <div className="list-group memory-voices">
+        {voices.map((m) => {
+          const playing = voice.playing === m.id
+
+          return (
+            <div
+              key={m.id}
+              className="list-item memory-voice"
+            >
+              <button
+                type="button"
+                className={`memory-voice-play${playing ? ' playing' : ''}`}
+                aria-label={playing ? '止める' : '声をきく'}
+                onClick={() => voice.toggle(m)}
+              >
+                {playing ? (
+                  <PauseIcon size={16} />
+                ) : (
+                  <PlayIcon size={16} />
+                )}
+              </button>
+
+              <div className="grow">
+                <p className="memory-voice-title">
+                  {m.caption || '声の記録'}
+                </p>
+
+                <p className="memory-voice-meta num">
+                  {[m.duration_label, m.date_label]
+                    .filter(Boolean)
+                    .join('・')}
+                </p>
+
+                {playing && (
+                  <span className="memory-voice-bar">
+                    <span
+                      style={{
+                        width: `${voice.progress * 100}%`,
+                      }}
+                    />
+                  </span>
+                )}
               </div>
-            )
-          })}
-        </div>
-      )}
+
+              <button
+                type="button"
+                className="icon-btn memory-voice-more"
+                aria-label="メニュー"
+                onClick={() =>
+                  setTarget({
+                    memory: m,
+                    mode: 'menu',
+                  })
+                }
+              >
+                <MoreIcon size={18} />
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    )}
+
+    {memo && (
+      <div className="memory-note">
+        <span className="memory-note-label">
+          作品に残したメモ
+        </span>
+        <p>{memo}</p>
+      </div>
+    )}
+  </div>
+)}
+
 
       {viewing !== null && (
         <MemoryViewer
