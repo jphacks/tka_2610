@@ -27,8 +27,6 @@
   border-radius: 999px;
   isolation: isolate;
   background:
-    radial-gradient(circle at 6% 115%, rgba(246, 223, 164, 0.75) 0 24px, transparent 25px),
-    radial-gradient(circle at 96% 118%, rgba(163, 189, 157, 0.6) 0 28px, transparent 29px),
     rgba(255, 252, 246, 0.9);
 }
 
@@ -40,9 +38,9 @@
   bottom: 2px;
   left: 4px;
   width: calc((100% - 8px) / 4);
-  border-radius: 56% 44% 52% 48% / 62% 58% 42% 38%;
-  background: #bcd4e6;
-  box-shadow: 0 4px 12px rgba(63, 109, 146, 0.25);
+  border-radius: 50%;
+  background: rgba(203, 232, 247, 0.8);
+  box-shadow: 0 1px 3px rgba(62, 97, 120, 0.08);
   transform: translateX(calc(var(--active) * 100%));
   transition: transform 0.5s var(--spring);
 }
