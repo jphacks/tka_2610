@@ -83,9 +83,9 @@
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--add-button);
+  box-shadow: 0 6px 18px rgba(75, 130, 172, 0.3);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(66, 155, 203, 0.3);
   transition: transform 0.4s var(--spring);
 }
 
