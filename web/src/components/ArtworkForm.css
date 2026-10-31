@@ -1,6 +1,6 @@
 /* 作品の登録・編集フォームの、写真を選ぶ枠と「3Dモデル(.glb)」の開閉（ArtworkForm）。
    入力欄そのものの見た目は styles/form.css */
-
+ 
 .photo-picker {
   position: relative;
   display: grid;
@@ -14,12 +14,12 @@
   overflow: hidden;
   transition: transform 0.4s var(--spring), background 0.2s;
 }
-
+ 
 .photo-picker:active {
   transform: scale(0.985);
   background: var(--paper-2);
 }
-
+ 
 .photo-picker .inner {
   display: grid;
   justify-items: center;
@@ -29,25 +29,25 @@
   letter-spacing: 0.06em;
   color: var(--ink);
 }
-
+ 
 .photo-picker .inner svg {
   margin-bottom: 6px;
   color: var(--ink);
 }
-
+ 
 .photo-picker .inner small {
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.02em;
   color: var(--ink-2);
 }
-
+ 
 /* 写真を選んだあと */
 .photo-picker.filled {
   background: var(--paper-2);
   border: 0;
 }
-
+ 
 /* 枠いっぱいに重ね、写真の全体を収める（枠は grid なので、height: 100% だけでは縦長・正方形の写真が枠からはみ出して切れる） */
 .photo-picker img {
   position: absolute;
@@ -56,13 +56,13 @@
   height: 100%;
   object-fit: contain;
 }
-
+ 
 .photo-change {
   position: absolute;
   right: 12px;
   bottom: 12px;
 }
-
+ 
 .disclosure {
   display: flex;
   align-items: center;
@@ -70,7 +70,7 @@
   font-size: 13px;
   color: var(--ink-2);
 }
-
+ 
 /* 角を iOS のような曲線に（対応ブラウザだけ） */
 @supports (corner-shape: squircle) {
   .photo-picker {
@@ -78,8 +78,19 @@
     border-radius: 24px;
   }
 }
-
+ 
 /* 写真の代わりに 3D モデルを撮った画像を使うときの説明 */
 .photo-note {
   margin: -6px 4px 0;
+}
+ 
+/* 絵の写真の「元の写真 / 影をとる」の切り替え（写真の枠のすぐ下） */
+.photo-look {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+ 
+.photo-look .hint {
+  margin: 0;
 }

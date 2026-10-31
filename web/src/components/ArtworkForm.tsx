@@ -4,10 +4,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Artwork, Category } from '../api'
 import { CalendarIcon, CameraIcon, ChevronRight } from '../icons'
+import { removeShadow } from '../photoFix'
 import { snapshotModel } from '../three'
 import { GlassButton } from './GlassButton'
 import { Segmented } from './Segmented'
 import './ArtworkForm.css'
+
+/** 絵の写真の見た目の選択（「影をとる」は photoFix.ts。作品の種類が「絵画」のときだけ出す） */
+const PHOTO_LOOKS: { value: 'original' | 'fixed'; label: string }[] = [
+  { value: 'original', label: '元の写真' },
+  { value: 'fixed', label: '影をとる' },
+]
 
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'drawing', label: '絵画' },
@@ -56,6 +63,13 @@ export function ArtworkForm({
   const [localError, setLocalError] = useState<string | null>(null)
   const [advanced, setAdvanced] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  // 「影をとる」：補正した写真 (fixedFile) と、それを使うか (useFixed)。補正している間は fixing
+  const [fixedFile, setFixedFile] = useState<File | null>(null)
+  const [fixedPreview, setFixedPreview] = useState<string | null>(null)
+  const [useFixed, setUseFixed] = useState(false)
+  const [fixing, setFixing] = useState(false)
+  // いちばん新しい補正の番号 (写真を選び直したあと、古い写真の補正結果で上書きしない)
+  const fixTurn = useRef(0)
 
   useEffect(() => {
     if (!file) {
@@ -67,11 +81,49 @@ export function ArtworkForm({
     return () => URL.revokeObjectURL(url)
   }, [file])
 
-  const shownImage = preview ?? initial?.image_url ?? null
+  useEffect(() => {
+    if (!fixedFile) {
+      setFixedPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(fixedFile)
+    setFixedPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [fixedFile])
+
+  // 「影をとる」を出すのは、新しく選んだ絵の写真だけ (3Dモデルを撮った画像と、工作などは対象にしない)
+  const canFix = category === 'drawing' && !!file && !fromModel
+  const showFixed = canFix && useFixed && !!fixedFile
+  const shownImage = (showFixed ? fixedPreview : null) ?? preview ?? initial?.image_url ?? null
 
   const choosePhoto = (photo: File | null) => {
+    fixTurn.current++
+    setFixedFile(null)
+    setUseFixed(false)
+    setFixing(false)
     setFile(photo)
     setFromModel(false)
+  }
+
+  /** 「元の写真」「影をとる」を切り替える。初めて「影をとる」を選んだときに補正する (補正した写真は取っておく) */
+  const chooseLook = async (look: 'original' | 'fixed') => {
+    if (look === 'original') return setUseFixed(false)
+    setUseFixed(true)
+    if (fixedFile || !file) return
+    const turn = ++fixTurn.current
+    setFixing(true)
+    setLocalError(null)
+    try {
+      const fixed = await removeShadow(file, file.name.replace(/\.[^.]+$/, '') || 'photo')
+      if (turn !== fixTurn.current) return
+      setFixedFile(fixed)
+    } catch {
+      if (turn !== fixTurn.current) return
+      setUseFixed(false)
+      setLocalError('写真を補正できませんでした。元の写真のまま登録できます')
+    } finally {
+      if (turn === fixTurn.current) setFixing(false)
+    }
   }
 
   /** 3Dモデルを選んだ。写真がまだ無い (か、前のモデルを撮った画像) なら、このモデルを撮って写真の代わりにする */
@@ -102,12 +154,14 @@ export function ArtworkForm({
     data.set('category', category)
     data.delete('image')
     data.delete('model')
-    if (file) data.set('image', file)
+    // 「影をとる」を選んでいて、補正した写真があるときは、そちらを送る
+    if (file) data.set('image', showFixed && fixedFile ? fixedFile : file)
     if (model) data.set('model', model)
 
     if (variant === 'add' && !file) {
       return setLocalError(snapshotting ? '3Dモデルを撮っています。少し待ってから追加してください' : '写真を撮るか選んでください')
     }
+    if (fixing) return setLocalError('写真を補正しています。少し待ってから追加してください')
     if (!String(data.get('title') ?? '').trim()) return setLocalError('作品のタイトルを入力してください')
     setLocalError(null)
     onSubmit(data)
@@ -143,6 +197,14 @@ export function ArtworkForm({
         </button>
       )}
       {fromModel && <p className="hint photo-note">3Dモデルを撮った画像を、写真の代わりに使います。写真を選ぶと置き換わります</p>}
+      {canFix && (
+        <div className="photo-look">
+          <Segmented label="写真の見た目" options={PHOTO_LOOKS} value={useFixed ? 'fixed' : 'original'} onChange={chooseLook} />
+          <p className="hint">
+            {fixing ? '影をならしています…' : '紙の影をならして、明るさをそろえます。切り替えて見くらべられます。'}
+          </p>
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="title">作品のタイトル</label>
@@ -219,7 +281,7 @@ export function ArtworkForm({
 
       {message && <div className="form-error">{message}</div>}
 
-      <button type="submit" className="btn btn-filled" disabled={busy || snapshotting}>
+      <button type="submit" className="btn btn-filled" disabled={busy || snapshotting || fixing}>
         {submitLabel}
       </button>
     </form>
