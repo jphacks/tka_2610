@@ -437,3 +437,56 @@
 .memory-note p {
   color: var(--ink);
 }
+
+
+/* ===== 写真の上のマスキングテープ（縦長） ===== */
+
+/* テープが写真の上にはみ出して見えるように、枠で隠さない。上に余白も足す */
+.memory-grid {
+  padding-top: 16px;
+}
+
+.memory-grid .memory-tile {
+  overflow: visible;
+}
+
+.memory-grid .memory-tile::after {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  z-index: 1;
+
+  width: 15px;
+  height: 22px;
+
+  translate: -50% 0;
+  rotate: 6deg;
+
+  background: color-mix(in srgb, var(--peach) 80%, transparent);
+  box-shadow: 0 1px 2px rgba(62, 97, 120, 0.14);
+
+  pointer-events: none;
+}
+
+/* テープの色：1枚目から順に 水色・赤・黄色・緑 のくり返し */
+.memory-grid .memory-tile:nth-child(4n + 1)::after {
+  background: color-mix(in srgb, var(--sky) 85%, transparent);
+}
+
+.memory-grid .memory-tile:nth-child(4n + 2)::after {
+  background: color-mix(in srgb, var(--red) 40%, transparent);
+}
+
+.memory-grid .memory-tile:nth-child(4n + 3)::after {
+  background: color-mix(in srgb, var(--sun) 90%, transparent);
+}
+
+.memory-grid .memory-tile:nth-child(4n)::after {
+  background: color-mix(in srgb, var(--sage) 80%, transparent);
+}
+
+/* 傾きは、1枚おきに左右を変える */
+.memory-grid .memory-tile:nth-child(even)::after {
+  rotate: -6deg;
+}

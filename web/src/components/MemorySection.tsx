@@ -299,7 +299,7 @@ export function MemorySection({
     {memo && (
       <div className="memory-note">
         <span className="memory-note-label">
-          作品に残したメモ
+          メモ
         </span>
         <p>{memo}</p>
       </div>
