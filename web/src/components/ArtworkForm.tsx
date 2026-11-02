@@ -7,6 +7,7 @@ import { CalendarIcon, CameraIcon, ChevronRight } from '../icons'
 import { removeShadow } from '../photoFix'
 import { snapshotModel } from '../three'
 import { GlassButton } from './GlassButton'
+import { PhotoEditor } from './PhotoEditor'
 import { Segmented } from './Segmented'
 import './ArtworkForm.css'
 
@@ -52,6 +53,10 @@ export function ArtworkForm({
   variant: 'add' | 'edit'
 }) {
   const [file, setFile] = useState<File | null>(null)
+  // 選んだままの写真 (向きをなおす・切り取るは、いつもこの写真から始める)。直したあとの写真は file に入る
+  const [picked, setPicked] = useState<File | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [edited, setEdited] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [model, setModel] = useState<File | null>(null)
   // 写真 (file) が、3Dモデルを撮った画像か。撮っている間は true の snapshotting
@@ -102,7 +107,19 @@ export function ArtworkForm({
     setUseFixed(false)
     setFixing(false)
     setFile(photo)
+    setPicked(photo)
+    setEdited(false)
     setFromModel(false)
+  }
+
+  /** 「向きをなおす・切り取る」で直した写真に置き換える (選び直しではないので、picked は変えない。影の補正はやり直し) */
+  const applyEdit = (fixed: File) => {
+    fixTurn.current++
+    setFixedFile(null)
+    setUseFixed(false)
+    setFixing(false)
+    setFile(fixed)
+    setEdited(true)
   }
 
   /** 「元の写真」「影をとる」を切り替える。初めて「影をとる」を選んだときに補正する (補正した写真は取っておく) */
@@ -197,12 +214,18 @@ export function ArtworkForm({
         </button>
       )}
       {fromModel && <p className="hint photo-note">3Dモデルを撮った画像を、写真の代わりに使います。写真を選ぶと置き換わります</p>}
+      {picked && !fromModel && (
+        <div className="photo-edit">
+          <button type="button" className="btn btn-outline btn-small" onClick={() => setEditing(true)} disabled={fixing}>
+            向きをなおす・切り取る
+          </button>
+          {edited && <p className="hint">向きや切り取りを直しました</p>}
+        </div>
+      )}
       {canFix && (
         <div className="photo-look">
           <Segmented label="写真の見た目" options={PHOTO_LOOKS} value={useFixed ? 'fixed' : 'original'} onChange={chooseLook} />
-          <p className="hint">
-            {fixing ? '影をならしています…' : '紙の影をならして、明るさをそろえます。切り替えて見くらべられます。'}
-          </p>
+          {fixing && <p className="hint">影をとっています…</p>}
         </div>
       )}
 
@@ -280,6 +303,8 @@ export function ArtworkForm({
       </div>
 
       {message && <div className="form-error">{message}</div>}
+
+      <PhotoEditor file={picked} open={editing} onClose={() => setEditing(false)} onDone={applyEdit} />
 
       <button type="submit" className="btn btn-filled" disabled={busy || snapshotting || fixing}>
         {submitLabel}

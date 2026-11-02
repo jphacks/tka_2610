@@ -94,3 +94,14 @@
 .photo-look .hint {
   margin: 0;
 }
+/* 「向きをなおす・切り取る」のボタン（写真の枠のすぐ下） */
+.photo-edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+ 
+.photo-edit .hint {
+  margin: 0;
+}
