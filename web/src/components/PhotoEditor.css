@@ -1,0 +1,110 @@
+/* 写真を整えるシート（PhotoEditor） */
+ 
+.photo-editor-stage {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 14px 0;
+}
+ 
+/* 写真と切り取りの枠。写真の大きさにぴったり合わせる */
+.photo-editor-box {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+ 
+.photo-editor-box canvas {
+  display: block;
+  max-width: 100%;
+  max-height: min(46vh, 360px);
+  width: auto;
+  height: auto;
+}
+ 
+/* 写真。枠の外側を暗くする影は、写真からはみ出さないよう、ここで隠す */
+.photo-editor-clip {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--paper-2);
+}
+ 
+.photo-editor-shade {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(62, 97, 120, 0.45);
+  pointer-events: none;
+}
+ 
+/* 切り取る枠。四隅の丸が写真の外にはみ出しても見えるように、隠さない */
+.photo-editor-crop {
+  position: absolute;
+  border: 2px solid var(--surface);
+  touch-action: none;
+  cursor: move;
+}
+ 
+/* 四隅の丸（見た目は小さく、つかめる範囲は広く） */
+.photo-editor-handle {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  touch-action: none;
+}
+ 
+.photo-editor-handle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(62, 97, 120, 0.4);
+}
+ 
+.photo-editor-handle.nw {
+  left: -17px;
+  top: -17px;
+}
+.photo-editor-handle.ne {
+  right: -17px;
+  top: -17px;
+}
+.photo-editor-handle.sw {
+  left: -17px;
+  bottom: -17px;
+}
+.photo-editor-handle.se {
+  right: -17px;
+  bottom: -17px;
+}
+ 
+.photo-editor-handle::after {
+  left: 10px;
+  top: 10px;
+}
+ 
+.photo-editor-hint {
+  margin: 6px 0 0;
+  text-align: center;
+}
+ 
+.photo-editor-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+ 
+.photo-editor-tools .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+ 
+.photo-editor-tools .flip {
+  transform: scaleX(-1);
+}
