@@ -1,5 +1,5 @@
 /* 読み込み中の表示（Spinner・Busy・StageFallback） */
-
+ 
 /* iOS の activity indicator */
 .spinner {
   position: relative;
@@ -7,7 +7,7 @@
   width: 26px;
   height: 26px;
 }
-
+ 
 .spinner i {
   position: absolute;
   left: 11.5px;
@@ -22,7 +22,7 @@
   animation: spinner-fade 0.8s linear infinite;
   animation-delay: calc(var(--i) * 0.1s - 0.8s);
 }
-
+ 
 @keyframes spinner-fade {
   0% {
     opacity: 0.85;
@@ -31,7 +31,7 @@
     opacity: 0.18;
   }
 }
-
+ 
 /* 3D が出るまでの仮表示（StageFallback） */
 .stage-fallback {
   position: absolute;
@@ -43,13 +43,86 @@
   letter-spacing: 0.06em;
   background: #ebe1d3;
 }
-
+ 
 .stage-fallback-inner {
   display: grid;
   justify-items: center;
   gap: 12px;
 }
-
+ 
+/* 待ち時間が短いときは出さない（0.3 秒たってから、ふわっと出す） */
+.stage-fallback-inner {
+  animation: fade-in 0.3s 0.3s both;
+}
+ 
+/* 虹の線が、外側から 1 本ずつ描かれて、そろったら、まとめて消えて、くり返す（色はスピナーと同じ） */
+.rainbow-loader {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+ 
+.rainbow-arc {
+  stroke-dasharray: 1 1.5;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  animation: 2.6s linear infinite both;
+}
+ 
+.rainbow-arc.a0 {
+  animation-name: rainbow-a0;
+}
+.rainbow-arc.a1 {
+  animation-name: rainbow-a1;
+}
+.rainbow-arc.a2 {
+  animation-name: rainbow-a2;
+}
+.rainbow-arc.a3 {
+  animation-name: rainbow-a3;
+}
+ 
+/* 線 i は、(i × 12)% から 20% の間で描かれ、78% まで残り、92% までに消える */
+@keyframes rainbow-a0 {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  1% { stroke-dashoffset: 1; opacity: 1; }
+  20% { stroke-dashoffset: 0; opacity: 1; }
+  78% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes rainbow-a1 {
+  0%, 12% { stroke-dashoffset: 1; opacity: 0; }
+  13% { stroke-dashoffset: 1; opacity: 1; }
+  32% { stroke-dashoffset: 0; opacity: 1; }
+  78% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes rainbow-a2 {
+  0%, 24% { stroke-dashoffset: 1; opacity: 0; }
+  25% { stroke-dashoffset: 1; opacity: 1; }
+  44% { stroke-dashoffset: 0; opacity: 1; }
+  78% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes rainbow-a3 {
+  0%, 36% { stroke-dashoffset: 1; opacity: 0; }
+  37% { stroke-dashoffset: 1; opacity: 1; }
+  56% { stroke-dashoffset: 0; opacity: 1; }
+  78% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+ 
+/* 「視差効果を減らす」のときは動かさず、虹を出したままにする */
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-arc {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+ 
 /* 画面全体を覆う処理中のカード（Busy） */
 .busy {
   position: absolute;
@@ -60,7 +133,7 @@
   background: rgba(246, 243, 238, 0.5);
   animation: fade-in 0.25s both;
 }
-
+ 
 .busy-card {
   display: grid;
   justify-items: center;
@@ -75,13 +148,13 @@
   letter-spacing: 0.06em;
   animation: busy-pop-in 0.45s var(--spring) both;
 }
-
+ 
 @keyframes fade-in {
   from {
     opacity: 0;
   }
 }
-
+ 
 /* nav.css の pop-in（戻る遷移）と名前が重ならないよう、busy- を付ける */
 @keyframes busy-pop-in {
   from {
@@ -89,7 +162,7 @@
     transform: scale(0.88);
   }
 }
-
+ 
 /* 角を iOS のような曲線に（対応ブラウザだけ） */
 @supports (corner-shape: squircle) {
   .busy-card {
