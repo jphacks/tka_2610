@@ -13,8 +13,9 @@ import {
   type Memory,
   type UploadMemoryInput,
 } from '../api'
-import { CameraIcon, GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
+import { CameraIcon, CloseIcon, GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
 import { MemoryViewer } from './MemoryViewer'
+import { PhotoEditor } from './PhotoEditor'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
 import { VoiceRecorder } from './VoiceRecorder'
@@ -29,6 +30,24 @@ interface Job {
   name: string
   ratio: number
   error?: string
+}
+
+/** 確認のシートに出す、選んだ写真 1 枚 (original は選んだままの写真、file は今の写真。直したら file が変わる) */
+interface ReviewItem {
+  id: number
+  original: File
+  file: File
+}
+
+/** 選んだ写真の小さい表示（ファイルから仮の URL を作って、使い終わったら捨てる） */
+function ReviewThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const u = URL.createObjectURL(file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [file])
+  return url ? <img src={url} alt="" /> : null
 }
 
 /** 声の再生（<audio> を 1 つ使い回す。画面を離れたら止める） */
@@ -93,6 +112,11 @@ export function MemorySection({
   const [adding, setAdding] = useState(false)
   const [recording, setRecording] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
+  // 「向きをなおす・切り取る」を開いている写真。index が null なら 1 枚だけ選んだとき (直したらそのまま足す)、数なら確認のシートの何番目か
+  // replace があるときは、足したあとの写真を直しているところ (直したら、その写真に置き換える)
+  const [editing, setEditing] = useState<{ file: File; index: number | null; replace?: Memory } | null>(null)
+  // 写真を 2 枚以上選んだときの確認のシート。直したい写真だけ直して、まとめて足す (others は、いっしょに選んだ動画・声)
+  const [review, setReview] = useState<{ items: ReviewItem[]; others: File[] } | null>(null)
   const busy = jobs.some((j) => !j.error && j.ratio < 1)
   const [viewing, setViewing] = useState<number | null>(null)
   // 「⋯」で選んだおもいでと、そのあとの操作
@@ -135,6 +159,70 @@ export function MemorySection({
   const onFiles = async (files: FileList | null) => {
     if (!files?.length) return
     const list = Array.from(files)
+    const photos = list.filter((f) => kindOfFile(f) === 'photo')
+    // 写真を 1 枚だけ選んだときは、すぐ「向きをなおす・切り取る」を開く
+    if (list.length === 1 && photos.length === 1) return setEditing({ file: photos[0], index: null })
+    // 写真を 2 枚以上選んだときは、足す前の確認のシートで、直したい写真だけ直せる
+    if (photos.length >= 2) {
+      const base = Date.now()
+      setReview({
+        items: photos.map((file, i) => ({ id: base + i, original: file, file })),
+        others: list.filter((f) => kindOfFile(f) !== 'photo'),
+      })
+      return
+    }
+    await sendFiles(list)
+  }
+
+  /** 足したあとの写真を「向きをなおす・切り取る」で開く。写真を読み込んで、シートに渡す */
+  const startEditPhoto = async (memory: Memory) => {
+    setTarget(null)
+    try {
+      const res = await fetch(memory.url)
+      if (!res.ok) throw new Error('read')
+      const blob = await res.blob()
+      setEditing({ file: new File([blob], `${memory.id}.jpg`, { type: blob.type || 'image/jpeg' }), index: null, replace: memory })
+    } catch {
+      toast('写真を読み込めませんでした')
+    }
+  }
+
+  /**
+   * 直した写真に置き換える。サーバーには「差し替え」が無いので、直した写真を新しく足してから、前の写真を消す
+   * (足すのに失敗したら、前の写真はそのまま。ひとことは引きつぐ。並びは、いちばん後ろになる)
+   */
+  const replacePhoto = async (old: Memory, photo: File) => {
+    setViewing(null)
+    toast('写真を直しています…')
+    try {
+      await upload.mutateAsync({ input: { file: photo, caption: old.caption || undefined } })
+    } catch (e) {
+      return toast(e instanceof Error ? e.message : '写真を直せませんでした')
+    }
+    try {
+      await remove.mutateAsync(old.id)
+      toast('写真を直しました')
+    } catch {
+      toast('直した写真を足しましたが、前の写真を消せませんでした。前の写真は、自分で消してください')
+    }
+  }
+
+  /** 確認のシートの「この内容で追加」：写真 (直したものを含む) と、いっしょに選んだ動画・声を、順に送る */
+  const confirmReview = async () => {
+    if (!review) return
+    const list = [...review.items.map((i) => i.file), ...review.others]
+    setReview(null)
+    await sendFiles(list)
+  }
+
+  const removeReviewItem = (id: number) =>
+    setReview((r) => {
+      if (!r) return r
+      const items = r.items.filter((i) => i.id !== id)
+      return items.length === 0 && r.others.length === 0 ? null : { ...r, items }
+    })
+
+  const sendFiles = async (list: File[]) => {
     const inputs = await Promise.all(list.map(async (file) => ({ name: file.name, input: { file, ...(await probeMedia(file)) } })))
     await send(inputs)
   }
@@ -420,6 +508,70 @@ export function MemorySection({
         )}
       </Sheet>
 
+      {/* 写真を 2 枚以上選んだときの確認。直したい写真をタップすると「写真を整える」が開く */}
+      <Sheet open={review !== null} onClose={() => setReview(null)} title="追加する写真">
+        <div className="sheet-body">
+          <p className="hint" style={{ margin: 0, textAlign: 'center' }}>
+            直したい写真をタップすると、向きをなおしたり、切り取ったりできます
+          </p>
+          <ul className="review-grid">
+            {review?.items.map((item, index) => (
+              <li key={item.id} className="review-tile">
+                <button
+                  type="button"
+                  className="review-photo"
+                  aria-label={`${index + 1} 枚目の写真を整える`}
+                  onClick={() => setEditing({ file: item.original, index })}
+                >
+                  <ReviewThumb file={item.file} />
+                  {item.file !== item.original && <span className="review-badge">直した</span>}
+                </button>
+                <button type="button" className="review-remove" aria-label="この写真を外す" onClick={() => removeReviewItem(item.id)}>
+                  <CloseIcon size={12} strokeWidth={2.6} />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {review && review.others.length > 0 && (
+            <p className="hint" style={{ margin: 0, textAlign: 'center' }}>動画・声 {review.others.length} 個も、いっしょに追加します</p>
+          )}
+          <button
+            type="button"
+            className="btn btn-filled"
+            onClick={confirmReview}
+            disabled={!review || review.items.length + review.others.length === 0}
+          >
+            この内容で追加
+          </button>
+          <button type="button" className="btn btn-gray" onClick={() => setReview(null)}>
+            キャンセル
+          </button>
+        </div>
+      </Sheet>
+
+      <PhotoEditor
+        file={editing?.file ?? null}
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        onDone={(photo) => {
+          if (!editing) return
+          if (editing.replace) {
+            // 何も直さなかったときは、そのまま
+            if (photo !== editing.file) replacePhoto(editing.replace, photo)
+            return
+          }
+          if (editing.index === null) {
+            sendFiles([photo])
+            return
+          }
+          // 確認のシートの写真を、直した写真に置き換える (直さなかったときは、選んだままの写真に戻る)
+          const index = editing.index
+          setReview((r) =>
+            r ? { ...r, items: r.items.map((item, i) => (i === index ? { ...item, file: photo } : item)) } : r,
+          )
+        }}
+      />
+
       <VoiceRecorder
         open={recording}
         onClose={() => !upload.isPending && setRecording(false)}
@@ -435,6 +587,11 @@ export function MemorySection({
       {/* 「⋯」：ひとことを変える・消す */}
       <Sheet open={target?.mode === 'menu'} onClose={() => setTarget(null)} title="このおもいで">
         <div className="sheet-body">
+          {target?.memory.kind === 'photo' && (
+            <button className="btn btn-filled" onClick={() => startEditPhoto(target.memory)}>
+              写真を加工する
+            </button>
+          )}
           <button className="btn btn-gray" onClick={() => target && setTarget({ ...target, mode: 'edit' })}>
             ひとことを変える
           </button>
