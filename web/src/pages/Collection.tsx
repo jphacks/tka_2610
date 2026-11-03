@@ -7,11 +7,11 @@
 // その種類の作品が無い年・月が URL にあれば、すべてにする（以前の ?month=all も、すべて）。
 // 並びのすぐ上に、いま見ている範囲と点数を 1 行で出す（「工作・2026年 10月　2点」）。作品名の下には作ったときの年齢（「5さい 4か月」）。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useArtworks, type Artwork, type Category } from '../api'
-import { ActionMenu, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons } from '../components'
-import { GalleryIcon, MoreIcon, RainbowIcon, PlusIcon } from '../icons'
+import { ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons } from '../components'
+import { GalleryIcon } from '../icons'
 import { useNav } from '../nav'
 import './Collection.css'
 
@@ -160,7 +160,6 @@ function MonthScroller({
 export default function Collection() {
   const [params, setParams] = useSearchParams()
   const nav = useNav()
-  const [menu, setMenu] = useState(false)
   const category: Tab = TABS.find((tab) => tab.value === params.get('category'))?.value ?? 'all'
   const compact = params.get('view') === 'compact'
   const gridClass = `collection-grid${compact ? ' compact' : ''}`
@@ -194,17 +193,7 @@ export default function Collection() {
 
   return (
     <Screen tabbar className="collection-screen">
-      <NavBar
-        title="作品一覧"
-        right={
-          <>
-            <button className="icon-btn" aria-label="作品を追加" onClick={() => nav.modal('/add')}><PlusIcon size={20} /></button>
-            <button className="icon-btn" aria-label="メニュー" onClick={() => setMenu(true)}>
-              <MoreIcon size={21} />
-            </button>
-          </>
-        }
-      />
+      <NavBar title="作品一覧" />
       <div className="page collection-page">
         <div className="collection-filters">
         <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
@@ -310,14 +299,6 @@ export default function Collection() {
         )}
       </div>
 
-      <ActionMenu
-        open={menu}
-        onClose={() => setMenu(false)}
-        items={[
-          { label: '作品を追加', icon: <PlusIcon size={19} />, onSelect: () => nav.modal('/add') },
-          { label: 'memoriaのマップ', icon: <RainbowIcon size={19} />, onSelect: () => nav.tab('/map') },
-        ]}
-      />
     </Screen>
   )
 }

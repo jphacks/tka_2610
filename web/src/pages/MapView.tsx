@@ -52,7 +52,7 @@ export default function MapView() {
 
   return (
     <Screen tabbar className="recall-screen">
-      <NavBar title="memoria" right={<button type="button" className="icon-btn" aria-label="作品一覧を開く" onClick={() => nav.tab('/collection')}><GalleryIcon size={21} /></button>} />
+      <NavBar title="memoria" />
       <div className="page recall-page">
         {recalls.isPending ? (
           <div className="recall-loading" aria-busy="true" aria-label="思い出を読み込み中"><div className="recall-hero-placeholder skeleton" /><div className="recall-age-grid"><ThumbSkeletons count={4} /></div></div>

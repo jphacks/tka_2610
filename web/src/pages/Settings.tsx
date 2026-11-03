@@ -1,4 +1,4 @@
-// // ⑩ 設定（/settings）。タブ。iOS の設定アプリ風。
+// ⑩ マイページ（/settings）。タブ。iOS の設定アプリ風。
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useSettings, useUpdateSettings } from '../api'
 import { InviteSheet, NavBar, Screen, Sheet, useToast } from '../components'
@@ -95,7 +95,7 @@ export default function Settings() {
 
   return (
     <Screen tabbar>
-      <NavBar large title="設定" />
+      <NavBar title="マイページ" />
       <div className="page">
         <div className="list-group" style={{ marginTop: 6 }}>
           <button className="list-item profile-row" onClick={() => setEditing(true)}>
