@@ -499,3 +499,17 @@ export interface Recollections {
   age_artworks: Artwork[]
   total: number
 }
+
+
+export type DigestScope = 'all' | 'year'
+export type DigestSlide =
+  | { kind: 'artwork'; artwork: Artwork; voice: Memory | null; duration_ms: number }
+  | { kind: 'photo'; artwork: Artwork; photo: Memory; duration_ms: number }
+  | { kind: 'comparison'; first: Artwork; last: Artwork; duration_ms: number }
+export interface ArtworkDigest {
+  title: string
+  period_label: string
+  artwork_count: number
+  duration_label: string
+  slides: DigestSlide[]
+}

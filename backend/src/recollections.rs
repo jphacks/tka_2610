@@ -23,10 +23,10 @@ pub struct RecallQuery {
 
 #[derive(Serialize)]
 pub struct RecallCard {
-    artwork: ArtworkDto,
+    pub(crate) artwork: ArtworkDto,
     /// 作品画像とは別の「おもいでの写真」。
-    photo: Option<MemoryDto>,
-    voice: Option<MemoryDto>,
+    pub(crate) photo: Option<MemoryDto>,
+    pub(crate) voice: Option<MemoryDto>,
 }
 
 #[derive(Serialize)]
@@ -97,7 +97,11 @@ fn daily_feature(indices: &[usize], today: NaiveDate) -> Option<usize> {
     }
 }
 
-async fn card(state: &AppState, row: &ArtworkRow, ctx: &DtoContext) -> AppResult<RecallCard> {
+pub(crate) async fn card(
+    state: &AppState,
+    row: &ArtworkRow,
+    ctx: &DtoContext,
+) -> AppResult<RecallCard> {
     let memories = memories::of_artwork(&state.pool, row.id).await?;
     let mut photo = None;
     let mut voice = None;

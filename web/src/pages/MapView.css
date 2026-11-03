@@ -65,3 +65,12 @@
 .recall-screen a:focus-visible, .recall-screen button:focus-visible, .recall-screen summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 @media (max-width: 360px) { .recall-hero-images.with-photo { grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; } .recall-section-head h1, .recall-section-head h2 { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .recall-screen .thumb-card { animation: none; } }
+
+/* ダイジェストの入口。タップしたときだけ再生画面を開く。 */
+.recall-digest { margin-bottom: 24px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 20px; background: color-mix(in srgb, var(--sky) 25%, var(--surface)); }
+.recall-digest > div:first-child { display: flex; align-items: center; gap: 9px; }
+.recall-digest-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); color: var(--accent); }
+.recall-digest h1 { margin: 0; font-size: 18px; }
+.recall-digest > p { margin: 10px 0 14px; font-size: 12px; line-height: 1.7; color: var(--ink-2); }
+.recall-digest-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.recall-digest-buttons button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--accent); }

@@ -1,0 +1,57 @@
+/* アプリ内で再生する作品ダイジェスト。native dialogで背景操作とフォーカスを閉じ込める。 */
+.digest-dialog { position: fixed; inset: 0; width: min(100vw, 440px); height: 100dvh; max-width: none; max-height: none; margin: auto; padding: 0; border: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--ink); color: var(--paper); }
+.digest-dialog:not([open]) { display: none; }
+.digest-dialog::backdrop { background: color-mix(in srgb, var(--ink) 65%, transparent); }
+.digest-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(8px + var(--safe-top)) 14px 4px; }
+.digest-top > span { font-size: 12px; opacity: .8; }
+.digest-round { display: inline-grid; flex: none; place-items: center; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--paper) 25%, transparent); border-radius: 50%; color: var(--paper); }
+.digest-round:disabled { opacity: .3; }
+.digest-options { display: flex; align-items: center; gap: 10px; padding: 4px 16px 8px; }
+.digest-options .segmented { flex: 1; background: color-mix(in srgb, var(--paper) 15%, transparent); }
+.digest-options .segmented button { color: var(--paper); }
+.digest-options .segmented button.active { color: var(--ink); }
+.digest-drawing-filter { flex: none; min-height: 38px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent); border-radius: 999px; font-size: 12px; color: var(--paper); }
+.digest-drawing-filter[aria-pressed='true'] { background: var(--paper); color: var(--ink); }
+.digest-playback { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(12px + var(--safe-bottom)); }
+.digest-progress { display: flex; flex: none; gap: 3px; height: 3px; margin: 8px 16px; }
+.digest-progress > span { position: relative; flex: 1; overflow: hidden; border-radius: 2px; background: color-mix(in srgb, var(--paper) 25%, transparent); }
+.digest-progress i { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--paper); }
+.digest-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 18px; }
+.digest-heading h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.digest-heading p { margin: 3px 0 0; font-size: 10px; opacity: .75; }
+.digest-heading > span { font-size: 11px; opacity: .75; }
+.digest-stage { position: relative; flex: 1; min-height: 150px; overflow: hidden; margin: 8px 16px 0; border-radius: 16px; background: var(--paper-2); color: var(--ink); }
+.digest-single { position: absolute; inset: 0; animation: digest-appear .4s var(--ease-out) both; }
+.digest-single .digest-image { width: 100%; height: 100%; padding: 12px; object-fit: contain; animation: digest-drift var(--digest-duration) linear both; }
+.digest-playback.paused .digest-image { animation-play-state: paused; }
+.digest-loading-label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; background: var(--paper-2); }
+.digest-comparison { height: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: center; padding: 12px; animation: digest-appear .4s var(--ease-out) both; }
+.digest-compare-work { display: flex; flex-direction: column; align-items: stretch; min-width: 0; gap: 8px; color: var(--ink); text-align: left; }
+.digest-compare-work > span { font-size: 11px; font-weight: 600; }
+.digest-compare-image { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 10px; background: var(--surface); }
+.digest-compare-image .digest-image { width: 100%; height: 100%; padding: 6px; object-fit: contain; }
+.digest-compare-work strong { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.digest-compare-work small { font-size: 10px; color: var(--ink-2); }
+.digest-image-failed { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; height: 100%; padding: 12px; text-align: center; font-size: 12px; }
+.digest-caption { padding: 12px 20px 4px; flex: none; }
+.digest-slide-label { margin: 0 0 4px; font-size: 11px; opacity: .8; }
+.digest-caption h3 { margin: 0; font-size: 20px; line-height: 1.5; overflow-wrap: anywhere; }
+.digest-date { margin: 3px 0 0; font-size: 11px; opacity: .75; }
+.digest-memo { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 8px 0 0; font-size: 12px; line-height: 1.8; }
+.digest-controls { display: flex; flex: none; justify-content: center; align-items: center; gap: 28px; padding: 14px 16px 10px; }
+.digest-play { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 120px; min-height: 46px; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 600; }
+.digest-actions { display: flex; flex: none; justify-content: space-between; align-items: center; gap: 12px; padding: 0 18px; }
+.digest-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; color: var(--paper); font-size: 11px; }
+.digest-voice-toggle[aria-pressed='true'] { color: var(--sun); }
+.digest-voice-note { margin: 0 18px; font-size: 10px; opacity: .75; }
+.digest-voice-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 18px; font-size: 11px; }
+.digest-voice-error button { flex: none; padding: 8px; border: 1px solid currentColor; border-radius: 8px; }
+.digest-state { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 30px; text-align: center; }
+.digest-state p { margin: 0; font-size: 13px; line-height: 1.9; }
+.digest-state h2 { margin: 0; font-size: 17px; }
+.digest-state button { min-height: 44px; padding: 8px 16px; border: 1px solid currentColor; border-radius: 999px; }
+.digest-dialog button:focus-visible { outline: 2px solid var(--sun); outline-offset: 3px; }
+@keyframes digest-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes digest-drift { from { transform: scale(1); } to { transform: scale(1.025); } }
+@media (min-width: 600px) and (min-height: 700px) { .digest-dialog { height: min(calc(100dvh - 48px), 932px); border-radius: 40px; } }
+@media (prefers-reduced-motion: reduce) { .digest-single, .digest-single .digest-image, .digest-comparison { animation: none; } }

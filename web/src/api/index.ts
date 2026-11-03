@@ -72,3 +72,6 @@ export {
 
 export { useRecollections } from './recollections'
 export type { RecallCard, Recollections } from './types'
+
+export { useArtworkDigest } from './recollections'
+export type { ArtworkDigest, DigestSlide, DigestScope } from './types'
