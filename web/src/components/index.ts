@@ -18,3 +18,5 @@ export { TLink } from './TLink'
 export { ToastProvider, useToast } from './Toast'
 export { InviteSheet } from './InviteSheet'
 export { DigestPlayer } from './DigestPlayer'
+
+export { MiniatureDigest } from './MiniatureDigest'

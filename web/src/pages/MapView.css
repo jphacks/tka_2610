@@ -74,3 +74,7 @@
 .recall-digest > p { margin: 10px 0 14px; font-size: 12px; line-height: 1.7; color: var(--ink-2); }
 .recall-digest-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .recall-digest-buttons button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--accent); }
+
+.recall-slideshow { margin-bottom: 24px; }
+.recall-slideshow > summary { padding: 10px 0; cursor: pointer; font-size: 12px; color: var(--ink-2); }
+.recall-slideshow .recall-digest { margin: 8px 0 0; }

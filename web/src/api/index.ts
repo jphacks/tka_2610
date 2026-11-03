@@ -75,3 +75,6 @@ export type { RecallCard, Recollections } from './types'
 
 export { useArtworkDigest } from './recollections'
 export type { ArtworkDigest, DigestSlide, DigestScope } from './types'
+
+export { useMiniatureDigest } from './recollections'
+export type { MiniatureEntry, MiniatureDigestData } from './types'

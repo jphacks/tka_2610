@@ -513,3 +513,19 @@ export interface ArtworkDigest {
   duration_label: string
   slides: DigestSlide[]
 }
+
+
+/** Rust: digest::MiniatureDigest。表示用。おへやの配置には保存しない。 */
+export interface MiniatureEntry {
+  artwork: Artwork
+  photos: Memory[]
+  voice: Memory | null
+  hold_ms: number
+}
+export interface MiniatureDigestData {
+  title: string
+  period_label: string
+  duration_label: string
+  transition_ms: number
+  entries: MiniatureEntry[]
+}

@@ -20,7 +20,7 @@ export function MemoryViewer({
   index: number
   onIndex: (index: number) => void
   onClose: () => void
-  onMenu: (memory: Memory) => void
+  onMenu?: (memory: Memory) => void
 }) {
   const memory = items[index]
   const swipe = useRef<number | null>(null)
@@ -61,9 +61,7 @@ export function MemoryViewer({
         <span className="memory-viewer-count num">
           {index + 1} / {items.length}
         </span>
-        <GlassButton label="メニュー" onClick={() => onMenu(memory)}>
-          <MoreIcon size={20} />
-        </GlassButton>
+        {onMenu ? <GlassButton label="メニュー" onClick={() => onMenu(memory)}><MoreIcon size={20} /></GlassButton> : <span /> }
       </div>
 
       <div className="memory-viewer-media" onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => (swipe.current = null)}>

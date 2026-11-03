@@ -204,6 +204,7 @@ async fn main() {
         // 年齢ごとのおへや (ホームの年齢のチップ・積み上げの建物・マップ)
         .route("/recollections", get(recollections::overview))
         .route("/recollections/digest", get(digest::generate))
+        .route("/recollections/miniature", get(digest::miniature))
         .route("/ages", get(ages_api::list_ages))
         .route("/ages/{age}", get(ages_api::age_stack))
         .route("/ages/{age}/rooms", post(ages_api::add_room))

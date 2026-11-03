@@ -1,0 +1,48 @@
+/* memoria内のミニチュア鑑賞。地面と作品を主役に、操作は枠の外へ。 */
+.miniature-digest { margin: 0 0 24px; }
+.miniature-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.miniature-heading h1 { margin: 0; font-size: 18px; }
+.miniature-heading > span { font-size: 11px; color: var(--ink-2); }
+.miniature-options { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.miniature-options .segmented { flex: 1; }
+.miniature-filter { min-height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-2); font-size: 12px; }
+.miniature-filter[aria-pressed='true'] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.miniature-playback { overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.miniature-period { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 14px 16px 0; }
+.miniature-period > span { font-size: 12px; font-weight: 600; }
+.miniature-period small { font-size: 10px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.miniature-stage { height: clamp(290px, 47vh, 370px); min-height: 290px; border-radius: 0; margin-top: 4px; overflow: hidden; }
+.miniature-stage canvas { touch-action: pan-y; }
+.miniature-start { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 9px; padding: 0 0 18px; color: var(--ink); background: linear-gradient(transparent 55%, color-mix(in srgb, var(--paper) 80%, transparent)); }
+.miniature-start > span { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); box-shadow: 0 4px 16px var(--fill); }
+.miniature-start strong { font-size: 12px; font-weight: 600; }
+.miniature-progress { display: flex; gap: 4px; height: 3px; margin: 0 16px; }
+.miniature-progress > span { flex: 1; overflow: hidden; border-radius: 2px; background: var(--fill); }
+.miniature-progress i { display: block; width: 100%; height: 100%; background: var(--accent); transform-origin: left; }
+.miniature-caption { padding: 12px 16px 0; }
+.miniature-status { min-height: 16px; margin: 0 0 4px; font-size: 10px; color: var(--ink-2); }
+.miniature-caption > button { display: flex; align-items: center; gap: 6px; max-width: 100%; text-align: left; color: var(--ink); }
+.miniature-caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.miniature-caption > small { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 10px; color: var(--ink-2); }
+.miniature-controls { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 14px 12px; }
+.miniature-arrow { display: grid; flex: none; place-items: center; width: 36px; height: 40px; color: var(--ink); }
+.miniature-arrow:disabled { opacity: .3; }
+.miniature-play { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 100px; min-height: 42px; padding: 0 12px; border-radius: 999px; background: var(--accent); color: var(--surface); font-size: 12px; font-weight: 600; }
+.miniature-voice { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 40px; color: var(--ink); font-size: 11px; white-space: nowrap; }
+.miniature-voice[aria-pressed='true'] { color: var(--green); }
+.miniature-memory-photo { width: clamp(70px, 20vw, 95px); padding: 5px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 4px 12px var(--fill); color: var(--ink); transform: rotate(-4deg); animation: miniature-photo-in .5s var(--ease-out) both; }
+.miniature-memory-photo.photo-1 { transform: rotate(4deg); }
+.miniature-memory-photo.photo-2 { transform: rotate(-2deg); }
+.miniature-memory-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; }
+.miniature-memory-photo > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 5px; font-size: 8px; }
+.miniature-art-fallback { width: 72px; padding: 4px; border-radius: 5px; background: var(--surface); box-shadow: 0 3px 10px var(--fill); color: var(--ink); }
+.miniature-art-fallback img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; }
+.miniature-art-fallback > span { display: block; font-size: 8px; }
+.miniature-note { margin: 0; padding: 0 16px 12px; color: var(--ink-2); font-size: 10px; line-height: 1.7; }
+.miniature-placeholder { height: 420px; border-radius: 20px; }
+.miniature-error { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; min-height: 220px; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); text-align: center; }
+.miniature-error p { margin: 0; font-size: 13px; line-height: 1.8; }
+.miniature-error > span { font-size: 12px; color: var(--ink-2); }
+@keyframes miniature-photo-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@media (max-width: 360px) { .miniature-controls { gap: 6px; padding-inline: 8px; } .miniature-play { min-width: 86px; } }
+@media (prefers-reduced-motion: reduce) { .miniature-memory-photo { animation: none; } }

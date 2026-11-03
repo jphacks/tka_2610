@@ -89,10 +89,15 @@ fn pick_indices(dates: &[NaiveDate], today: NaiveDate, year_only: bool) -> Vec<u
     chosen.into_iter().map(|i| eligible[i]).collect()
 }
 
-pub async fn generate(
-    State(state): State<AppState>,
-    Query(query): Query<DigestQuery>,
-) -> AppResult<Json<Digest>> {
+struct Selection {
+    rows: Vec<ArtworkRow>,
+    ctx: DtoContext,
+    indices: Vec<usize>,
+    title: String,
+    period_label: String,
+}
+
+async fn selection(state: &AppState, query: &DigestQuery) -> AppResult<Selection> {
     let scope = query.scope.as_deref().unwrap_or("all");
     if !matches!(scope, "all" | "year") {
         return Err(AppError::bad_request(
@@ -113,6 +118,44 @@ pub async fn generate(
         today,
         scope == "year",
     );
+    let period_label = indices
+        .first()
+        .zip(indices.last())
+        .map(|(&first, &last)| {
+            format!(
+                "{} — {}",
+                crate::artworks::date_short(rows[first].made_on),
+                crate::artworks::date_short(rows[last].made_on)
+            )
+        })
+        .unwrap_or_default();
+    let title = match (scope, category) {
+        ("year", Some("drawing")) => "この1年の絵",
+        (_, Some("drawing")) => "絵のうつりかわり",
+        ("year", _) => "この1年の作品",
+        _ => "これまでの作品",
+    }
+    .to_owned();
+    Ok(Selection {
+        rows,
+        ctx,
+        indices,
+        title,
+        period_label,
+    })
+}
+
+pub async fn generate(
+    State(state): State<AppState>,
+    Query(query): Query<DigestQuery>,
+) -> AppResult<Json<Digest>> {
+    let Selection {
+        rows,
+        ctx,
+        indices,
+        title,
+        period_label,
+    } = selection(&state, &query).await?;
     let mut slides = Vec::new();
     for &index in &indices {
         let row = &rows[index];
@@ -141,34 +184,77 @@ pub async fn generate(
             duration_ms: 6000,
         });
     }
-    let period_label = indices
-        .first()
-        .zip(indices.last())
-        .map(|(&first, &last)| {
-            format!(
-                "{} — {}",
-                crate::artworks::date_short(rows[first].made_on),
-                crate::artworks::date_short(rows[last].made_on)
-            )
-        })
-        .unwrap_or_default();
     let seconds = slides
         .iter()
         .map(DigestSlide::duration_ms)
         .sum::<u32>()
         .div_ceil(1000);
-    let title = match (scope, category) {
-        ("year", Some("drawing")) => "この1年の絵",
-        (_, Some("drawing")) => "絵のうつりかわり",
-        ("year", _) => "この1年の作品",
-        _ => "これまでの作品",
-    };
     Ok(Json(Digest {
         title: title.into(),
         period_label,
         artwork_count: indices.len(),
         duration_label: format!("約{seconds}秒"),
         slides,
+    }))
+}
+
+/// 同じ選択ロジックを使う3D鑑賞用の読み取りAPI。既存の配置は変更しない。
+#[derive(Serialize)]
+pub struct MiniatureEntry {
+    artwork: ArtworkDto,
+    photos: Vec<memories::MemoryDto>,
+    voice: Option<memories::MemoryDto>,
+    hold_ms: u32,
+}
+#[derive(Serialize)]
+pub struct MiniatureDigest {
+    title: String,
+    period_label: String,
+    duration_label: String,
+    transition_ms: u32,
+    entries: Vec<MiniatureEntry>,
+}
+
+pub async fn miniature(
+    State(state): State<AppState>,
+    Query(query): Query<DigestQuery>,
+) -> AppResult<Json<MiniatureDigest>> {
+    let Selection {
+        rows,
+        ctx,
+        indices,
+        title,
+        period_label,
+    } = selection(&state, &query).await?;
+    let mut entries = Vec::new();
+    for index in indices {
+        let row = &rows[index];
+        let mut photos = Vec::new();
+        let mut voice = None;
+        for memory in memories::of_artwork(&state.pool, row.id).await? {
+            match memory.kind.as_str() {
+                "photo" if photos.len() < 3 => photos.push(memory),
+                "audio" if voice.is_none() => voice = Some(memory),
+                _ => {}
+            }
+        }
+        let hold_ms = if photos.is_empty() { 4500 } else { 6000 };
+        entries.push(MiniatureEntry {
+            artwork: ArtworkDto::new(row, &ctx),
+            photos,
+            voice,
+            hold_ms,
+        });
+    }
+    let transition_ms = 2400;
+    let duration = entries.iter().map(|entry| entry.hold_ms).sum::<u32>()
+        + entries.len().saturating_sub(1) as u32 * transition_ms;
+    Ok(Json(MiniatureDigest {
+        title,
+        period_label,
+        duration_label: format!("約{}秒", duration.div_ceil(1000)),
+        transition_ms,
+        entries,
     }))
 }
 
