@@ -13,14 +13,21 @@ export function Spinner() {
   )
 }
 
-/** 虹の線が 1 本ずつ増えていく読み込み表示（色は文字の色。動きは Loading.css。動きを減らす設定のときは止めて、虹を出したままにする） */
+/**
+ * 虹の線が 1 本ずつ増えていく読み込み表示（色は文字の色。動きは Loading.css）。
+ * 3D を読み込んでいる間は、ブラウザのメインの処理がふさがる。そのとき止まらないよう、動かすのは transform と opacity だけにしている
+ * （SVG の線を描く動き stroke-dashoffset は、メインの処理で動くので、止まってしまう）。
+ * 線は、半円の窓（overflow: hidden）の中で、輪を回して、左から右へ描く。
+ */
 export function RainbowLoader() {
   return (
-    <svg className="rainbow-loader" viewBox="0 0 56 32" width="56" height="32" aria-hidden="true">
-      {[24, 18, 12, 6].map((r, i) => (
-        <path key={r} className={`rainbow-arc a${i}`} pathLength={1} d={`M${28 - r} 30A${r} ${r} 0 0 1 ${28 + r} 30`} />
+    <span className="rainbow-loader" aria-hidden="true">
+      {[26, 20, 14, 8].map((r, i) => (
+        <span key={r} className={`rainbow-arc a${i}`} style={{ width: r * 2, height: r, marginLeft: -r }}>
+          <i style={{ width: r * 2, height: r * 2 }} />
+        </span>
       ))}
-    </svg>
+    </span>
   )
 }
 
@@ -35,7 +42,7 @@ export function Busy({ label }: { label: string }) {
   )
 }
 
-export function StageFallback({ label = 'おうちを準備しています…' }: { label?: string }) {
+export function StageFallback({ label = 'Loading…' }: { label?: string }) {
   return (
     <div className="stage-fallback">
       <div className="stage-fallback-inner">
