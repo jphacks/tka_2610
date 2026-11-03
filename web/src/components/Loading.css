@@ -57,68 +57,84 @@
  
 /* 虹の線が、外側から 1 本ずつ描かれて、そろったら、まとめて消えて、くり返す（色はスピナーと同じ） */
 .rainbow-loader {
+  position: relative;
   display: block;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 4;
-  stroke-linecap: round;
+  width: 56px;
+  height: 28px;
 }
  
+/* 半円の窓。中の輪が、窓の下半分にあるうちは見えない */
 .rainbow-arc {
-  stroke-dasharray: 1 1.5;
-  stroke-dashoffset: 1;
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  overflow: hidden;
+}
+ 
+/* 上と右だけ色のある輪（半円）。回して、窓の上半分に入れる */
+.rainbow-arc i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  border-radius: 50%;
+  transform: rotate(-225deg);
   opacity: 0;
+  will-change: transform, opacity;
   animation: 2.6s linear infinite both;
 }
  
-.rainbow-arc.a0 {
+.rainbow-arc.a0 i {
   animation-name: rainbow-a0;
 }
-.rainbow-arc.a1 {
+.rainbow-arc.a1 i {
   animation-name: rainbow-a1;
 }
-.rainbow-arc.a2 {
+.rainbow-arc.a2 i {
   animation-name: rainbow-a2;
 }
-.rainbow-arc.a3 {
+.rainbow-arc.a3 i {
   animation-name: rainbow-a3;
 }
  
-/* 線 i は、(i × 12)% から 20% の間で描かれ、78% まで残り、92% までに消える */
+/* 線 i は、(i × 12)% から 20% の間で描かれ、78% まで残り、92% までに消える（rotate(-45deg) で半円がそろう） */
 @keyframes rainbow-a0 {
-  0% { stroke-dashoffset: 1; opacity: 0; }
-  1% { stroke-dashoffset: 1; opacity: 1; }
-  20% { stroke-dashoffset: 0; opacity: 1; }
-  78% { stroke-dashoffset: 0; opacity: 1; }
-  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  0% { transform: rotate(-225deg); opacity: 0; }
+  1% { transform: rotate(-225deg); opacity: 1; }
+  20% { transform: rotate(-45deg); opacity: 1; }
+  78% { transform: rotate(-45deg); opacity: 1; }
+  92%, 100% { transform: rotate(-45deg); opacity: 0; }
 }
 @keyframes rainbow-a1 {
-  0%, 12% { stroke-dashoffset: 1; opacity: 0; }
-  13% { stroke-dashoffset: 1; opacity: 1; }
-  32% { stroke-dashoffset: 0; opacity: 1; }
-  78% { stroke-dashoffset: 0; opacity: 1; }
-  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  0%, 12% { transform: rotate(-225deg); opacity: 0; }
+  13% { transform: rotate(-225deg); opacity: 1; }
+  32% { transform: rotate(-45deg); opacity: 1; }
+  78% { transform: rotate(-45deg); opacity: 1; }
+  92%, 100% { transform: rotate(-45deg); opacity: 0; }
 }
 @keyframes rainbow-a2 {
-  0%, 24% { stroke-dashoffset: 1; opacity: 0; }
-  25% { stroke-dashoffset: 1; opacity: 1; }
-  44% { stroke-dashoffset: 0; opacity: 1; }
-  78% { stroke-dashoffset: 0; opacity: 1; }
-  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  0%, 24% { transform: rotate(-225deg); opacity: 0; }
+  25% { transform: rotate(-225deg); opacity: 1; }
+  44% { transform: rotate(-45deg); opacity: 1; }
+  78% { transform: rotate(-45deg); opacity: 1; }
+  92%, 100% { transform: rotate(-45deg); opacity: 0; }
 }
 @keyframes rainbow-a3 {
-  0%, 36% { stroke-dashoffset: 1; opacity: 0; }
-  37% { stroke-dashoffset: 1; opacity: 1; }
-  56% { stroke-dashoffset: 0; opacity: 1; }
-  78% { stroke-dashoffset: 0; opacity: 1; }
-  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+  0%, 36% { transform: rotate(-225deg); opacity: 0; }
+  37% { transform: rotate(-225deg); opacity: 1; }
+  56% { transform: rotate(-45deg); opacity: 1; }
+  78% { transform: rotate(-45deg); opacity: 1; }
+  92%, 100% { transform: rotate(-45deg); opacity: 0; }
 }
  
 /* 「視差効果を減らす」のときは動かさず、虹を出したままにする */
 @media (prefers-reduced-motion: reduce) {
-  .rainbow-arc {
+  .rainbow-arc i {
     animation: none;
-    stroke-dashoffset: 0;
+    transform: rotate(-45deg);
     opacity: 1;
   }
 }
