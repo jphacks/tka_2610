@@ -1,46 +1,67 @@
-/* ⑦ おへやの一覧（MapView）。年齢ごとの見出しと、おへやのリスト */
-
-.age-section + .age-section {
-  margin-top: 8px;
-}
-
-.age-count {
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-3);
-}
-
-.list-empty {
-  margin: 0;
-  padding: 14px 16px;
-  font-size: 13px;
-  color: var(--ink-2);
-}
-
-/* 部屋のリストの 1 行（リストそのものは styles/list.css） */
-.room-row .thumb {
-  width: 52px;
-  height: 52px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  color: var(--ink-3);
-}
-
-.room-row .name {
-  font-family: var(--serif);
-  font-size: 15.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.room-row .desc {
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-/* 行と行の間の線を、サムネイルの右から引く */
-.list-item.room-row + .list-item::before {
-  left: 82px;
-}
+/* memoria。作品を入口に、同じころの写真・声・年齢のおへやへ戻る。 */
+.recall-page { padding-top: 10px; }
+.recall-section + .recall-section { margin-top: 30px; }
+.recall-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.recall-section-head h1, .recall-section-head h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 18px; line-height: 1.5; font-weight: 700; }
+.recall-section-head > span { flex: none; font-size: 11px; color: var(--ink-2); }
+.recall-hero { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
+.recall-hero-images { display: grid; padding: 12px 12px 0; }
+.recall-hero-images > .thumb { aspect-ratio: 4 / 3; border-radius: 12px; background: var(--paper-2) !important; }
+.recall-hero-images > .thumb img { object-fit: contain; padding: 8px; }
+.recall-hero-images.with-photo { grid-template-columns: minmax(0, 1fr) 105px; align-items: end; gap: 10px; }
+.recall-hero-images.with-photo > .thumb { aspect-ratio: 1; }
+.recall-photo { padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); transform: rotate(3deg); }
+.recall-photo .thumb { border-radius: 4px; aspect-ratio: 3 / 4; }
+.recall-photo > span { display: block; margin-top: 5px; text-align: center; font-size: 9px; color: var(--ink-2); }
+.recall-hero-caption { padding: 16px; }
+.recall-date { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.recall-hero-caption h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.5; }
+.recall-hero-memo { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.9; }
+.recall-open { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.recall-selection-note { margin: 8px 2px 14px; font-size: 10px; color: var(--ink-2); }
+.recall-strip { display: flex; gap: 12px; padding: 0 20px 8px; margin-inline: -20px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+.recall-strip::-webkit-scrollbar { display: none; }
+.recall-tile { flex: 0 0 154px; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); scroll-snap-align: start; }
+.recall-tile > a { display: block; }
+.recall-tile > a > .thumb { margin: 8px 8px 0; border-radius: 10px; background: var(--paper-2) !important; }
+.recall-tile .thumb img { object-fit: contain; padding: 6px; }
+.recall-tile-caption { padding: 10px; }
+.recall-tile h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; min-height: 39px; margin: 5px 0 0; font-size: 13px; line-height: 1.5; }
+.recall-tile-memo { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 6px 0 0; font-size: 11px; line-height: 1.7; color: var(--ink-2); }
+.recall-voice-strip .recall-tile { flex-basis: 240px; }
+.recall-voice-strip .recall-tile > a > .thumb { aspect-ratio: 16 / 10; }
+.recall-voice { margin-top: 12px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--sky) 30%, var(--surface)); }
+.recall-voice > span { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.recall-voice audio { display: block; width: 100%; max-width: 100%; height: 36px; }
+.recall-tile > .recall-voice { margin: 0 8px 8px; }
+.recall-voice-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: 14px; background: color-mix(in srgb, var(--surface) 75%, transparent); }
+.recall-voice-empty p { margin: 0 0 5px; font-size: 13px; font-weight: 600; }
+.recall-voice-empty > span { font-size: 12px; line-height: 1.8; color: var(--ink-2); }
+.recall-age-tabs { display: flex; gap: 8px; margin: 0 -20px 16px; padding: 0 20px 6px; overflow-x: auto; scrollbar-width: none; }
+.recall-age-tab { display: flex; flex: none; align-items: center; gap: 9px; min-height: 65px; padding: 8px 12px 8px 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: left; }
+.recall-age-tab[aria-pressed='true'] { border-color: var(--accent); background: color-mix(in srgb, var(--sky) 25%, var(--surface)); box-shadow: inset 0 0 0 1px var(--accent); }
+.recall-age-tab .thumb { width: 42px; flex: none; border-radius: 8px; }
+.recall-age-tab > span { font-size: 12px; font-weight: 600; }
+.recall-age-tab small { display: block; margin-top: 2px; font-size: 10px; color: var(--ink-2); font-weight: 400; }
+.recall-age-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; }
+.recall-age-grid.pending { opacity: 0.5; pointer-events: none; }
+.recall-age-grid .thumb { border-radius: 12px; }
+.recall-rooms { margin-top: 32px; border-top: 1px solid var(--line-strong); }
+.recall-rooms > summary { display: flex; align-items: center; gap: 9px; min-height: 56px; list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+.recall-rooms > summary::-webkit-details-marker { display: none; }
+.recall-rooms > summary > span { flex: 1; }
+.recall-rooms[open] > summary > svg:last-child { transform: rotate(90deg); }
+.recall-room-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.recall-room-head h3 { margin: 0; font-size: 13px; }
+.recall-room-head button { min-height: 40px; font-size: 12px; }
+.recall-room-age + .recall-room-age { margin-top: 16px; }
+.recall-room { display: flex; align-items: center; gap: 8px; min-height: 48px; width: 100%; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; font-size: 13px; }
+.recall-room > span { flex: 1; }
+.recall-room small { color: var(--ink-2); }
+.recall-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 16px; text-align: center; }
+.recall-empty h2 { margin: 0; font-size: 18px; }
+.recall-empty p { margin: 0; font-size: 13px; line-height: 1.9; color: var(--ink-2); }
+.recall-hero-placeholder { height: 360px; margin-bottom: 24px; border-radius: 22px; }
+.recall-screen a:focus-visible, .recall-screen button:focus-visible, .recall-screen summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 360px) { .recall-hero-images.with-photo { grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; } .recall-section-head h1, .recall-section-head h2 { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .recall-screen .thumb-card { animation: none; } }

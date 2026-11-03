@@ -83,6 +83,7 @@ function useInvalidate() {
   const client = useQueryClient()
   return (extra: QueryKey[] = []) => {
     return Promise.all([
+      client.invalidateQueries({ queryKey: keys.recollections }),
       client.invalidateQueries({ queryKey: ['artworks'] }),
       client.invalidateQueries({ queryKey: keys.museum }),
       // 飾る・外す・削除で、配置 JSON とおへやの数も変わる
@@ -156,6 +157,7 @@ export function useFavorite() {
     },
     onSettled: (_, __, { id }) => {
       client.invalidateQueries({ queryKey: keys.artwork(id) })
+      client.invalidateQueries({ queryKey: keys.recollections })
       client.invalidateQueries({ queryKey: ['artworks'] })
     },
   })

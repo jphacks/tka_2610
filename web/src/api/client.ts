@@ -54,6 +54,7 @@ export const keys = {
   /** おへやの配置 JSON（GET /api/home/layout?room=） */
   layout: ['home', 'layout'] as const,
   /** 年齢ごとのおへやの一覧（GET /api/ages）と、年齢ごとの積み上げ（GET /api/ages/{age}） */
+  recollections: ['recollections'] as const,
   ages: ['ages'] as const,
   ageStack: (age: number) => ['ages', age] as const,
   settings: ['settings'] as const,
