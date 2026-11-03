@@ -2,7 +2,7 @@
 // 写真は一覧のサムネイルや詳細の画像に使うので必須。3Dモデル(.glb)だけを選んで写真が無いときは、モデルを撮った画像
 // (three の snapshotModel) を写真の代わりにする。あとから写真を選べば、そちらに置き換わる
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useGenerateMemoFromImage, type Artwork, type Category } from '../api'
+import type { Artwork, Category } from '../api'
 import { CalendarIcon, CameraIcon, ChevronRight } from '../icons'
 import { removeShadow } from '../photoFix'
 import { snapshotModel } from '../three'
@@ -52,11 +52,6 @@ export function ArtworkForm({
   onSubmit: (form: FormData) => void
   variant: 'add' | 'edit'
 }) {
-  const formRef = useRef<HTMLFormElement>(null)
-  const generateImageMemo = useGenerateMemoFromImage()
-  const generatingMemo = generateImageMemo.isPending
-  const [memo, setMemo] = useState(initial?.memo ?? '')
-  const [memoError, setMemoError] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   // 選んだままの写真 (向きをなおす・切り取るは、いつもこの写真から始める)。直したあとの写真は file に入る
   const [picked, setPicked] = useState<File | null>(null)
@@ -170,26 +165,8 @@ export function ArtworkForm({
       .finally(() => turn === modelTurn.current && setSnapshotting(false))
   }
 
-  const generateMemo = async () => {
-    if (generatingMemo || busy || fixing || snapshotting) return
-    const image = showFixed && fixedFile ? fixedFile : file
-    if (!image) return setMemoError('先に作品の写真を選んでください')
-    setMemoError(null)
-    try {
-      const form = new FormData(formRef.current!)
-      const input = new FormData()
-      for (const name of ['title', 'made_on', 'memo']) input.set(name, String(form.get(name) ?? ''))
-      input.set('image', image)
-      const draft = await generateImageMemo.mutateAsync(input)
-      setMemo(draft.memo)
-    } catch (e) {
-      setMemoError(e instanceof Error ? e.message : '下書きを作れませんでした')
-    }
-  }
-
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (generatingMemo || busy) return
     const data = new FormData(e.currentTarget)
     data.set('category', category)
     data.delete('image')
@@ -210,8 +187,7 @@ export function ArtworkForm({
   const message = localError ?? error
 
   return (
-    <form ref={formRef} className="form" onSubmit={submit} noValidate>
-      <fieldset disabled={busy || generatingMemo} style={{ display: 'contents' }}>
+    <form className="form" onSubmit={submit} noValidate>
       <input
         ref={fileInput}
         className="visually-hidden"
@@ -305,20 +281,8 @@ export function ArtworkForm({
           className="textarea"
           maxLength={500}
           placeholder={'例）おかあさんの誕生日に描いたよ。\n虹がきれいにかけてうれしそうだった。'}
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
+          defaultValue={initial?.memo}
         />
-        {variant === 'add' && (
-          <>
-            <button type="button" className="btn btn-outline btn-small"
-              disabled={busy || generatingMemo || fixing || snapshotting || !file}
-              onClick={generateMemo}>
-              {generatingMemo ? 'AIでメモを作成しています…' : 'AIでメモの下書きをつくる'}
-            </button>
-            <p className="hint">作品の画像から下書きをつくります。画像と入力中の作品情報をGoogleのGemini APIへ送ります。内容を確認・編集してから登録できます。</p>
-            {memoError && <p role="alert" className="form-error">{memoError}</p>}
-          </>
-        )}
       </div>
 
       <div>
@@ -345,7 +309,6 @@ export function ArtworkForm({
       <button type="submit" className="btn btn-filled" disabled={busy || snapshotting || fixing}>
         {submitLabel}
       </button>
-      </fieldset>
     </form>
   )
 }

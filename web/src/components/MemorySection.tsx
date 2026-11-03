@@ -15,7 +15,6 @@ import {
 } from '../api'
 import { CameraIcon, CloseIcon, GalleryIcon, MicIcon, MoreIcon, NoteIcon, PauseIcon, PlayIcon, PlusIcon, VideoIcon } from '../icons'
 import { MemoryViewer } from './MemoryViewer'
-import { ArtworkMemo } from './ArtworkMemo'
 import { PhotoEditor } from './PhotoEditor'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
@@ -347,6 +346,7 @@ export function MemorySection({
 
       
 {/* 声と作品メモを横並びに表示 */}
+{(voices.length > 0 || memo) && (
   <div className="memory-keepsakes">
     {voices.length > 0 && (
       <div className="list-group memory-voices">
@@ -407,8 +407,16 @@ export function MemorySection({
       </div>
     )}
 
-    <ArtworkMemo key={artworkId} artworkId={artworkId} memo={memo ?? ''} />
+    {memo && (
+      <div className="memory-note">
+        <span className="memory-note-label">
+          メモ
+        </span>
+        <p>{memo}</p>
+      </div>
+    )}
   </div>
+)}
 
 
       {viewing !== null && (

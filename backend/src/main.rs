@@ -7,7 +7,6 @@ mod home;
 mod home_api;
 mod media;
 mod memories;
-mod memo_draft;
 mod migration_repair;
 mod museum;
 mod museum_api;
@@ -188,8 +187,6 @@ async fn main() {
                 .delete(artworks::delete_artwork),
         )
         .route("/artworks/{id}/favorite", put(artworks::set_favorite))
-        .route("/artworks/{id}/memo-draft", post(memo_draft::generate))
-        .route("/artworks/memo-draft", post(memo_draft::generate_upload))
         // おもいで (写真・動画・声の記録)。動画を送れるよう、このルートだけ送信の上限を上げる
         .route(
             "/artworks/{id}/memories",
