@@ -34,6 +34,8 @@ export { hasHouseModel, houseRoomsOf, shellUrlsOf } from './scenes/home/house'
 
 const load = () => import('./scenes')
 
+export const MiniatureScene = lazy(() => load().then((m) => ({ default: m.MiniatureScene })))
+
 export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene })))
 export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))
 export const PreviewScene = lazy(() => load().then((m) => ({ default: m.PreviewScene })))

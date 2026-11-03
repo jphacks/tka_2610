@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAges, useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
-import { ArtworkThumb, DigestPlayer, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
+import { ArtworkThumb, DigestPlayer, Img, MiniatureDigest, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
 import { ChevronRight, GalleryIcon, MicIcon, MuseumIcon, PlayIcon } from '../icons'
 import { useNav } from '../nav'
 import './MapView.css'
@@ -62,6 +62,8 @@ export default function MapView() {
           <div className="recall-empty"><GalleryIcon size={30} /><h2>まだ振り返る作品がありません</h2><p>作品と一緒に、写真や声も残せます。登録した作品がここに並びます。</p><button type="button" className="btn btn-filled" onClick={() => nav.modal('/add')}>作品を追加</button></div>
         ) : data && (
           <>
+            <MiniatureDigest suspended={digestScope !== null} onStart={() => playing.current?.pause()} onAudioPlay={element => { if (playing.current && playing.current !== element) playing.current.pause(); playing.current = element }} onOpenArtwork={id => { playing.current?.pause(); nav.push(`/artworks/${id}`) }} />
+            <details className="recall-slideshow"><summary>スライドショーで振り返る</summary>
             <section className="recall-digest" aria-labelledby="recall-digest-title">
               <div><span className="recall-digest-mark"><PlayIcon size={17} /></span><h1 id="recall-digest-title">作品のダイジェスト</h1></div>
               <p>昔から今へ。作品とおもいでを、続けて振り返る。</p>
@@ -70,6 +72,7 @@ export default function MapView() {
                 <button type="button" onClick={() => { playing.current?.pause(); setDigestScope('year') }}><PlayIcon size={15} />この1年</button>
               </div>
             </section>
+            </details>
             {featured && (
               <section className="recall-section" aria-labelledby="recall-moment-title">
                 <div className="recall-section-head"><h2 id="recall-moment-title">{data.moment_title}</h2><span>今日のひとつ</span></div>

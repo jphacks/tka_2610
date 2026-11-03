@@ -9,3 +9,5 @@ export { MuseumScene } from './MuseumScene'
 export { PreviewScene } from './PreviewScene'
 export { StackScene } from './StackScene'
 export { WalkScene } from './WalkScene'
+
+export { MiniatureScene } from './MiniatureScene'

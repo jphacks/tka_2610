@@ -35,7 +35,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import type { ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, MemoryCounts, RoomId, SlotView, Vec3 } from '../../../api'
+import type { Artwork, ArtworkObject, CatalogAsset, FurnitureObject, HomeCatalog, House, Layout, MemoryCounts, RoomId, SlotView, Vec3 } from '../../../api'
 import { ErrorBoundary } from '../../../components/ErrorBoundary'
 import { GalleryIcon, NoteIcon, VideoIcon } from '../../../icons'
 import { FittedModel } from '../models'
@@ -407,6 +407,42 @@ function MemoryBadge({ counts, height, onClick }: { counts: MemoryCounts | undef
       <button type="button" className={`memory-badge${counts.audio > 0 ? ' voice' : ''}`} aria-label={`おもいで ${total}`} onClick={onClick}>
         <Icon size={13} />
         <span className="num">{total}</span>
+      </button>
+    </Html>
+  )
+}
+
+
+/** ミニチュア鑑賞用。作品の描画はここに集約し、既存の家の配置・材質は変更しない。 */
+export function ShowcaseArtwork({ artwork, onReady, onSelect }: {
+  artwork: Artwork
+  onReady: (id: string, fallback: boolean) => void
+  onSelect: (id: string) => void
+}) {
+  const notify = useCallback(() => onReady(artwork.id, false), [artwork.id, onReady])
+  return (
+    <group name={`SHOWCASE_${artwork.id}`} onClick={event => { event.stopPropagation(); onSelect(artwork.id) }}>
+      <ErrorBoundary key={artwork.model_url} fallback={() => <ShowcaseFallback artwork={artwork} failed onReady={onReady} onSelect={onSelect} />}>
+        <Suspense fallback={<ShowcaseFallback artwork={artwork} onReady={onReady} onSelect={onSelect} />}>
+          <FittedModel url={artwork.model_url} fit={[2, 2.05, 2]} shadows onMount={notify} />
+        </Suspense>
+      </ErrorBoundary>
+    </group>
+  )
+}
+
+function ShowcaseFallback({ artwork, failed = false, onReady, onSelect }: {
+  artwork: Artwork; failed?: boolean; onReady: (id: string, fallback: boolean) => void; onSelect: (id: string) => void
+}) {
+  useEffect(() => {
+    // 取得が遅い場合も鑑賞を止め続けず、写真で振り返れるようにする。
+    const timer = window.setTimeout(() => onReady(artwork.id, true), failed ? 0 : 12000)
+    return () => window.clearTimeout(timer)
+  }, [artwork.id, failed, onReady])
+  return (
+    <Html position={[0, 0.65, 0]} center zIndexRange={[3, 0]}>
+      <button type="button" className="miniature-art-fallback" aria-label={`${artwork.title}の詳細を見る`} onClick={() => onSelect(artwork.id)}>
+        <img src={artwork.thumb_url} alt={artwork.title} /><span>{failed ? '写真で表示' : '3Dを読み込み中'}</span>
       </button>
     </Html>
   )
