@@ -561,3 +561,83 @@
   background: rgba(62, 97, 120, 0.72);
   color: #fff;
 }
+
+
+/* ===== 声のカードを、波形の縦線つきの、すき間のない形に ===== */
+ 
+/* 声のカードとメモのカードを、同じ高さにそろえない（声のカードの下に、空きができない） */
+.memory-keepsakes {
+  align-items: start;
+}
+ 
+.memory-voices {
+  border-radius: 22px;
+}
+ 
+.memory-voices .memory-voice {
+  min-height: 0;
+  padding: 7px 4px 7px 8px;
+  gap: 8px;
+}
+ 
+.memory-voice-play {
+  width: 38px;
+  height: 38px;
+  background: var(--sky);
+  color: var(--accent);
+}
+ 
+.memory-voice-play.playing {
+  background: var(--add-button);
+  color: #fff;
+}
+ 
+/* 縦線の波形（流しているところまでが濃くなる） */
+.memory-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+}
+ 
+.memory-wave i {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--add-button) 30%, transparent);
+  transition: background 0.2s;
+}
+ 
+.memory-wave i.on {
+  background: var(--add-button);
+}
+ 
+.memory-voice-title {
+  margin-bottom: 2px;
+}
+ 
+.memory-voice-meta {
+  margin: 1px 0 0;
+}
+ 
+.memory-voice-more {
+  padding: 4px;
+  margin-right: -2px;
+}
+ 
+/* ===== メモの文章の下に、直線（ノートの罫線のように、1 行ごと） ===== */
+ 
+.memory-note p {
+  margin-top: 6px;
+  line-height: 20px;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 18.5px,
+    color-mix(in srgb, var(--ink) 10%, transparent) 18.5px,
+    color-mix(in srgb, var(--ink) 10%, transparent) 19.5px,
+    transparent 19.5px
+  );
+  background-size: 100% 20px;
+  background-repeat: repeat-y;
+}
