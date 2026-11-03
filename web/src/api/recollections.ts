@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, keys, request } from './client'
-import type { Recollections } from './types'
+import type { ArtworkDigest, DigestScope, Recollections } from './types'
 
 export function useRecollections(age?: string | null) {
   const search = new URLSearchParams()
@@ -19,5 +19,23 @@ export function useRecollections(age?: string | null) {
         throw error
       }
     },
+  })
+}
+
+
+export function useArtworkDigest(scope: DigestScope, drawingsOnly: boolean) {
+  const search = new URLSearchParams({ scope })
+  if (drawingsOnly) search.set('category', 'drawing')
+  return useQuery({
+    queryKey: [...keys.recollections, 'digest', scope, drawingsOnly],
+    queryFn: async () => {
+      try { return await request<ArtworkDigest>(`/api/recollections/digest?${search}`) }
+      catch (error) {
+        if (error instanceof SyntaxError) throw new ApiError(502, 'ダイジェストのAPIを読み込めませんでした。backendを再起動してください。')
+        throw error
+      }
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   })
 }

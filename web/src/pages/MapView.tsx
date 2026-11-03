@@ -1,9 +1,9 @@
 // ⑦ memoria（/map）。作品・写真・声を手がかりに振り返る。作品の選択と年齢の分類はRust。
-import { useEffect, useRef, type SyntheticEvent } from 'react'
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAges, useRecollections, type Memory, type RecallCard } from '../api'
-import { ArtworkThumb, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
-import { ChevronRight, GalleryIcon, MicIcon, MuseumIcon } from '../icons'
+import { useAges, useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
+import { ArtworkThumb, DigestPlayer, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
+import { ChevronRight, GalleryIcon, MicIcon, MuseumIcon, PlayIcon } from '../icons'
 import { useNav } from '../nav'
 import './MapView.css'
 
@@ -35,6 +35,7 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
 
 export default function MapView() {
   const [params, setParams] = useSearchParams()
+  const [digestScope, setDigestScope] = useState<DigestScope | null>(null)
   const recalls = useRecollections(params.get('age'))
   const ages = useAges()
   const nav = useNav()
@@ -61,9 +62,17 @@ export default function MapView() {
           <div className="recall-empty"><GalleryIcon size={30} /><h2>まだ振り返る作品がありません</h2><p>作品と一緒に、写真や声も残せます。登録した作品がここに並びます。</p><button type="button" className="btn btn-filled" onClick={() => nav.modal('/add')}>作品を追加</button></div>
         ) : data && (
           <>
+            <section className="recall-digest" aria-labelledby="recall-digest-title">
+              <div><span className="recall-digest-mark"><PlayIcon size={17} /></span><h1 id="recall-digest-title">作品のダイジェスト</h1></div>
+              <p>昔から今へ。作品とおもいでを、続けて振り返る。</p>
+              <div className="recall-digest-buttons">
+                <button type="button" onClick={() => { playing.current?.pause(); setDigestScope('all') }}><PlayIcon size={15} />これまで</button>
+                <button type="button" onClick={() => { playing.current?.pause(); setDigestScope('year') }}><PlayIcon size={15} />この1年</button>
+              </div>
+            </section>
             {featured && (
               <section className="recall-section" aria-labelledby="recall-moment-title">
-                <div className="recall-section-head"><h1 id="recall-moment-title">{data.moment_title}</h1><span>今日のひとつ</span></div>
+                <div className="recall-section-head"><h2 id="recall-moment-title">{data.moment_title}</h2><span>今日のひとつ</span></div>
                 <article className="recall-hero">
                   <TLink to={`/artworks/${featured.artwork.id}`} className={`recall-hero-images${featured.photo ? ' with-photo' : ''}`}>
                     <Img src={featured.artwork.image_url} tint={featured.artwork.tint} alt={featured.artwork.title} eager />
@@ -120,6 +129,7 @@ export default function MapView() {
           )}
         </details>
       </div>
+      {digestScope && <DigestPlayer initialScope={digestScope} onClose={() => setDigestScope(null)} onOpenArtwork={id => { setDigestScope(null); nav.push(`/artworks/${id}`) }} />}
     </Screen>
   )
 }
