@@ -64,21 +64,20 @@
   gap: 20px 10px;
 }
 
+/* 作品だけを見せる：白い台・影・縁の線は付けない */
 .collection-grid .artwork-gallery-card .thumb {
   aspect-ratio: 1;
   border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 4px 16px var(--fill);
+  background: none;
 }
 
 .collection-grid .artwork-gallery-card .thumb img {
   object-fit: contain;
-  padding: 12px;
   transition: opacity 0.4s var(--ease-out), transform 0.3s var(--ease-out);
 }
 
 .collection-grid .artwork-gallery-card .thumb::after {
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow: none;
 }
 
 .collection-grid .thumb-title {
@@ -103,7 +102,6 @@
   min-height: 36px;
 }
 
-.collection-grid.compact .thumb img { padding: 8px; }
 .collection-grid.compact .thumb-meta { font-size: 10px; }
 
 .collection-empty {
