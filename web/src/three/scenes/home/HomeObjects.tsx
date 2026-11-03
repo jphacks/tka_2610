@@ -424,7 +424,7 @@ export function ShowcaseArtwork({ artwork, onReady, onSelect }: {
     <group name={`SHOWCASE_${artwork.id}`} onClick={event => { event.stopPropagation(); onSelect(artwork.id) }}>
       <ErrorBoundary key={artwork.model_url} fallback={() => <ShowcaseFallback artwork={artwork} failed onReady={onReady} onSelect={onSelect} />}>
         <Suspense fallback={<ShowcaseFallback artwork={artwork} onReady={onReady} onSelect={onSelect} />}>
-          <FittedModel url={artwork.model_url} fit={[2, 2.05, 2]} shadows onMount={notify} />
+          <FittedModel url={artwork.model_url} fit={[2.8, 2.8, 2.8]} shadows onMount={notify} />
         </Suspense>
       </ErrorBoundary>
     </group>

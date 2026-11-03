@@ -1,7 +1,6 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useMiniatureDigest, type DigestScope, type MiniatureDigestData } from '../api'
-import { BackIcon, ChevronRight, MicIcon, PauseIcon, PlayIcon } from '../icons'
+import { BackIcon, ChevronRight, CloseIcon, MicIcon, PauseIcon, PlayIcon } from '../icons'
 import { MiniatureScene, StageShell } from '../three'
 import { ErrorBoundary } from './ErrorBoundary'
 import { MemoryViewer } from './MemoryViewer'
@@ -15,13 +14,15 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const [arrived, setArrived] = useState(false)
   const [finished, setFinished] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const [progress, setProgress] = useState(0)
   const [voicePlaying, setVoicePlaying] = useState(false)
   const [voiceError, setVoiceError] = useState('')
   const [photoIndex, setPhotoIndex] = useState<number | null>(null)
+  const [photoArtworkId, setPhotoArtworkId] = useState<string | null>(null)
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const container = useRef<HTMLDivElement>(null)
+  const container = useRef<HTMLDialogElement>(null)
   const audio = useRef<HTMLAudioElement>(null)
   const elapsed = useRef(0)
   const currentTurn = useRef(turn)
@@ -29,6 +30,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const count = data.entries.length
   const index = ((turn % count) + count) % count
   const active = data.entries[index]
+  const photoEntry = data.entries.find(entry => entry.artwork.id === photoArtworkId)
   const modelReady = loaded[active.artwork.id] !== undefined
   const palette = useMemo(() => {
     const style = getComputedStyle(document.documentElement)
@@ -40,6 +42,29 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const sceneMounted = useCallback(() => setSceneReady(true), [])
   const onArrive = useCallback((value: number) => { if (value === currentTurn.current) setArrived(true) }, [])
   const stopVoice = useCallback(() => { audio.current?.pause(); setVoicePlaying(false) }, [])
+  const closeFullscreen = useCallback(() => {
+    stopVoice()
+    setPlaying(false)
+    setFullscreen(false)
+    setPhotoIndex(null)
+    const dialog = container.current
+    if (dialog?.matches(':modal')) { dialog.close(); dialog.show() }
+    dialog?.querySelector<HTMLButtonElement>('.miniature-play')?.focus({ preventScroll: true })
+  }, [stopVoice])
+  const enterFullscreen = () => {
+    const dialog = container.current
+    if (!dialog || dialog.matches(':modal')) return
+    // 同じCanvasを維持したままブラウザの最前面へ移す。iPhoneでも使える。
+    dialog.close()
+    dialog.showModal()
+    setFullscreen(true)
+  }
+  useEffect(() => {
+    if (!fullscreen) return
+    const before = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = before }
+  }, [fullscreen])
   useLayoutEffect(() => {
     stopVoice()
     elapsed.current = 0
@@ -62,8 +87,8 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
     setVoiceError('')
     setTurn(before => before + delta)
   }, [stopVoice])
-  const openArtwork = useCallback((id: string) => { stopVoice(); setPlaying(false); onOpenArtwork(id) }, [stopVoice, onOpenArtwork])
-  const openPhoto = useCallback((photo: number) => { stopVoice(); setPlaying(false); setPhotoIndex(photo) }, [stopVoice])
+  const openArtwork = useCallback((id: string) => { closeFullscreen(); onOpenArtwork(id) }, [closeFullscreen, onOpenArtwork])
+  const openPhoto = useCallback((artworkId: string, photo: number) => { stopVoice(); setPlaying(false); setPhotoArtworkId(artworkId); setPhotoIndex(photo) }, [stopVoice])
 
   useEffect(() => {
     if (!playing || !arrived || !modelReady || voicePlaying || finished || photoIndex !== null) return
@@ -95,6 +120,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   }, [])
 
   const toggle = () => {
+    if (!fullscreen) enterFullscreen()
     if (!playing) onStart()
     if (finished) { move(count - index); setStarted(true); setPlaying(true); return }
     setStarted(true)
@@ -112,15 +138,18 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const status = finished ? '見終わりました' : !started ? 'タップして再生' : !playing ? '一時停止中' : !arrived ? '次の作品へ' : !modelReady ? '3Dを読み込み中' : voicePlaying ? '声を聴いています' : 'おもいでを振り返っています'
 
   return (
-    <div className="miniature-playback" ref={container}>
+    <dialog open className="miniature-playback" ref={container} role={fullscreen ? 'dialog' : 'region'} aria-modal={fullscreen || undefined} aria-label="作品と思い出の3D鑑賞"
+      onKeyDown={event => { if (event.key === 'Escape' && photoIndex !== null) { event.preventDefault(); event.stopPropagation(); setPhotoIndex(null) } }}
+      onCancel={event => { event.preventDefault(); if (photoIndex !== null) setPhotoIndex(null); else closeFullscreen() }}>
+      {fullscreen && <div className="miniature-fullscreen-heading"><span>作品と思い出</span><button type="button" aria-label="全画面を閉じる" onClick={closeFullscreen}><CloseIcon size={24} /></button></div>}
       <div className="miniature-period"><span>{data.title}</span><small>{data.duration_label} · {index + 1} / {count}点</small></div>
       <ErrorBoundary fallback={() => <div className="miniature-error"><p>この端末では3Dを表示できませんでした。</p><button type="button" className="btn btn-outline btn-small" onClick={() => openArtwork(active.artwork.id)}>作品を開く</button></div>}>
         <StageShell className="miniature-stage" ready={sceneReady} label="ミニチュアを準備しています…">
           <Suspense fallback={null}>
-            <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} showPhotos={started && arrived && modelReady} transitionMs={data.transition_ms}
+            <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} transitionMs={data.transition_ms}
               onArrive={onArrive} onModelReady={modelSettled} onArtwork={openArtwork} onPhoto={openPhoto} onReady={sceneMounted} reducedMotion={reducedMotion} palette={palette} />
           </Suspense>
-          {!started && sceneReady && <button type="button" className="miniature-start" aria-label="3Dダイジェストを再生" onClick={toggle}><span><PlayIcon size={24} /></span><strong>タップして再生</strong></button>}
+          {!fullscreen && sceneReady && <button type="button" className="miniature-start" aria-label="3Dダイジェストを全画面で再生" onClick={() => { if (!playing) toggle() }}><span><PlayIcon size={24} /></span><strong>タップして全画面で再生</strong></button>}
         </StageShell>
       </ErrorBoundary>
       <div className="miniature-progress" role="progressbar" aria-label="3Dダイジェストの進み具合" aria-valuemin={0} aria-valuemax={count} aria-valuenow={index + progress}>
@@ -128,16 +157,16 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
       </div>
       <div className="miniature-caption"><p className="miniature-status" aria-live="polite">{status}</p><button type="button" onClick={() => openArtwork(active.artwork.id)}><strong>{active.artwork.title}</strong><ChevronRight size={14} /></button><small>{active.artwork.age_month_label ?? active.artwork.date_short}<span>{active.artwork.date_long}</span></small></div>
       <div className="miniature-controls">
-        <button type="button" className="miniature-arrow" aria-label="前の作品" disabled={index === 0} onClick={() => { setStarted(true); move(-1) }}><BackIcon size={20} /></button>
+        <button type="button" className="miniature-arrow" aria-label="前の作品" disabled={index === 0} onClick={() => { enterFullscreen(); setStarted(true); move(-1) }}><BackIcon size={20} /></button>
         <button type="button" className="miniature-play" onClick={toggle} aria-label={finished ? '3Dダイジェストをもう一度' : !started ? '3Dダイジェストを再生' : playing ? '3Dダイジェストを一時停止' : '3Dダイジェストを再開'}>{playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}{finished ? 'もう一度' : playing ? '一時停止' : started ? '再開' : '再生'}</button>
-        <button type="button" className="miniature-arrow" aria-label="次の作品" disabled={index + 1 === count} onClick={() => { setStarted(true); move(1) }}><ChevronRight size={20} /></button>
+        <button type="button" className="miniature-arrow" aria-label="次の作品" disabled={index + 1 === count} onClick={() => { enterFullscreen(); setStarted(true); move(1) }}><ChevronRight size={20} /></button>
         {active.voice && <button type="button" className="miniature-voice" onClick={playVoice} aria-pressed={voicePlaying}><MicIcon size={15} />{voicePlaying ? '声を止める' : '声をきく'}</button>}
       </div>
       <audio ref={audio} src={active.voice?.url} preload="none" onPlay={event => { setVoicePlaying(true); onAudioPlay(event.currentTarget) }} onEnded={() => setVoicePlaying(false)} onPause={() => setVoicePlaying(false)} onError={() => { if (voicePlaying) { setVoicePlaying(false); setVoiceError('声を再生できませんでした。') } }} />
       {loaded[active.artwork.id] && <p className="miniature-note">3Dを読み込めない作品は写真で表示しています。</p>}
       {voiceError && <p className="miniature-note" role="status">{voiceError}</p>}
-      {photoIndex !== null && createPortal(<MemoryViewer items={active.photos} index={photoIndex} onIndex={setPhotoIndex} onClose={() => setPhotoIndex(null)} />, document.querySelector('.app') ?? document.body)}
-    </div>
+      {photoIndex !== null && photoEntry && <MemoryViewer items={photoEntry.photos} index={photoIndex} onIndex={setPhotoIndex} onClose={() => setPhotoIndex(null)} />}
+    </dialog>
   )
 }
 
