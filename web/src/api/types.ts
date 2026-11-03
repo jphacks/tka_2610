@@ -480,3 +480,22 @@ export interface Settings {
   /** 子どもの誕生日（"2021-06-01"）。作品を作ったときの年齢（おへや）を決める。送るときに省くと今のまま */
   child_birthday?: string | null
 }
+
+
+/** memoriaの振り返り。分類・表示する作品の選択はRust: recollections.rs */
+export interface RecallCard {
+  artwork: Artwork
+  photo: Memory | null
+  voice: Memory | null
+}
+export interface Recollections {
+  moment_title: string
+  moment_note: string
+  featured: RecallCard | null
+  moments: RecallCard[]
+  voices: RecallCard[]
+  age_albums: { age: number; label: string; count: number; cover_url: string }[]
+  selected_age: number | null
+  age_artworks: Artwork[]
+  total: number
+}

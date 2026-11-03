@@ -69,3 +69,6 @@ export {
   useGenerateMemoFromImage,
   useUpdateArtwork,
 } from './artworks'
+
+export { useRecollections } from './recollections'
+export type { RecallCard, Recollections } from './types'

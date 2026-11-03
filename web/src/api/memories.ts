@@ -119,6 +119,7 @@ function useRefresh() {
   return (artworkId: string) =>
     Promise.all([
       client.invalidateQueries({ queryKey: keys.artwork(artworkId) }),
+      client.invalidateQueries({ queryKey: keys.recollections }),
       client.invalidateQueries({ queryKey: ['artworks'] }),
       client.invalidateQueries({ queryKey: keys.museum }),
       client.invalidateQueries({ queryKey: keys.ages }),

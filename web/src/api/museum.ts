@@ -34,6 +34,7 @@ export function useUpdateSettings() {
         client.invalidateQueries({ queryKey: keys.museum }),
         client.invalidateQueries({ queryKey: keys.ages }),
         client.invalidateQueries({ queryKey: keys.layout }),
+        client.invalidateQueries({ queryKey: keys.recollections }),
         client.invalidateQueries({ queryKey: ['artworks'] }),
         client.invalidateQueries({ queryKey: ['artwork'] }),
       ])

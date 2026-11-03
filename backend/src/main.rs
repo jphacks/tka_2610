@@ -9,6 +9,7 @@ mod media;
 mod memories;
 mod memo_draft;
 mod migration_repair;
+mod recollections;
 mod museum;
 mod museum_api;
 mod seed;
@@ -200,6 +201,7 @@ async fn main() {
             patch(memories::update_memory).delete(memories::delete_memory),
         )
         // 年齢ごとのおへや (ホームの年齢のチップ・積み上げの建物・マップ)
+        .route("/recollections", get(recollections::overview))
         .route("/ages", get(ages_api::list_ages))
         .route("/ages/{age}", get(ages_api::age_stack))
         .route("/ages/{age}/rooms", post(ages_api::add_room))
