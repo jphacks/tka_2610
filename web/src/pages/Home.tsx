@@ -70,8 +70,7 @@ export default function Home() {
 
   return (
     <Screen tabbar className="home-screen">
-       <NavBar
-        large
+      <NavBar
         title={data?.name ?? 'はるのミュージアム'}
         right={
           <TLink to="/settings" kind="tab" className="avatar" aria-label="マイページ">
