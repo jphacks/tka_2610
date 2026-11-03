@@ -1,7 +1,152 @@
-/* ⑧ 作品一覧（Collection）。年の切り替え（丸いトラックのピル）・月のダイヤル（横にスクロールして真ん中の月を選ぶ）・見ている範囲と点数・作品の 3 列 */
+/* ⑧ 作品一覧。2列の作品集・3列の一覧と、年・月の絞り込み。 */
+
+.collection-page { padding-top: 10px; }
+
+.collection-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.collection-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.collection-scope h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.collection-scope > span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.collection-density {
+  display: flex;
+  flex: none;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.collection-density button {
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.collection-density button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px var(--line);
+}
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+}
+
+.collection-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 10px;
+}
+
+.collection-grid .artwork-gallery-card .thumb {
+  aspect-ratio: 1;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px var(--fill);
+}
+
+.collection-grid .artwork-gallery-card .thumb img {
+  object-fit: contain;
+  padding: 12px;
+  transition: opacity 0.4s var(--ease-out), transform 0.3s var(--ease-out);
+}
+
+.collection-grid .artwork-gallery-card .thumb::after {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.collection-grid .thumb-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 4px;
+  min-height: 42px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.collection-grid .thumb-meta {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.collection-grid.compact .thumb-title {
+  font-size: 12px;
+  min-height: 36px;
+}
+
+.collection-grid.compact .thumb img { padding: 8px; }
+.collection-grid.compact .thumb-meta { font-size: 10px; }
+
+.collection-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 40px 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  text-align: center;
+}
+
+.collection-empty > svg { color: var(--accent); }
+.collection-empty h2 { margin: 0; font-size: 17px; }
+.collection-empty p { margin: 0 0 6px; font-size: 13px; line-height: 1.9; color: var(--ink-2); }
+
+.collection-screen button:focus-visible,
+.collection-screen a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .collection-grid .artwork-gallery-card:hover .thumb img { transform: scale(1.035); }
+}
+
+@media (max-width: 360px) {
+  .collection-page { padding-inline: 16px; }
+  .collection-grid { gap: 20px 12px; }
+  .collection-scope h2 { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collection-grid .thumb-card { animation: none; }
+  .collection-grid .artwork-gallery-card .thumb img { transition: none; }
+  .collection-grid .artwork-gallery-card:hover .thumb img { transform: none; }
+}
 
 .collection-body {
-  margin-top: 16px;
+  margin-top: 10px;
   transition: opacity 0.2s;
 }
 
@@ -29,10 +174,10 @@
 
 .collection-year {
   flex: none;
-  height: 32px;
+  height: 40px;
   padding: 0 16px;
   border-radius: 999px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-2);
@@ -41,8 +186,7 @@
 
 .collection-year.selected {
   background: var(--ink);
-  color: var(--paper);
-  box-shadow: 0 2px 8px var(--ink-3);
+  color: var(--surface);
 }
 
 /* 月のダイヤル：横にスクロールして、真ん中の枠（.month-lens）に止まった月を選ぶ。
@@ -75,8 +219,8 @@
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 22%, var(--ink) 78%, transparent);
+  mask-image: linear-gradient(to right, transparent, var(--ink) 22%, var(--ink) 78%, transparent);
 }
 
 .month-track::-webkit-scrollbar {
@@ -110,23 +254,6 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--ink-2);
-}
-
-/* いま見ている範囲（左）と点数（右） */
-.collection-scope {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 18px 2px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-.collection-scope .num {
-  font-size: 12.5px;
-  color: var(--ink-3);
 }
 
 /* 1 年分を月ごとに区切るとき：細い線と「10月」の見出し */

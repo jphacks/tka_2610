@@ -2,6 +2,7 @@
 import type { CSSProperties } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchArtwork, type Artwork } from '../api'
+import { GalleryIcon, HeartIcon, MicIcon, VideoIcon } from '../icons'
 import { Img } from './Img'
 import { TLink } from './TLink'
 import './ArtworkThumb.css'
@@ -11,6 +12,7 @@ export function ArtworkThumb({
   showBadge = false,
   meta = 'date',
   index = 0,
+  gallery = false,
   onSelect,
 }: {
   artwork: Artwork
@@ -20,6 +22,8 @@ export function ArtworkThumb({
   meta?: 'date' | 'age'
   /** 並び順。表示アニメーションを少しずつずらすのに使う */
   index?: number
+  /** 一覧用。作品全体の画像と、飾っている印・おもいでを表示する */
+  gallery?: boolean
   /** 渡すと、詳細画面へのリンクではなく、押すとこれを呼ぶボタンになる（模様替えの「追加」のシート） */
   onSelect?: () => void
 }) {
@@ -43,18 +47,32 @@ export function ArtworkThumb({
     <TLink
       to={`/artworks/${artwork.id}`}
       share={artwork.id}
-      className="thumb-card pressable"
+      className={`thumb-card pressable${gallery ? ' artwork-gallery-card' : ''}`}
       style={{ '--i': Math.min(index, 12) } as CSSProperties}
       // 指を置いた時点で詳細データを先読みしておく
       onPointerEnter={() => prefetchArtwork(client, artwork.id)}
       onTouchStart={() => prefetchArtwork(client, artwork.id)}
+      onFocus={() => prefetchArtwork(client, artwork.id)}
     >
-      <Img src={artwork.thumb_url} tint={artwork.tint} alt={artwork.title} share={artwork.id} />
+      <Img src={gallery ? artwork.image_url : artwork.thumb_url} tint={gallery ? undefined : artwork.tint} alt={artwork.title} share={artwork.id} eager={gallery && index < 4}>
+        {gallery && artwork.favorite && <span className="artwork-gallery-favorite" aria-label="お気に入り"><HeartIcon size={13} filled /></span>}
+      </Img>
+      {gallery && <p className="artwork-gallery-category">{artwork.category_label}</p>}
       <p className="thumb-title">{artwork.title}</p>
       <p className="thumb-meta">
-        {showBadge && artwork.displayed && <span className="on-view" title="展示中" aria-label="展示中" />}
+        {showBadge && artwork.displayed && !gallery && <span className="on-view" title="展示中" aria-label="展示中" />}
         {metaText}
       </p>
+      {gallery && (
+        <div className="artwork-gallery-foot">
+          {artwork.displayed && <span className="artwork-gallery-display"><span className="on-view" />飾っている</span>}
+          <span className="artwork-gallery-memories">
+            {artwork.memory_counts.photo > 0 && <span aria-label={`おもいでの写真${artwork.memory_counts.photo}件`}><GalleryIcon size={12} />{artwork.memory_counts.photo}</span>}
+            {artwork.memory_counts.video > 0 && <span aria-label={`おもいでの動画${artwork.memory_counts.video}件`}><VideoIcon size={12} />{artwork.memory_counts.video}</span>}
+            {artwork.memory_counts.audio > 0 && <span aria-label={`おもいでの音声${artwork.memory_counts.audio}件`}><MicIcon size={12} />{artwork.memory_counts.audio}</span>}
+          </span>
+        </div>
+      )}
     </TLink>
   )
 }

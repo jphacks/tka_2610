@@ -1,17 +1,17 @@
 // ⑧ 作品一覧（/collection）。タブ。
 // 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のダイヤルで、見る範囲を絞り込む（?month=）。
 // 月のダイヤル（MonthScroller）は横にスクロールして、真ん中の枠に止まった月を選ぶ（押すと、その月が真ん中へすべって選ばれる）。
-//   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで 3 列に並べる（はじめに開いたとき）
+//   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで並べる（既定2列・切り替えで3列）（はじめに開いたとき）
 //   2026      … その年の作品を、月ごとの見出しで区切って並べる（年を押したとき・月のダイヤルの「すべて」）
-//   2026-10   … その月の作品だけを 3 列に並べる
+//   2026-10   … その月の作品だけを並べる
 // その種類の作品が無い年・月が URL にあれば、すべてにする（以前の ?month=all も、すべて）。
 // 並びのすぐ上に、いま見ている範囲と点数を 1 行で出す（「工作・2026年 10月　2点」）。作品名の下には作ったときの年齢（「5さい 4か月」）。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useArtworks, type Artwork, type Category } from '../api'
 import { ActionMenu, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons } from '../components'
-import { MoreIcon, RainbowIcon, PlusIcon } from '../icons'
+import { GalleryIcon, MoreIcon, RainbowIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import './Collection.css'
 
@@ -74,6 +74,7 @@ function MonthScroller({
   const steering = useRef(false)
   const timer = useRef<number | undefined>(undefined)
   const first = useRef(true)
+  useEffect(() => () => window.clearTimeout(timer.current), [])
   const latest = useRef({ value, onChange, items })
   latest.current = { value, onChange, items }
 
@@ -97,7 +98,7 @@ function MonthScroller({
     const left = child.offsetLeft + child.offsetWidth / 2 - el.clientWidth / 2
     if (Math.abs(el.scrollLeft - left) >= 1) {
       steering.current = true
-      el.scrollTo({ left, behavior: first.current ? 'auto' : 'smooth' })
+      el.scrollTo({ left, behavior: first.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
     }
     first.current = false
     paint()
@@ -160,7 +161,9 @@ export default function Collection() {
   const [params, setParams] = useSearchParams()
   const nav = useNav()
   const [menu, setMenu] = useState(false)
-  const category = (params.get('category') as Tab | null) ?? 'all'
+  const category: Tab = TABS.find((tab) => tab.value === params.get('category'))?.value ?? 'all'
+  const compact = params.get('view') === 'compact'
+  const gridClass = `collection-grid${compact ? ' compact' : ''}`
   const list = useArtworks({ category, sort: 'made' })
 
   const items = list.data?.items ?? []
@@ -183,39 +186,52 @@ export default function Collection() {
 
 
   /** URL の種類（category）と範囲（month）を変える。履歴は増やさない。range が null なら「すべて」 */
-  const go = (next: { category?: Tab; range?: string | null }) => {
+  const go = (next: { category?: Tab; range?: string | null; compact?: boolean }) => {
     const c = next.category ?? category
     const r = next.range === undefined ? params.get('month') : next.range
-    setParams({ ...(c !== 'all' ? { category: c } : {}), ...(r ? { month: r } : {}) }, { replace: true })
+    setParams({ ...(c !== 'all' ? { category: c } : {}), ...(r ? { month: r } : {}), ...((next.compact ?? compact) ? { view: 'compact' } : {}) }, { replace: true })
   }
 
   return (
-    <Screen tabbar>
+    <Screen tabbar className="collection-screen">
       <NavBar
-        large
         title="作品一覧"
         right={
-          <button className="icon-btn" aria-label="メニュー" onClick={() => setMenu(true)}>
-            <MoreIcon size={21} />
-          </button>
+          <>
+            <button className="icon-btn" aria-label="作品を追加" onClick={() => nav.modal('/add')}><PlusIcon size={20} /></button>
+            <button className="icon-btn" aria-label="メニュー" onClick={() => setMenu(true)}>
+              <MoreIcon size={21} />
+            </button>
+          </>
         }
       />
-      <div className="page">
+      <div className="page collection-page">
+        <div className="collection-filters">
         <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
+        </div>
 
         {list.isPending ? (
-          <div className="grid-3 collection-body">
-            <ThumbSkeletons count={9} />
+          <div className={`${gridClass} collection-body`} aria-label="作品を読み込み中" aria-busy="true">
+            <ThumbSkeletons count={6} />
+          </div>
+        ) : list.isError ? (
+          <div className="collection-empty" role="alert">
+            <GalleryIcon size={30} />
+            <h2>作品を読み込めませんでした</h2>
+            <p>接続を確認して、もう一度お試しください。</p>
+            <button type="button" className="btn btn-outline btn-small" disabled={list.isFetching} onClick={() => list.refetch()}>もう一度読み込む</button>
           </div>
         ) : items.length === 0 ? (
-          <div className="empty">
-            <p>{category === 'all' ? 'まだ作品がありません。' : 'この種類の作品はまだありません。'}</p>
+          <div className="collection-empty">
+            <GalleryIcon size={30} />
+            <h2>{category === 'all' ? 'まだ作品がありません' : 'この種類の作品はまだありません'}</h2>
+            <p>作品の写真を撮るか、画像を選んで追加できます。</p>
             <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
               作品を追加
             </button>
           </div>
         ) : (
-          <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'}>
+          <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'} aria-busy={list.isFetching}>
             {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
             <div className="collection-years" role="tablist" aria-label="作った年">
               <button
@@ -236,7 +252,7 @@ export default function Collection() {
                   className={`collection-year num${y === year ? ' selected' : ''}`}
                   onClick={() => go({ range: y })}
                 >
-                  {y}
+                  {y}年
                 </button>
               ))}
             </div>
@@ -253,16 +269,22 @@ export default function Collection() {
               />
             )}
 
-            <p className="collection-scope" aria-live="polite">
-              <span>{scopeLabel}</span>
-              <span className="num">{shownCount}点</span>
-            </p>
+            <div className="collection-toolbar">
+              <div className="collection-scope" aria-live="polite">
+                <h2>{scopeLabel}</h2>
+                <span className="num">{shownCount}点</span>
+              </div>
+              <div className="collection-density" role="group" aria-label="作品の表示サイズ">
+                <button type="button" aria-pressed={!compact} onClick={() => go({ compact: false })}>2列</button>
+                <button type="button" aria-pressed={compact} onClick={() => go({ compact: true })}>3列</button>
+              </div>
+            </div>
 
             {month || !year ? (
               // すべて・1 か月：見出し無しで並べる
-              <div key={`${category}-${month?.key ?? 'all'}`} className="grid-3">
+              <div key={`${category}-${month?.key ?? 'all'}`} className={gridClass}>
                 {(month ? month.items : items).map((a, i) => (
-                  <ArtworkThumb key={a.id} artwork={a} index={i} showBadge meta="age" />
+                  <ArtworkThumb key={a.id} artwork={a} index={i} showBadge meta="age" gallery />
                 ))}
               </div>
             ) : (
@@ -275,9 +297,9 @@ export default function Collection() {
                       <span className="num">{splitLabel(m.label)[1]}</span>
                       <small className="num">{m.items.length}点</small>
                     </h2>
-                    <div className="grid-3">
+                    <div className={gridClass}>
                       {m.items.map((a, j) => (
-                        <ArtworkThumb key={a.id} artwork={a} index={before + j} showBadge meta="age" />
+                        <ArtworkThumb key={a.id} artwork={a} index={before + j} showBadge meta="age" gallery />
                       ))}
                     </div>
                   </section>

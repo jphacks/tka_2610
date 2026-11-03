@@ -41,3 +41,49 @@
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* 作品一覧でだけ使う情報。関連作品・模様替えのカードは従来の表示。 */
+.artwork-gallery-category {
+  margin: 12px 1px 0;
+  color: var(--ink-2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.artwork-gallery-favorite {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--red);
+  background: var(--surface);
+}
+
+.artwork-gallery-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 28px;
+  margin: 6px 1px 0;
+  color: var(--ink-2);
+  font-size: 10px;
+}
+
+.artwork-gallery-display,
+.artwork-gallery-memories,
+.artwork-gallery-memories > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.artwork-gallery-display { color: var(--green); white-space: nowrap; }
+.artwork-gallery-memories { gap: 7px; font-variant-numeric: tabular-nums; }
