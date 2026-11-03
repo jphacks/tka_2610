@@ -2,7 +2,7 @@
 // 写真と動画は 3 列のタイル（押すと MemoryViewer で画面いっぱいに見る）、声はリストの行（押すとその場で流す。<audio> を 1 つ使い回す）。
 // 「＋ 追加」のシートから、写真・動画や音声ファイルを選ぶ・声を録音する（VoiceRecorder）。選んだファイルは 1 つずつ順に送り、シートに進み具合を出す。
 // スマホなど指で操作する端末では、「写真をとる」「動画をとる」でその場でカメラを開ける（capture 付きの入力。PC では効かないので出さない）。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MEMORY_LIMITS,
   kindOfFile,
@@ -48,6 +48,34 @@ function ReviewThumb({ file }: { file: File }) {
     return () => URL.revokeObjectURL(u)
   }, [file])
   return url ? <img src={url} alt="" /> : null
+}
+
+/** 声の波形の縦線の数 */
+const WAVE_BARS = 22
+
+/** 声の記録の id から、いつも同じ形の縦線の高さ（0.25〜1）を作る。本当の音の大きさは測らない、見た目の波形 */
+function waveHeights(id: string): number[] {
+  let x = 2166136261
+  for (const c of id) x = Math.imul(x ^ c.charCodeAt(0), 16777619)
+  return Array.from({ length: WAVE_BARS }, () => {
+    x ^= x << 13
+    x ^= x >>> 17
+    x ^= x << 5
+    return 0.25 + 0.75 * (((x >>> 0) % 1000) / 1000)
+  })
+}
+
+/** 声のカードの縦線の波形。流しているところまでの線が濃くなる（progress は 0〜1） */
+function Waveform({ id, progress }: { id: string; progress: number }) {
+  const heights = useMemo(() => waveHeights(id), [id])
+  const played = Math.round(progress * heights.length)
+  return (
+    <span className="memory-wave" aria-hidden="true">
+      {heights.map((h, i) => (
+        <i key={i} className={i < played ? 'on' : undefined} style={{ height: `${h * 100}%` }} />
+      ))}
+    </span>
+  )
 }
 
 /** 声の再生（<audio> を 1 つ使い回す。画面を離れたら止める） */
@@ -250,7 +278,7 @@ export function MemorySection({
       {
         onSuccess: () => {
           setTarget(null)
-          toast('ひとことを変えました')
+          toast('ひとことを保存しました')
         },
         onError: (e) => toast(e.message),
       },
@@ -344,25 +372,20 @@ export function MemorySection({
               </button>
 
               <div className="grow">
-                <p className="memory-voice-title">
-                  {m.caption || '声の記録'}
-                </p>
+                {m.caption && (
+                  <p className="memory-voice-title">
+                    {m.caption}
+                  </p>
+                )}
+
+                <Waveform id={m.id} progress={playing ? voice.progress : 0} />
 
                 <p className="memory-voice-meta num">
-                  {[m.duration_label, m.date_label]
+                  {[m.duration_label, m.date_label?.replace(/^\d{4}年/, '')]
                     .filter(Boolean)
                     .join('・')}
                 </p>
 
-                {playing && (
-                  <span className="memory-voice-bar">
-                    <span
-                      style={{
-                        width: `${voice.progress * 100}%`,
-                      }}
-                    />
-                  </span>
-                )}
               </div>
 
               <button
@@ -615,7 +638,7 @@ export function MemorySection({
               className="input"
               maxLength={80}
               defaultValue={target.memory.caption}
-              placeholder="例）できあがって、うれしくておどったよ"
+              
             />
             <button className="btn btn-filled" disabled={update.isPending}>
               保存
