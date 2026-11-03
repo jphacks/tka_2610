@@ -65,5 +65,7 @@ export {
   useDeleteArtwork,
   useDisplay,
   useFavorite,
+  useGenerateMemo,
+  useGenerateMemoFromImage,
   useUpdateArtwork,
 } from './artworks'

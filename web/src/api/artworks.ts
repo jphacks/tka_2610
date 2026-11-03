@@ -65,6 +65,20 @@ export function fetchArtworkDetail(id: string) {
 
 // ---------- 変更 ----------
 
+/** 下書きを生成するだけで、作品のメモは保存しない。 */
+export function useGenerateMemo(id: string) {
+  return useMutation({
+    mutationFn: () => request<{ memo: string }>(`/api/artworks/${id}/memo-draft`, { method: 'POST' }),
+  })
+}
+
+/** 登録前・画像差し替え中の作品から、保存せず下書きを作る。 */
+export function useGenerateMemoFromImage() {
+  return useMutation({
+    mutationFn: (form: FormData) => request<{ memo: string }>('/api/artworks/memo-draft', { method: 'POST', body: form }),
+  })
+}
+
 function useInvalidate() {
   const client = useQueryClient()
   return (extra: QueryKey[] = []) => {
