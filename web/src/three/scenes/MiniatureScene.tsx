@@ -21,7 +21,8 @@ interface Props {
   palette: { paper: string; surface: string; earth: string; ink: string }
 }
 
-const RADIUS = 3.15
+// 大きな球の上面だけを写し、地面を緩やかな丘として見せる。
+const RADIUS = 9
 // 鑑賞位置は球の頂点。到着時は作品の上方向と世界の上方向が一致する。
 const RING = 0
 const LATITUDE = 0
@@ -108,7 +109,7 @@ function World(props: Props) {
   })
 
   const ground = useMemo(() => {
-    const geometry = new THREE.SphereGeometry(RADIUS, 64, 40)
+    const geometry = new THREE.SphereGeometry(RADIUS, 96, 64)
     const positions = geometry.attributes.position
     const colors = new Float32Array(positions.count * 3)
     const earth = new THREE.Color(palette.earth)
@@ -117,7 +118,7 @@ function World(props: Props) {
     const color = new THREE.Color()
     for (let i = 0; i < positions.count; i++) {
       point.fromBufferAttribute(positions, i)
-      const ripple = 1 + 0.0025 * Math.sin(point.x * 6) * Math.cos(point.z * 5)
+      const ripple = 1 + 0.0007 * Math.sin(point.x * 6) * Math.cos(point.z * 5)
       positions.setXYZ(i, point.x * ripple, point.y * ripple, point.z * ripple)
       // どの作品まで回っても同じ草色。回転で白い裏側に切り替わらない。
       color.copy(paper).lerp(earth, 0.8 + 0.1 * Math.sin(point.x * 1.2) * Math.cos(point.z * 0.8))

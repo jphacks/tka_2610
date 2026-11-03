@@ -35,6 +35,7 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
 
 export default function MapView() {
   const [params, setParams] = useSearchParams()
+  const [miniatureExpanded, setMiniatureExpanded] = useState(false)
   const [digestScope, setDigestScope] = useState<DigestScope | null>(null)
   const recalls = useRecollections(params.get('age'))
   const ages = useAges()
@@ -51,7 +52,7 @@ export default function MapView() {
   }
 
   return (
-    <Screen tabbar className="recall-screen">
+    <Screen tabbar className={`recall-screen${miniatureExpanded ? ' is-viewing-miniature' : ''}`}>
       <NavBar title="memoria" />
       <div className="page recall-page">
         {recalls.isPending ? (
@@ -62,7 +63,7 @@ export default function MapView() {
           <div className="recall-empty"><GalleryIcon size={30} /><h2>まだ振り返る作品がありません</h2><p>作品と一緒に、写真や声も残せます。登録した作品がここに並びます。</p><button type="button" className="btn btn-filled" onClick={() => nav.modal('/add')}>作品を追加</button></div>
         ) : data && (
           <>
-            <MiniatureDigest suspended={digestScope !== null} onStart={() => playing.current?.pause()} onAudioPlay={element => { if (playing.current && playing.current !== element) playing.current.pause(); playing.current = element }} onOpenArtwork={id => { playing.current?.pause(); nav.push(`/artworks/${id}`) }} />
+            <MiniatureDigest onExpandedChange={setMiniatureExpanded} suspended={digestScope !== null} onStart={() => playing.current?.pause()} onAudioPlay={element => { if (playing.current && playing.current !== element) playing.current.pause(); playing.current = element }} onOpenArtwork={id => { playing.current?.pause(); nav.push(`/artworks/${id}`) }} />
             <details className="recall-slideshow"><summary>スライドショーで振り返る</summary>
             <section className="recall-digest" aria-labelledby="recall-digest-title">
               <div><span className="recall-digest-mark"><PlayIcon size={17} /></span><h1 id="recall-digest-title">作品のダイジェスト</h1></div>

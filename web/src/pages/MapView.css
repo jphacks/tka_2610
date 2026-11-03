@@ -78,3 +78,8 @@
 .recall-slideshow { margin-bottom: 24px; }
 .recall-slideshow > summary { padding: 10px 0; cursor: pointer; font-size: 12px; color: var(--ink-2); }
 .recall-slideshow .recall-digest { margin: 8px 0 0; }
+
+.recall-screen.is-viewing-miniature { overflow-y: hidden; }
+.recall-screen.is-viewing-miniature .recall-page > :not(.miniature-digest),
+.recall-screen.is-viewing-miniature .miniature-heading,
+.recall-screen.is-viewing-miniature .miniature-options { visibility: hidden; }
