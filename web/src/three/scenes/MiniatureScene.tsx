@@ -11,10 +11,12 @@ interface Props {
   entries: MiniatureEntry[]
   turn: number
   playing: boolean
+  focusedArtworkId: string | null
   transitionMs: number
   onArrive: (turn: number) => void
   onModelReady: (id: string, fallback: boolean) => void
   onArtwork: (id: string) => void
+  onArtworkBottom: (bottom: number) => void
   onPhoto: (artworkId: string, index: number) => void
   onReady: () => void
   reducedMotion: boolean
@@ -28,7 +30,7 @@ const RING = 0
 const LATITUDE = 0
 
 /** 写真も地面に立て、作品と一緒に回す。球の裏側では地面に隠れる。 */
-function GroundPhoto({ photo, index, artworkId, title, ground, onPhoto }: { photo: Memory; index: number; artworkId: string; title: string; ground: RefObject<THREE.Mesh | null>; onPhoto: Props['onPhoto'] }) {
+function GroundPhoto({ photo, index, artworkId, title, ground, focused, onPhoto }: { photo: Memory; index: number; artworkId: string; title: string; ground: RefObject<THREE.Mesh | null>; focused: boolean; onPhoto: Props['onPhoto'] }) {
   const x = index === 1 ? 1.35 : -1.35
   const z = index === 2 ? 0.9 : -0.35
   const position = new THREE.Vector3(x, RADIUS, z).normalize().multiplyScalar(RADIUS + 0.025)
@@ -36,7 +38,7 @@ function GroundPhoto({ photo, index, artworkId, title, ground, onPhoto }: { phot
   return (
     <group position={position} quaternion={rotation}>
       <Html transform position={[0, 0.55, 0]} rotation-x={-LATITUDE} distanceFactor={2.3} occlude={[ground as RefObject<THREE.Object3D>]} zIndexRange={[5, 0]}>
-        <button type="button" className="miniature-memory-photo" onClick={event => { event.stopPropagation(); onPhoto(artworkId, index) }} aria-label={photo.caption || `${title}のおもいでの写真${index + 1}を見る`}>
+        <button type="button" className={`miniature-memory-photo${focused ? ' is-focused' : ''}`} onClick={event => { event.stopPropagation(); onPhoto(artworkId, index) }} aria-label={photo.caption || `${title}のおもいでの写真${index + 1}を見る`}>
           <img src={photo.thumb_url ?? photo.url} alt={photo.caption || 'おもいでの写真'} draggable={false} />
           <span>{photo.caption || 'おもいでの写真'}</span>
         </button>
@@ -50,6 +52,8 @@ function World(props: Props) {
   const globe = useRef<THREE.Group>(null)
   const groundMesh = useRef<THREE.Mesh>(null)
   const works = useRef(new Map<number, THREE.Group>())
+  const bounds = useRef(new THREE.Box3())
+  const corner = useRef(new THREE.Vector3())
   const invalidate = useThree(state => state.invalidate)
   const camera = useThree(state => state.camera)
   const size = useThree(state => state.size)
@@ -106,6 +110,23 @@ function World(props: Props) {
       if (m.elapsed * 1000 >= transitionMs) { m.settled = true; onArrive(turn) }
       else invalidate()
     }
+    if (m.settled) {
+      const work = works.current.get(index)
+      if (work) {
+        // 実際のGLBを画面へ投影して下端を求める。メモを作品に重ねないための表示座標。
+        group.updateWorldMatrix(true, true)
+        camera.updateMatrixWorld()
+        bounds.current.setFromObject(work)
+        const box = bounds.current
+        let bottom = 0
+        if (box.isEmpty()) bottom = 0.72
+        else for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+          corner.current.set(x, y, z).project(camera)
+          bottom = Math.max(bottom, (1 - corner.current.y) / 2)
+        }
+        props.onArtworkBottom(Math.min(1, Math.max(0, bottom)))
+      }
+    }
   })
 
   const ground = useMemo(() => {
@@ -157,7 +178,7 @@ function World(props: Props) {
               <ShowcaseArtwork artwork={entries[i].artwork} onReady={props.onModelReady} onSelect={props.onArtwork} />
             </group>
             <group rotation-x={LATITUDE}>
-              {entries[i].photos.map((photo, photoIndex) => <GroundPhoto key={photo.id} photo={photo} index={photoIndex} artworkId={entries[i].artwork.id} title={entries[i].artwork.title} ground={groundMesh} onPhoto={props.onPhoto} />)}
+              {entries[i].photos.map((photo, photoIndex) => <GroundPhoto key={photo.id} photo={photo} index={photoIndex} artworkId={entries[i].artwork.id} title={entries[i].artwork.title} ground={groundMesh} focused={props.focusedArtworkId === entries[i].artwork.id} onPhoto={props.onPhoto} />)}
             </group>
           </group>
         ))}

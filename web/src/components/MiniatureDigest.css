@@ -59,3 +59,20 @@
   .miniature-playback.is-expanded .miniature-expanded-heading { position: absolute; top: 0; right: 0; z-index: 8; }
   .miniature-playback.is-expanded .miniature-expanded-heading > span { display: none; }
 }
+
+/* Canvasを縮めず、投影した作品の下端より下の地面にだけメモを置く。 */
+.miniature-memo { position: absolute; z-index: 7; left: 16px; right: 16px; bottom: 10px; display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; overflow: hidden; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+.miniature-memo.is-visible { opacity: 1; }
+.miniature-memo-content { flex: 0 1 auto; display: flex; flex-direction: column; min-height: 0; max-height: 100%; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--paper) 94%, transparent); color: var(--ink); pointer-events: auto; }
+.miniature-memo[aria-hidden='true'] .miniature-memo-content { pointer-events: none; }
+.miniature-memo-content > span { flex: none; font-size: 10px; color: var(--ink-2); }
+.miniature-memo p { min-height: 0; max-height: 3.4em; overflow-y: auto; overscroll-behavior: contain; margin: 4px 0 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.miniature-memory-photo { opacity: .78; transition: opacity .5s ease, box-shadow .5s ease; }
+.miniature-memory-photo.is-focused { opacity: 1; box-shadow: 0 3px 12px var(--fill); }
+@media (max-height: 500px) {
+  .miniature-memo { left: 12px; right: 12px; bottom: 4px; }
+  .miniature-memo-content { padding: 3px 8px; }
+  .miniature-memo-content > span { display: none; }
+  .miniature-memo p { margin: 0; font-size: 12px; line-height: 1.6; max-height: 3.2em; }
+}
+@media (prefers-reduced-motion: reduce) { .miniature-memo, .miniature-memory-photo { transition: none; } }
