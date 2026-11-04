@@ -215,6 +215,17 @@ pub struct MiniatureDigest {
     entries: Vec<MiniatureEntry>,
 }
 
+/// 写真を見る時間に、登録されたメモを読むための余韻を加える。
+fn miniature_hold_ms(memo: &str, has_photos: bool) -> u32 {
+    let base = if has_photos { 6000 } else { 4500 };
+    let length = memo.trim().chars().count() as u32;
+    if length == 0 {
+        base
+    } else {
+        base.max((2500 + length * 70).clamp(8000, 14000))
+    }
+}
+
 pub async fn miniature(
     State(state): State<AppState>,
     Query(query): Query<DigestQuery>,
@@ -238,7 +249,7 @@ pub async fn miniature(
                 _ => {}
             }
         }
-        let hold_ms = if photos.is_empty() { 4500 } else { 6000 };
+        let hold_ms = miniature_hold_ms(&row.memo, !photos.is_empty());
         entries.push(MiniatureEntry {
             artwork: ArtworkDto::new(row, &ctx),
             photos,
@@ -261,6 +272,15 @@ pub async fn miniature(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn miniature_gives_memos_reading_time_without_slowing_empty_records() {
+        assert_eq!(miniature_hold_ms(" \n　", false), 4500);
+        assert_eq!(miniature_hold_ms("", true), 6000);
+        assert_eq!(miniature_hold_ms("何度も作り直したね", false), 8000);
+        assert_eq!(miniature_hold_ms(&"あ".repeat(100), true), 9500);
+        assert_eq!(miniature_hold_ms(&"あ".repeat(500), true), 14000);
+    }
+
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, day).unwrap()
     }

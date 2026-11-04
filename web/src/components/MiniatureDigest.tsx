@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useMiniatureDigest, type DigestScope, type MiniatureDigestData } from '../api'
+import { useMiniatureDigest, type Artwork, type DigestScope, type MiniatureDigestData } from '../api'
 import { BackIcon, ChevronRight, CloseIcon, MicIcon, PauseIcon, PlayIcon } from '../icons'
 import { MiniatureScene, StageShell } from '../three'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -23,6 +23,8 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const [voiceError, setVoiceError] = useState('')
   const [photoIndex, setPhotoIndex] = useState<number | null>(null)
   const [photoArtworkId, setPhotoArtworkId] = useState<string | null>(null)
+  const [artworkBottom, setArtworkBottom] = useState(0.72)
+  const [memoCard, setMemoCard] = useState<Artwork | null>(null)
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const container = useRef<HTMLDivElement>(null)
   const audio = useRef<HTMLAudioElement>(null)
@@ -34,6 +36,11 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   const active = data.entries[index]
   const photoEntry = data.entries.find(entry => entry.artwork.id === photoArtworkId)
   const modelReady = loaded[active.artwork.id] !== undefined
+  // 停止直後は作品を見せ、鑑賞時間が進んでから登録済みの言葉を出す。
+  // 進捗を使うので、一時停止・音声再生・写真の拡大中もこの間は進まない。
+  const memoReady = expanded && started && arrived && modelReady && progress * active.hold_ms >= 650 && !!active.artwork.memo.trim()
+  const memoVisible = memoReady && memoCard?.id === active.artwork.id
+  useEffect(() => { if (memoReady) setMemoCard(active.artwork) }, [memoReady, active.artwork])
   const palette = useMemo(() => {
     const style = getComputedStyle(document.documentElement)
     const color = (name: string) => style.getPropertyValue(name).trim()
@@ -41,6 +48,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
   }, [])
 
   const modelSettled = useCallback((id: string, fallback: boolean) => setLoaded(before => before[id] === fallback ? before : { ...before, [id]: fallback }), [])
+  const artworkFramed = useCallback((bottom: number) => setArtworkBottom(before => Math.abs(before - bottom) < 0.002 ? before : bottom), [])
   const sceneMounted = useCallback(() => setSceneReady(true), [])
   const onArrive = useCallback((value: number) => { if (value === currentTurn.current) setArrived(true) }, [])
   const stopVoice = useCallback(() => { audio.current?.pause(); setVoicePlaying(false) }, [])
@@ -64,6 +72,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
     setProgress(0)
     setVoiceError('')
     setPhotoIndex(null)
+    setMemoCard(null)
   }, [revision, stopVoice])
   useEffect(() => { if (suspended) { setPlaying(false); setExpanded(false); stopVoice() } }, [suspended, stopVoice])
   const move = useCallback((delta: number) => {
@@ -134,10 +143,17 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
         <StageShell className="miniature-stage" ready={sceneReady} label="ミニチュアを準備しています…">
           <Suspense fallback={null}>
             <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} transitionMs={data.transition_ms}
+              focusedArtworkId={started && arrived && modelReady ? active.artwork.id : null} onArtworkBottom={artworkFramed}
               onArrive={onArrive} onModelReady={modelSettled} onArtwork={openArtwork} onPhoto={openPhoto} onReady={sceneMounted} reducedMotion={reducedMotion} palette={palette} />
           </Suspense>
+          {memoCard && <div className={`miniature-memo${memoVisible ? ' is-visible' : ''}`} style={{ top: `calc(${artworkBottom * 100}% + 8px)` }} aria-hidden={!memoVisible} aria-live="polite">
+            <div className="miniature-memo-content" role="note" aria-label={`${memoCard.title}に残したメモ`}>
+              <span>残していたメモ</span><p>{memoCard.memo}</p>
+            </div>
+          </div>}
           {!expanded && sceneReady && <button type="button" className="miniature-start" aria-label="3Dダイジェストを再生" onClick={toggle}><span><PlayIcon size={24} /></span><strong>タップして再生</strong></button>}
         </StageShell>
+
       </ErrorBoundary>
       <div className="miniature-progress" role="progressbar" aria-label="3Dダイジェストの進み具合" aria-valuemin={0} aria-valuemax={count} aria-valuenow={index + progress}>
         {data.entries.map((entry, i) => <span key={entry.artwork.id}><i style={{ transform: `scaleX(${i < index ? 1 : i === index ? progress : 0})` }} /></span>)}
