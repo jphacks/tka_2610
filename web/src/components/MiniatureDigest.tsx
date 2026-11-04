@@ -142,7 +142,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
       <ErrorBoundary fallback={() => <div className="miniature-error"><p>この端末では3Dを表示できませんでした。</p><button type="button" className="btn btn-outline btn-small" onClick={() => openArtwork(active.artwork.id)}>作品を開く</button></div>}>
         <StageShell className="miniature-stage" ready={sceneReady} label="ミニチュアを準備しています…">
           <Suspense fallback={null}>
-            <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} transitionMs={data.transition_ms}
+            <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} transitionMs={data.transition_ms} immersive={expanded}
               focusedArtworkId={started && arrived && modelReady ? active.artwork.id : null} onArtworkBottom={artworkFramed}
               onArrive={onArrive} onModelReady={modelSettled} onArtwork={openArtwork} onPhoto={openPhoto} onReady={sceneMounted} reducedMotion={reducedMotion} palette={palette} />
           </Suspense>

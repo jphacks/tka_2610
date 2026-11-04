@@ -11,6 +11,7 @@ interface Props {
   entries: MiniatureEntry[]
   turn: number
   playing: boolean
+  immersive: boolean
   focusedArtworkId: string | null
   transitionMs: number
   onArrive: (turn: number) => void
@@ -65,13 +66,15 @@ function World(props: Props) {
   useLayoutEffect(() => {
     // 縦画面は作品を横幅いっぱいに寄せ、横画面は背の高い作品も収める。
     const aspect = size.width / Math.max(1, size.height)
-    const distance = Math.max(3.3 / aspect, 4) / (2 * Math.tan(THREE.MathUtils.degToRad(44 / 2)))
-    camera.position.set(0, 0.9 + distance * 0.08, distance)
-    camera.lookAt(0, 0.9, 0)
+    const shortStage = props.immersive && size.height < 500
+    const distance = Math.max((props.immersive ? 2.9 : 3.3) / aspect, shortStage ? 5 : props.immersive ? 3.8 : 4) / (2 * Math.tan(THREE.MathUtils.degToRad(44 / 2)))
+    const targetHeight = shortStage ? 0.7 : props.immersive ? 1.1 : 0.9
+    camera.position.set(0, targetHeight + distance * 0.08, distance)
+    camera.lookAt(0, targetHeight, 0)
     camera.updateProjectionMatrix()
     props.onReady()
     invalidate()
-  }, [camera, invalidate, props.onReady, size.width, size.height])
+  }, [camera, invalidate, props.onReady, props.immersive, size.width, size.height])
 
   useLayoutEffect(() => {
     motion.current.turn = Number.NaN
