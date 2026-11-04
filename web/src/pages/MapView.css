@@ -80,7 +80,9 @@
 .recall-slideshow .recall-digest { margin: 8px 0 0; }
 
 .recall-screen.is-viewing-miniature { overflow-y: hidden; background: var(--paper); }
-.recall-screen.is-viewing-miniature .navbar { background: var(--paper); }
+.recall-screen.is-viewing-miniature .navbar { visibility: hidden; }
+.app:has(.recall-screen.is-viewing-miniature) .tabbar-wrap,
+.app:has(.recall-screen.is-viewing-miniature) .tab-rainbow { visibility: hidden; }
 .recall-screen.is-viewing-miniature .recall-page > :not(.miniature-digest),
 .recall-screen.is-viewing-miniature .miniature-heading,
 .recall-screen.is-viewing-miniature .miniature-options { visibility: hidden; }

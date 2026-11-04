@@ -44,20 +44,25 @@
 .miniature-error > span { font-size: 12px; color: var(--ink-2); }
 @media (max-width: 360px) { .miniature-controls { gap: 6px; padding-inline: 8px; } .miniature-play { min-width: 86px; } }
 
-/* タイトルとタブの間を鑑賞に使う。アプリの外枠を基準にし、Canvasは維持する。 */
-.miniature-playback.is-expanded { position: absolute; inset: calc(54px + var(--safe-top)) 0 calc(var(--tabbar-space) + var(--safe-bottom)); z-index: 21; display: flex; flex-direction: column; border: 0; border-radius: 0; background: var(--paper); }
-.miniature-playback.is-expanded .miniature-stage { flex: 1; height: auto; min-height: 0; margin-top: 0; }
-.miniature-expanded-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
-.miniature-expanded-heading > span { font-size: 12px; font-weight: 600; }
+/* 再生中はアプリの端まで3Dを広げ、操作をストーリーのように重ねる。 */
+.miniature-playback.is-expanded { position: absolute; inset: 0; z-index: 31; border: 0; border-radius: 0; background: var(--paper); }
+.miniature-playback.is-expanded .miniature-stage { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; }
+.miniature-expanded-heading { position: absolute; z-index: 9; top: calc(18px + var(--safe-top)); right: 8px; }
+.miniature-expanded-heading > span { display: none; }
 .miniature-expanded-heading > button { display: grid; place-items: center; width: 44px; height: 44px; color: var(--ink); }
-.miniature-playback.is-expanded .miniature-period { padding-top: 0; }
-.miniature-playback.is-expanded .miniature-controls { padding-bottom: 10px; }
+.miniature-playback.is-expanded .miniature-period { position: absolute; z-index: 8; top: calc(22px + var(--safe-top)); left: 16px; right: 64px; min-height: 36px; padding: 0; }
+.miniature-playback.is-expanded .miniature-progress { position: absolute; z-index: 8; top: calc(10px + var(--safe-top)); left: 0; right: 0; }
+.miniature-playback.is-expanded .miniature-caption { position: absolute; z-index: 8; bottom: calc(76px + var(--safe-bottom)); left: 0; right: 0; padding: 0 16px; }
+.miniature-playback.is-expanded .miniature-status { display: none; }
+.miniature-playback.is-expanded .miniature-controls { position: absolute; z-index: 8; bottom: calc(12px + var(--safe-bottom)); left: 0; right: 0; padding: 0 12px; }
+.miniature-playback.is-expanded .miniature-note { position: absolute; z-index: 8; bottom: calc(60px + var(--safe-bottom)); left: 0; right: 0; padding-bottom: 0; font-size: 9px; }
+.miniature-playback.is-expanded .miniature-memo { bottom: calc(138px + var(--safe-bottom)); }
 @media (max-height: 500px) {
-  .miniature-playback.is-expanded .miniature-period, .miniature-playback.is-expanded .miniature-caption > small, .miniature-playback.is-expanded .miniature-status { display: none; }
-  .miniature-playback.is-expanded .miniature-caption { padding-top: 4px; }
-  .miniature-playback.is-expanded .miniature-controls { padding-block: 2px; }
-  .miniature-playback.is-expanded .miniature-expanded-heading { position: absolute; top: 0; right: 0; z-index: 8; }
-  .miniature-playback.is-expanded .miniature-expanded-heading > span { display: none; }
+  .miniature-playback.is-expanded .miniature-caption { bottom: calc(66px + var(--safe-bottom)); }
+  .miniature-playback.is-expanded .miniature-caption > small { display: none; }
+  .miniature-playback.is-expanded .miniature-period { right: 60px; }
+  .miniature-playback.is-expanded .miniature-period > small { display: none; }
+  .miniature-playback.is-expanded .miniature-memo { bottom: calc(102px + var(--safe-bottom)); }
 }
 
 /* Canvasを縮めず、投影した作品の下端より下の地面にだけメモを置く。 */
