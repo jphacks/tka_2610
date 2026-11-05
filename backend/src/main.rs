@@ -15,6 +15,7 @@ mod museum;
 mod museum_api;
 mod seed;
 mod state;
+mod theater;
 
 use std::{
     collections::HashMap,
@@ -205,6 +206,8 @@ async fn main() {
         .route("/recollections", get(recollections::overview))
         .route("/recollections/digest", get(digest::generate))
         .route("/recollections/miniature", get(digest::miniature))
+        // 期間をえらんで振り返るシアター (場面ごとの時間割)
+        .route("/recollections/theater", get(theater::theater))
         .route("/ages", get(ages_api::list_ages))
         .route("/ages/{age}", get(ages_api::age_stack))
         .route("/ages/{age}/rooms", post(ages_api::add_room))
@@ -239,6 +242,15 @@ async fn main() {
             "/home-assets",
             SetResponseHeader::if_not_present(
                 ServeDir::new(static_dir.join("home")),
+                header::CACHE_CONTROL,
+                ONE_DAY,
+            ),
+        )
+        // シアターの舞台の手描き風テクスチャ (static/stage)
+        .nest_service(
+            "/stage-assets",
+            SetResponseHeader::if_not_present(
+                ServeDir::new(static_dir.join("stage")),
                 header::CACHE_CONTROL,
                 ONE_DAY,
             ),

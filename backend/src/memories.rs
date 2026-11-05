@@ -242,6 +242,27 @@ pub async fn of_artwork<'e>(executor: impl PgExecutor<'e>, artwork_id: Uuid) -> 
     Ok(rows.into_iter().map(MemoryDto::from).collect())
 }
 
+/// いくつもの作品のおもいでを 1 回で読む (作品ごとに足した順)。おもいでの無い作品はキーが無い
+pub async fn of_artworks<'e>(
+    executor: impl PgExecutor<'e>,
+    artwork_ids: &[Uuid],
+) -> AppResult<HashMap<Uuid, Vec<MemoryDto>>> {
+    let mut grouped: HashMap<Uuid, Vec<MemoryDto>> = HashMap::new();
+    if artwork_ids.is_empty() {
+        return Ok(grouped);
+    }
+    let rows = sqlx::query_as::<_, MemoryRow>(&format!(
+        "SELECT {COLUMNS} FROM artwork_memories WHERE artwork_id = ANY($1) ORDER BY created_at, id"
+    ))
+    .bind(artwork_ids)
+    .fetch_all(executor)
+    .await?;
+    for row in rows {
+        grouped.entry(row.artwork_id).or_default().push(MemoryDto::from(row));
+    }
+    Ok(grouped)
+}
+
 /// 作品のおもいでのファイル (作品を消すときに、行が CASCADE で消える前に集めておく)
 pub async fn files_of<'e>(executor: impl PgExecutor<'e>, artwork_id: Uuid) -> AppResult<Vec<(MediaKind, String)>> {
     let rows = sqlx::query_as::<_, (String, Option<String>)>(
