@@ -87,7 +87,7 @@
   cursor: none;
 }
 
-/* ---------- メモ（作品の少し上に、ふわっと浮かぶ） ---------- */
+/* ---------- メモ（作品の少し上に、雲のようにふわっと浮かぶ） ---------- */
 
 .theater-memo-anchor {
   position: absolute;
@@ -100,52 +100,102 @@
   will-change: transform;
 }
 
+/* 位置だけを受け持つ（作品の上の中央に、雲の下端を合わせる） */
 .theater-memo {
   position: absolute;
   left: 0;
-  bottom: 10px;
+  bottom: 22px;
+  transform: translateX(-50%);
+}
+
+/*
+ * 雲：もこもこ（丸）をいくつか重ねた形。文字の長さで横に伸び、丸の大きさは雲の高さから決まる（上限あり）。
+ * 出るとき … ぼやけた小さなかたまりから、丸がひとつずつふくらんで雲になり、少しあとで文字が浮かぶ。
+ * 消えるとき … 少し大きくなりながら上へ流れて、ぼやけて薄れる。次の行の雲は、その下で同時にふくらむ。
+ */
+.theater-cloud {
+  position: relative;
   width: max-content;
-  max-width: min(340px, calc(100vw - 32px));
-  padding: 12px 18px 13px;
-  border-radius: 16px 16px 16px 6px;
-  background: var(--paper);
-  box-shadow:
-    0 1px 0 var(--line-strong),
-    0 10px 28px rgba(62, 97, 120, 0.16),
-    0 2px 6px rgba(62, 97, 120, 0.1);
-  transform: translate(-50%, 14px) scale(0.97);
-  opacity: 0;
-  filter: blur(6px);
-  transition:
-    opacity 0.7s var(--ease-out),
-    transform 0.9s var(--spring),
-    filter 0.7s var(--ease-out);
+  min-width: 150px;
+  max-width: min(320px, calc(100vw - 64px));
+  padding: 16px 32px 14px;
+  animation: theater-cloud-in 1.4s var(--ease-out) both;
 }
 
-/* 紙の小さなしっぽ（作品のほうを指す） */
-.theater-memo::after {
-  content: '';
+.theater-cloud.is-leaving {
+  animation: theater-cloud-out 1.3s ease-in both;
+}
+
+/* 読んでいるあいだ、ゆっくり上下・左右にただよう */
+.theater-cloud-drift {
   position: absolute;
-  left: 50%;
-  bottom: -6px;
-  width: 14px;
-  height: 14px;
-  background: var(--paper);
-  border-radius: 3px;
-  transform: translateX(-50%) rotate(45deg);
-  box-shadow: 3px 3px 6px rgba(62, 97, 120, 0.08);
+  inset: 0;
+  animation: theater-cloud-drift 7s ease-in-out 1.4s infinite;
 }
 
-.theater-memo.is-visible {
-  opacity: 1;
-  filter: blur(0);
-  transform: translate(-50%, 0) scale(1);
-  animation: theater-memo-float 5.5s ease-in-out 0.9s infinite;
+/* 雲の形（本体＋丸）。影は形ぜんぶにひとつだけ落とす */
+.theater-cloud-shape {
+  position: absolute;
+  inset: 0;
+  /* ふちを少しだけぼかして、空の雲のやわらかさに寄せる */
+  filter:
+    blur(0.6px)
+    drop-shadow(0 10px 18px rgba(62, 97, 120, 0.16))
+    drop-shadow(0 2px 3px rgba(62, 97, 120, 0.08));
 }
 
-.theater-memo p {
+.theater-cloud-shape::before,
+.theater-cloud-shape i {
+  position: absolute;
+  background: radial-gradient(
+    circle at 42% 30%,
+    var(--surface) 0%,
+    var(--surface) 52%,
+    color-mix(in srgb, var(--sky) 38%, var(--surface)) 100%
+  );
+}
+
+/* 本体（横長のまるい形） */
+.theater-cloud-shape::before {
+  content: '';
+  inset: 0;
+  z-index: 1;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    var(--surface) 0%,
+    var(--surface) 55%,
+    color-mix(in srgb, var(--sky) 42%, var(--surface)) 100%
+  );
+}
+
+/* もこもこの丸。--x: 横の位置、--s: 大きさ（雲の高さに対する割合）、--y: 上下のずれ、--d: ふくらむ順番 */
+.theater-cloud-shape i {
+  left: var(--x);
+  height: min(var(--s), 72px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% 0;
+  transform-origin: 50% 70%;
+  animation:
+    theater-puff-in 0.9s var(--spring) calc(var(--d) * 0.07s) both,
+    theater-puff-breathe 5.5s ease-in-out calc(1.2s + var(--d) * 0.6s) infinite;
+}
+
+.theater-cloud-shape i.top {
+  bottom: calc(100% - var(--y));
+}
+
+.theater-cloud-shape i.bottom {
+  top: calc(100% - var(--y));
+  z-index: 0;
+}
+
+.theater-cloud p {
+  position: relative;
+  z-index: 2;
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1.7;
   letter-spacing: 0.05em;
@@ -153,16 +203,92 @@
   color: var(--ink);
   line-break: strict;
   text-wrap: balance;
+  animation: theater-cloud-text-in 0.9s var(--ease-out) 0.45s both;
 }
 
-/* 読んでいるあいだ、ほんの少しだけ上下にただよう */
-@keyframes theater-memo-float {
+.theater-cloud.is-leaving p {
+  animation: theater-cloud-text-out 0.5s ease-in both;
+}
+
+@keyframes theater-cloud-in {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(18px) scale(0.72);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes theater-cloud-out {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translateY(-34px) scale(1.12);
+  }
+}
+
+@keyframes theater-cloud-drift {
   0%,
   100% {
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(0, 0);
+  }
+  30% {
+    transform: translate(3px, -4px);
+  }
+  65% {
+    transform: translate(-2px, -2px);
+  }
+}
+
+@keyframes theater-puff-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes theater-puff-breathe {
+  0%,
+  100% {
+    transform: scale(1);
   }
   50% {
-    transform: translate(-50%, -4px) scale(1);
+    transform: scale(1.045);
+  }
+}
+
+@keyframes theater-cloud-text-in {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes theater-cloud-text-out {
+  to {
+    opacity: 0;
   }
 }
 
@@ -729,10 +855,29 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theater-memo,
-  .theater-memo.is-visible {
+  /* 雲は動かさず、薄く出て薄く消えるだけ */
+  .theater-cloud {
+    animation: theater-cloud-fade-in 0.5s ease-out both;
+  }
+  .theater-cloud.is-leaving {
+    animation: theater-cloud-fade-out 0.5s ease-in both;
+  }
+  .theater-cloud-drift,
+  .theater-cloud-shape i,
+  .theater-cloud p,
+  .theater-cloud.is-leaving p {
     animation: none;
-    transition: opacity 0.4s;
-    filter: none;
+  }
+}
+
+@keyframes theater-cloud-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes theater-cloud-fade-out {
+  to {
+    opacity: 0;
   }
 }
