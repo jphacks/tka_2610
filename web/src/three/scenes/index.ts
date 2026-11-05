@@ -7,6 +7,7 @@ export { HomeEditScene } from './HomeEditScene'
 export { HomeScene } from './HomeScene'
 export { MuseumScene } from './MuseumScene'
 export { PreviewScene } from './PreviewScene'
+export { ArtworkViewerScene } from './ArtworkViewer'
 export { StackScene } from './StackScene'
 export { WalkScene } from './WalkScene'
 

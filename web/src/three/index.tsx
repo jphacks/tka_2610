@@ -55,6 +55,8 @@ export {
 export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene })))
 export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))
 export const PreviewScene = lazy(() => load().then((m) => ({ default: m.PreviewScene })))
+// ⑥ 作品の詳細の上の 3D（触って回せる作品のモデル）
+export const ArtworkViewerScene = lazy(() => load().then((m) => ({ default: m.ArtworkViewerScene })))
 export const StackScene = lazy(() => load().then((m) => ({ default: m.StackScene })))
 export const WalkScene = lazy(() => load().then((m) => ({ default: m.WalkScene })))
 export const HomeEditScene = lazy(() => load().then((m) => ({ default: m.HomeEditScene })))
