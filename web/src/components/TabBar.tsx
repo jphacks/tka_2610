@@ -10,7 +10,8 @@ import './TabBar.css'
 const TABS = [
   { to: '/', label: 'ホーム', icon: HomeIcon, match: (p: string) => p === '/' },
   { to: '/collection', label: '作品一覧', icon: GalleryIcon, match: (p: string) => p.startsWith('/collection') },
-  { to: '/map', label: 'memoria', icon: RainbowIcon, match: (p: string) => p.startsWith('/map') },
+  // /map/theater（全画面のシアター）ではタブを出さない
+  { to: '/map', label: 'memoria', icon: RainbowIcon, match: (p: string) => p === '/map' || p === '/map/' },
   { to: '/settings', label: 'マイページ', icon: UserIcon, match: (p: string) => p.startsWith('/settings') },
 ]
 

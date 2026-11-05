@@ -11,3 +11,5 @@ export { StackScene } from './StackScene'
 export { WalkScene } from './WalkScene'
 
 export { MiniatureScene } from './MiniatureScene'
+
+export { TheaterScene } from './theater/TheaterScene'

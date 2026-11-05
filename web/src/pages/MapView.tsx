@@ -63,6 +63,11 @@ export default function MapView() {
           <div className="recall-empty"><GalleryIcon size={30} /><h2>まだ振り返る作品がありません</h2><p>作品と一緒に、写真や声も残せます。登録した作品がここに並びます。</p><button type="button" className="btn btn-filled" onClick={() => nav.modal('/add')}>作品を追加</button></div>
         ) : data && (
           <>
+            <TLink to="/map/theater" className="recall-theater-link">
+              <span className="recall-theater-mark"><PlayIcon size={16} /></span>
+              <span><strong>期間をえらんで振り返る</strong><small>好きな音楽で、作品と写真・動画・メモを順に</small></span>
+              <ChevronRight size={16} />
+            </TLink>
             <MiniatureDigest onExpandedChange={setMiniatureExpanded} suspended={digestScope !== null} onStart={() => playing.current?.pause()} onAudioPlay={element => { if (playing.current && playing.current !== element) playing.current.pause(); playing.current = element }} onOpenArtwork={id => { playing.current?.pause(); nav.push(`/artworks/${id}`) }} />
             <details className="recall-slideshow"><summary>スライドショーで振り返る</summary>
             <section className="recall-digest" aria-labelledby="recall-digest-title">

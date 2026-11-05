@@ -529,3 +529,57 @@ export interface MiniatureDigestData {
   transition_ms: number
   entries: MiniatureEntry[]
 }
+
+
+/** Rust: theater::TheaterData。期間をえらんで振り返るシアター。時刻はすべてミリ秒 */
+export type TheaterSide = 'left' | 'right'
+/** 作品の隣に立つ写真・動画。show_ms・hide_ms は作品が着いた時刻（arrive_ms）からの相対 */
+export interface TheaterMediaSlot {
+  memory: Memory
+  side: TheaterSide
+  show_ms: number
+  hide_ms: number
+  /** 動画を流す長さ（写真は null） */
+  play_ms: number | null
+}
+/** 作品の上に浮かぶメモの 1 行（arrive_ms からの相対） */
+export interface TheaterMemoLine {
+  text: string
+  show_ms: number
+  hide_ms: number
+}
+export interface TheaterScene {
+  artwork: Artwork
+  /** 大地が回りはじめる時刻（全体の先頭から） */
+  start_ms: number
+  /** 作品が手前に着く時刻（全体の先頭から） */
+  arrive_ms: number
+  /** 着いてから次の場面が始まるまで */
+  hold_ms: number
+  media: TheaterMediaSlot[]
+  memo: TheaterMemoLine[]
+  voice: Memory | null
+  voice_at_ms: number
+  voice_ms: number
+}
+export interface TheaterPreset {
+  key: string
+  label: string
+  title: string
+  from: string
+  to: string
+}
+export interface TheaterData {
+  title: string
+  period_label: string
+  from: string
+  to: string
+  artwork_count: number
+  truncated: boolean
+  transition_ms: number
+  outro_ms: number
+  total_ms: number
+  duration_label: string
+  available: { first: string | null; last: string | null; today: string; presets: TheaterPreset[] }
+  scenes: TheaterScene[]
+}
