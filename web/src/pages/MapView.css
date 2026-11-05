@@ -79,18 +79,8 @@
 .recall-slideshow > summary { padding: 10px 0; cursor: pointer; font-size: 12px; color: var(--ink-2); }
 .recall-slideshow .recall-digest { margin: 8px 0 0; }
 
-.recall-screen.is-viewing-miniature { overflow-y: hidden; background: var(--paper); }
-.recall-screen.is-viewing-miniature .navbar { visibility: hidden; }
-.app:has(.recall-screen.is-viewing-miniature) .tabbar-wrap,
-.app:has(.recall-screen.is-viewing-miniature) .tab-rainbow { visibility: hidden; }
-.recall-screen.is-viewing-miniature .recall-page > :not(.miniature-digest),
-.recall-screen.is-viewing-miniature .miniature-heading,
-.recall-screen.is-viewing-miniature .miniature-options { visibility: hidden; }
-
-/* 期間をえらんで振り返るシアター（/map/theater）への入口 */
-.recall-theater-link { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 20px; background: linear-gradient(120deg, color-mix(in srgb, var(--sky) 55%, var(--surface)), color-mix(in srgb, var(--sun) 45%, var(--surface))); color: var(--ink); text-decoration: none; transition: transform .35s var(--spring); }
-.recall-theater-link:active { transform: scale(.98); }
-.recall-theater-link > span:nth-child(2) { display: grid; flex: 1; gap: 2px; min-width: 0; }
-.recall-theater-link strong { font-size: 15px; letter-spacing: .04em; }
-.recall-theater-link small { font-size: 12px; color: var(--ink-2); }
-.recall-theater-mark { display: grid; flex: none; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--surface); }
+.recall-screen.is-viewing-theater { overflow-y: hidden; background: var(--paper); }
+.recall-screen.is-viewing-theater .navbar { visibility: hidden; }
+.app:has(.recall-screen.is-viewing-theater) .tabbar-wrap,
+.app:has(.recall-screen.is-viewing-theater) .tab-rainbow { visibility: hidden; }
+.recall-screen.is-viewing-theater .recall-page > :not(.theater-embed-slot) { visibility: hidden; }
