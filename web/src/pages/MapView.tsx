@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAges, useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
 import { ArtworkThumb, DigestPlayer, Img, MiniatureDigest, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
-import { ChevronRight, GalleryIcon, MicIcon, MuseumIcon, PlayIcon } from '../icons'
+import { ChevronRight, GalleryIcon, MicIcon, RainbowIcon, PlayIcon } from '../icons'
 import { useNav } from '../nav'
 import './MapView.css'
 
@@ -124,7 +124,7 @@ export default function MapView() {
         )}
 
         <details className="recall-rooms">
-          <summary><MuseumIcon size={18} /><span>年齢ごとのおへや</span><ChevronRight size={16} /></summary>
+          <summary><RainbowIcon size={18} /><span>年齢ごとのおへや</span><ChevronRight size={16} /></summary>
           {ages.isPending ? <p className="note">おへやを読み込んでいます…</p> : ages.isError ? <div className="recall-voice-empty"><p>おへやを読み込めませんでした</p><button type="button" className="btn btn-outline btn-small" onClick={() => ages.refetch()}>もう一度読み込む</button></div> : (
             <div className="recall-room-list">
               {(ages.data?.ages ?? []).map(age => (

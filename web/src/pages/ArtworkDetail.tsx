@@ -29,7 +29,7 @@ import {
   DocIcon,
   HeartIcon,
   MoreIcon,
-  MuseumIcon,
+  RainbowIcon,
   ShareIcon,
 } from '../icons'
 import { useNav } from '../nav'
@@ -352,7 +352,7 @@ export default function ArtworkDetail() {
             label: artwork?.displayed
               ? '飾るのをやめる'
               : 'おうちに飾る',
-            icon: <MuseumIcon size={19} />,
+            icon: <RainbowIcon size={19} />,
             onSelect: toggleDisplay,
           },
           {
