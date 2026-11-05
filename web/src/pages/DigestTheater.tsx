@@ -212,7 +212,7 @@ function SetupPanel({
           <span>絵だけを見る</span>
         </label>
         <p className="theater-summary" aria-live="polite">
-          {pending ? '作品を数えています…' : data ? (data.artwork_count > 0 ? <><strong>{data.artwork_count}点</strong>の作品 · {data.duration_label}<small>{data.period_label}</small></> : 'この期間の作品はありません') : ''}
+          {pending ? 'Loading…' : data ? (data.artwork_count > 0 ? <><strong>{data.artwork_count}点</strong>の作品 · {data.duration_label}<small>{data.period_label}</small></> : 'この期間の作品はありません') : ''}
         </p>
         {data?.truncated && <p className="theater-note">作品が多いので、はじめの {data.artwork_count} 点を流します。期間をせまくすると全部見られます。</p>}
       </section>
@@ -313,7 +313,7 @@ function TheaterPoster({
       <span className="theater-eyebrow">期間をえらんで振り返る</span>
       <h1 id="theater-poster-title">{data?.title ?? '作品のシアター'}</h1>
       <p className="theater-poster-meta" aria-live="polite">
-        {pending ? '作品を数えています…'
+        {pending ? 'Loading…'
           : !data ? ''
           : empty ? 'この期間の作品はありません'
           : <><strong>{data.artwork_count}点</strong><span>{data.duration_label}</span><span>{data.period_label}</span></>}
@@ -546,7 +546,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
 
   const marks = useMemo(() => (shown ? chapterMarks(shown) : []), [shown])
   const total = shown?.total_ms ?? 0
-  const status = view.waiting ? '作品の3Dを読み込んでいます…' : null
+  const status = view.waiting ? 'Loading…' : null
   // 下の再生の操作列だけ、本物の Liquid Glass（3D の絵を操作列の形の中で屈折させる。liquidGlass.ts）。
   // 3D が出ていて、撮っておいた絵を重ねていないときだけ。それ以外（準備中・戻った直後・3D を出せない端末）は、ふつうのすりガラス
   const liquid = sceneReady && !freeze && !stageError && !!shown && shown.scenes.length > 0
@@ -582,7 +582,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
               <button type="button" className="btn btn-outline" onClick={close}>memoriaへ戻る</button>
             </div>
           )}>
-            <StageShell className="theater-stage" ready={!!shown && (sceneReady || shown.scenes.length === 0)} label="舞台を準備しています…">
+            <StageShell className="theater-stage" ready={!!shown && (sceneReady || shown.scenes.length === 0)} label="Loading…">
               {shown && shown.scenes.length > 0 && (
                 <Suspense fallback={null}>
                   <TheaterScene

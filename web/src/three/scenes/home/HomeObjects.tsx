@@ -442,7 +442,7 @@ function ShowcaseFallback({ artwork, failed = false, onReady, onSelect }: {
   return (
     <Html position={[0, 0.65, 0]} center zIndexRange={[3, 0]}>
       <button type="button" className="miniature-art-fallback" aria-label={`${artwork.title}の詳細を見る`} onClick={() => onSelect(artwork.id)}>
-        <img src={artwork.thumb_url} alt={artwork.title} /><span>{failed ? '写真で表示' : '3Dを読み込み中'}</span>
+        <img src={artwork.thumb_url} alt={artwork.title} /><span>{failed ? '写真で表示' : 'Loading…'}</span>
       </button>
     </Html>
   )

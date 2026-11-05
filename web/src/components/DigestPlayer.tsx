@@ -120,7 +120,7 @@ function Playback({ digest, onOpen }: { digest: ArtworkDigest; onOpen: (id: stri
       <div className="digest-heading"><div><h2>{digest.title}</h2><p>{digest.period_label}</p></div><span className="num">{index + 1} / {digest.slides.length}</span></div>
       <div className="digest-stage" aria-busy={!ready}>
         <SlideMedia key={index} slide={slide} onReady={onReady} onError={onImageError} onOpen={onOpen} />
-        {!ready && <span className="digest-loading-label">画像を読み込んでいます…</span>}
+        {!ready && <span className="digest-loading-label">Loading…</span>}
       </div>
       <div className="digest-caption" aria-live="polite">
         <p className="digest-slide-label">{slide.kind === 'comparison' ? 'はじめと最近' : slide.kind === 'photo' ? 'おもいでの写真' : artwork.age_month_label ?? artwork.date_short}</p>
@@ -159,7 +159,7 @@ export function DigestPlayer({ initialScope, onClose, onOpenArtwork }: { initial
     <dialog ref={dialog} className="digest-dialog" aria-label="作品のダイジェスト" onCancel={event => { event.preventDefault(); onClose() }}>
       <div className="digest-top"><span>作品のダイジェスト</span><button type="button" className="digest-round" aria-label="ダイジェストを閉じる" onClick={onClose}><CloseIcon size={21} /></button></div>
       <div className="digest-options"><Segmented<DigestScope> label="ダイジェストの期間" options={[{ value: 'all', label: 'これまで' }, { value: 'year', label: 'この1年' }]} value={scope} onChange={setScope} /><button type="button" className="digest-drawing-filter" aria-pressed={drawingsOnly} onClick={() => setDrawingsOnly(!drawingsOnly)}>絵画だけ</button></div>
-      {query.isPending ? <div className="digest-state" aria-busy="true"><PlayIcon size={30} /><p>作品を選んでいます…</p></div>
+      {query.isPending ? <div className="digest-state" aria-busy="true"><PlayIcon size={30} /><p>Loading…</p></div>
         : query.isError ? <div className="digest-state" role="alert"><p>{query.error.message}</p><button type="button" onClick={() => query.refetch()}>もう一度読み込む</button></div>
           : query.data?.slides.length ? <Playback key={`${scope}-${drawingsOnly}-${query.dataUpdatedAt}`} digest={query.data} onOpen={onOpenArtwork} />
             : <div className="digest-state"><GalleryIcon size={32} /><h2>この条件の作品はまだありません</h2><p>期間や「絵画だけ」の選択を変えてお試しください。</p></div>}

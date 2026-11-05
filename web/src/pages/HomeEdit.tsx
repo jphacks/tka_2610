@@ -395,7 +395,7 @@ export default function HomeEdit() {
       <StageShell
         className="edit-stage"
         ready={ready || (!!data && !hasHouseModel(data))}
-        label="おうちを読み込んでいます…"
+        label="Loading…"
         overlay={
           <>
             <div className="stage-top">

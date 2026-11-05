@@ -47,7 +47,7 @@ export default function ArtworkPreview() {
         <StageShell
           className="preview-stage"
           ready={ready || (!!museum.data && !hasHouseModel(museum.data))}
-          label="3Dにしています…"
+          label="Loading…"
           overlay={
             <div className="stage-top">
               <GlassButton label="閉じる" onClick={() => nav.dismiss(`/artworks/${id}`)}>
