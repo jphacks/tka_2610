@@ -5,7 +5,7 @@ import { Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMuseum } from '../api'
 import { ActionMenu, GlassButton, Screen } from '../components'
-import { BackIcon, GalleryIcon, HomeIcon, MoreIcon, MuseumIcon, PlusIcon, SofaIcon, WalkIcon } from '../icons'
+import { BackIcon, GalleryIcon, HomeIcon, MoreIcon, RainbowIcon, PlusIcon, SofaIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
 import { MuseumScene, StageShell, hasHouseModel } from '../three'
 import './MuseumView.css'
@@ -49,7 +49,7 @@ export default function MuseumView() {
               </div>
               <div className="toolbar">
                 <button className="glass-pill glass" onClick={() => nav.push('/map')}>
-                  <MuseumIcon size={18} />
+                  <RainbowIcon size={18} />
                   マップ
                 </button>
                 <button className="glass-pill glass" onClick={() => nav.modal('/add')}>
@@ -82,7 +82,7 @@ export default function MuseumView() {
         items={[
           { label: '鑑賞モード', icon: <WalkIcon size={19} />, onSelect: () => nav.push(inRoom('/museum/walk')) },
           { label: '模様替え', icon: <SofaIcon size={19} />, onSelect: () => nav.push(inRoom('/home/edit')) },
-          { label: 'マップ', icon: <MuseumIcon size={19} />, onSelect: () => nav.push('/map') },
+          { label: 'マップ', icon: <RainbowIcon size={19} />, onSelect: () => nav.push('/map') },
           { label: '作品一覧', icon: <GalleryIcon size={19} />, onSelect: () => nav.tab('/collection') },
           { label: 'ホーム', icon: <HomeIcon size={19} />, onSelect: () => nav.tab('/') },
         ]}
