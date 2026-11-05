@@ -346,8 +346,8 @@ export function MemorySection({
       )}
 
       
-{/* 声と作品メモを横並びに表示 */}
-  <div className="memory-keepsakes">
+{/* 短いメモと声1件は横並び。長文・改行が多いメモや複数の声は横幅を使う */}
+  <div className={`memory-keepsakes${voices.length > 1 || Array.from(memo ?? '').length > 80 || (memo ?? '').split('\n').length > 3 ? ' memory-keepsakes-stacked' : ''}`}>
     {voices.length > 0 && (
       <div className="list-group memory-voices">
         {voices.map((m) => {
