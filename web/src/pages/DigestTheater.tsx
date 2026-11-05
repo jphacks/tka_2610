@@ -1,4 +1,4 @@
-// 期間をえらんで振り返るシアター（/map/theater?from=YYYY-MM-DD&to=YYYY-MM-DD&drawing=1）。memoria の「期間をえらんで振り返る」から push で開く。
+// memoria内に埋め込むシアター。再生するとアプリ全体に広げる。/map/theater から単独でも開ける。
 //
 // えらんだ期間に作った作品を、古い順に全部、手描きの町が回る丸い大地の上で振り返る。
 //   作品 … 大地が回って奥から手前に来る（3D は TheaterScene。three/ の遅延読み込みの中）
@@ -10,7 +10,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { createPortal } from 'react-dom'
 import { useNavigationType, useSearchParams } from 'react-router-dom'
 import { useTheater, type TheaterData } from '../api'
-import { ErrorBoundary, GlassButton, MemoryViewer, Screen } from '../components'
+import { ErrorBoundary, GlassButton, MemoryViewer } from '../components'
 import { BackIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
 import { useNav } from '../nav'
 import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, scaleTheater } from '../three'
@@ -337,7 +337,15 @@ function TheaterPoster({
   )
 }
 
-export default function DigestTheater() {
+export default function DigestTheater({ embedded = false, onExpandedChange, suspended = false, onStart }: {
+  embedded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
+  suspended?: boolean
+  onStart?: () => void
+} = {}) {
+  const [expanded, setExpanded] = useState(false)
+  const compact = embedded && !expanded
+  useEffect(() => { onExpandedChange?.(expanded); return () => onExpandedChange?.(false) }, [expanded, onExpandedChange])
   const nav = useNav()
   const [params, setParams] = useSearchParams()
   const from = params.get('from')
@@ -390,6 +398,7 @@ export default function DigestTheater() {
     if (resume) {
       seek(Math.min(shown.total_ms, resume.at / settings.speed))
       setStarted(true)
+      if (embedded) setExpanded(true)
       setSetupOpen(false)
       setPlaying(resume.playing)
       return
@@ -428,11 +437,21 @@ export default function DigestTheater() {
   }
 
   const start = () => {
+    if (embedded) setExpanded(true)
+    onStart?.()
     seek(0)
     setStarted(true)
     setSetupOpen(false)
     setPlaying(true)
   }
+  const close = () => {
+    setPlaying(false)
+    setSetupOpen(false)
+    if (document.fullscreenElement === root.current) void document.exitFullscreen().catch(() => {})
+    if (embedded) { setExpanded(false); setStarted(false) }
+    else nav.back('/map')
+  }
+  useEffect(() => { if (suspended) { setPlaying(false); setExpanded(false); setStarted(false); setSetupOpen(false) } }, [suspended, setPlaying])
   const toggle = () => {
     if (!shown) return
     if (!started) { start(); return }
@@ -492,10 +511,11 @@ export default function DigestTheater() {
       if (viewer) return
       const target = event.target as HTMLElement | null
       if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA')) return
+      if (embedded && !expanded) return
       if (event.key === ' ') { event.preventDefault(); toggle(); wake() }
       else if (event.key === 'ArrowRight' && started) { jump(1); wake() }
       else if (event.key === 'ArrowLeft' && started) { jump(-1); wake() }
-      else if (event.key === 'Escape' && setupOpen) setSetupOpen(false)
+      else if (event.key === 'Escape') { if (setupOpen) setSetupOpen(false); else if (embedded && expanded) close() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -536,7 +556,8 @@ export default function DigestTheater() {
   const viewerScene = viewer ? shown?.scenes[viewer.scene] : null
 
   return (
-    <Screen className={`theater-screen${hudVisible || !playing ? '' : ' is-idle'}`}>
+    <div className={embedded ? 'theater-embed-slot' : 'theater-page'}>
+    <div className={`${embedded ? 'theater-embedded' : 'screen'} theater-screen${compact ? ' is-compact' : ''}${embedded && expanded ? ' is-expanded' : ''}${hudVisible || !playing ? '' : ' is-idle'}`}>
       <div className={`theater-root${liquid ? ' is-liquid' : ''}`} ref={root} onPointerMove={playing ? wake : undefined} onPointerDown={playing ? wake : undefined} onPointerDownCapture={(e) => { tapPoint.current = { x: e.clientX, y: e.clientY } }}>
         {query.isError ? (
           <div className="theater-message" role="alert">
@@ -544,21 +565,21 @@ export default function DigestTheater() {
             <p>{query.error.message}</p>
             <div className="theater-message-actions">
               <button type="button" className="btn btn-outline" onClick={() => query.refetch()}>もう一度読み込む</button>
-              <button type="button" className="btn-plain" onClick={() => nav.back('/map')}>memoriaへ戻る</button>
+              <button type="button" className="btn-plain" onClick={close}>memoriaへ戻る</button>
             </div>
           </div>
         ) : stageError ? (
           <div className="theater-message" role="alert">
             <h2>舞台を準備できませんでした</h2>
             <p>{stageError.message}</p>
-            <button type="button" className="btn-plain" onClick={() => nav.back('/map')}>memoriaへ戻る</button>
+            <button type="button" className="btn-plain" onClick={close}>memoriaへ戻る</button>
           </div>
         ) : (
           <ErrorBoundary fallback={() => (
             <div className="theater-message" role="alert">
               <h2>この端末では3Dを表示できませんでした</h2>
               <p>memoriaのスライドショーでも振り返れます。</p>
-              <button type="button" className="btn btn-outline" onClick={() => nav.back('/map')}>memoriaへ戻る</button>
+              <button type="button" className="btn btn-outline" onClick={close}>memoriaへ戻る</button>
             </div>
           )}>
             <StageShell className="theater-stage" ready={!!shown && (sceneReady || shown.scenes.length === 0)} label="舞台を準備しています…">
@@ -599,11 +620,11 @@ export default function DigestTheater() {
         {fade && <div className="theater-fade" style={{ '--fade': String(1 - Math.abs(((view.time - (scene?.start_ms ?? 0)) / Math.max(1, (scene?.arrive_ms ?? 1) - (scene?.start_ms ?? 0))) * 2 - 1)) } as CSSProperties} />}
 
         {/* 上：戻る・期間・設定 */}
-        <div className="stage-top theater-top theater-hud">
-          <GlassButton label="memoriaへ戻る" onClick={() => { setPlaying(false); nav.back('/map') }}><BackIcon size={20} /></GlassButton>
+        {!compact && <div className="stage-top theater-top theater-hud">
+          <GlassButton label="memoriaへ戻る" onClick={close}><BackIcon size={20} /></GlassButton>
           {shown && started && <div className="stage-title glass theater-title"><span>{shown.title}</span><small>{shown.period_label}</small></div>}
           <GlassButton label="期間と音楽の設定" onClick={() => { setPlaying(false); setSetupOpen(true) }}><ThemeIcon size={20} /></GlassButton>
-        </div>
+        </div>}
 
         {/* 作品の名前（映画の字幕のように、映像の上に直接出す）。作品が見えている間だけ出て、去るときに消える。
             操作が薄くなっても残り、操作の分だけ下へ下がる。押すと作品の詳細へ */}
@@ -671,7 +692,7 @@ export default function DigestTheater() {
             <div className="theater-end-actions">
               <button type="button" className="btn btn-filled" onClick={() => { seek(0); setPlaying(true) }}><PlayIcon size={16} />もう一度</button>
               <button type="button" className="btn btn-outline" onClick={() => setSetupOpen(true)}>期間を変える</button>
-              <button type="button" className="btn-plain" onClick={() => nav.back('/map')}>memoriaへ戻る</button>
+              <button type="button" className="btn-plain" onClick={close}>memoriaへ戻る</button>
             </div>
           </div>
         )}
@@ -713,7 +734,8 @@ export default function DigestTheater() {
         <MemoryViewer items={viewerScene.media.map((m) => m.memory)} index={viewer.index} onIndex={(index) => setViewer({ ...viewer, index })} onClose={() => setViewer(null)} />,
         document.querySelector('.app') ?? document.body,
       )}
-    </Screen>
+    </div>
+    </div>
   )
 }
 

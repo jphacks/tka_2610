@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAges, useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
-import { ArtworkThumb, DigestPlayer, Img, MiniatureDigest, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
+import { ArtworkThumb, DigestPlayer, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
 import { ChevronRight, GalleryIcon, MicIcon, RainbowIcon, PlayIcon } from '../icons'
 import { useNav } from '../nav'
+import DigestTheater from './DigestTheater'
 import './MapView.css'
 
 function RecallVoice({ memory, title, onPlay }: { memory: Memory; title: string; onPlay: (event: SyntheticEvent<HTMLAudioElement>) => void }) {
@@ -35,7 +36,7 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
 
 export default function MapView() {
   const [params, setParams] = useSearchParams()
-  const [miniatureExpanded, setMiniatureExpanded] = useState(false)
+  const [theaterExpanded, setTheaterExpanded] = useState(false)
   const [digestScope, setDigestScope] = useState<DigestScope | null>(null)
   const recalls = useRecollections(params.get('age'))
   const ages = useAges()
@@ -52,7 +53,7 @@ export default function MapView() {
   }
 
   return (
-    <Screen tabbar className={`recall-screen${miniatureExpanded ? ' is-viewing-miniature' : ''}`}>
+    <Screen tabbar className={`recall-screen${theaterExpanded ? ' is-viewing-theater' : ''}`}>
       <NavBar title="memoria" />
       <div className="page recall-page">
         {recalls.isPending ? (
@@ -63,12 +64,7 @@ export default function MapView() {
           <div className="recall-empty"><GalleryIcon size={30} /><h2>まだ振り返る作品がありません</h2><p>作品と一緒に、写真や声も残せます。登録した作品がここに並びます。</p><button type="button" className="btn btn-filled" onClick={() => nav.modal('/add')}>作品を追加</button></div>
         ) : data && (
           <>
-            <TLink to="/map/theater" className="recall-theater-link">
-              <span className="recall-theater-mark"><PlayIcon size={16} /></span>
-              <span><strong>期間をえらんで振り返る</strong><small>好きな音楽で、作品と写真・動画・メモを順に</small></span>
-              <ChevronRight size={16} />
-            </TLink>
-            <MiniatureDigest onExpandedChange={setMiniatureExpanded} suspended={digestScope !== null} onStart={() => playing.current?.pause()} onAudioPlay={element => { if (playing.current && playing.current !== element) playing.current.pause(); playing.current = element }} onOpenArtwork={id => { playing.current?.pause(); nav.push(`/artworks/${id}`) }} />
+            <DigestTheater embedded onExpandedChange={setTheaterExpanded} suspended={digestScope !== null} onStart={() => playing.current?.pause()} />
             <details className="recall-slideshow"><summary>スライドショーで振り返る</summary>
             <section className="recall-digest" aria-labelledby="recall-digest-title">
               <div><span className="recall-digest-mark"><PlayIcon size={17} /></span><h1 id="recall-digest-title">作品のダイジェスト</h1></div>

@@ -1143,3 +1143,32 @@
 .theater-root.is-liquid .theater-controls .theater-icon-btn:hover {
   background: rgba(255, 255, 255, 0.18);
 }
+
+/* memoriaでは元のプレビュー枠に収め、再生時にアプリ全体へ広げる。 */
+.theater-page { height: 100%; }
+.theater-embed-slot { height: clamp(420px, 62svh, 540px); margin-bottom: 24px; }
+.theater-embedded { height: 100%; }
+.theater-embedded.is-compact {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+.theater-embedded.is-expanded {
+  position: absolute;
+  inset: 0;
+  z-index: 31;
+}
+.theater-screen.is-compact .theater-poster {
+  gap: 7px;
+  padding: 0 16px 14px;
+}
+.theater-screen.is-compact .theater-poster h1 { font-size: 23px; }
+.theater-screen.is-compact .theater-poster-meta { font-size: 12px; }
+.theater-screen.is-compact .theater-poster-play { min-height: 42px; }
+.theater-screen.is-compact .theater-poster-settings { font-size: 11px; }
+.theater-screen.is-compact .theater-poster-periods { max-width: 100%; }
+.theater-screen.is-compact .theater-stage canvas { touch-action: pan-y; }
+.theater-screen.is-compact .theater-setup {
+  bottom: 8px;
+  max-height: calc(100% - 16px);
+}
