@@ -1,10 +1,11 @@
 // ⑥ 作品の詳細（/artworks/:id）。一覧などから push で開く。
-// 額縁に入った作品とキャプション。3D で見る・おうちに飾る・編集・削除ができる。
+// 上は作品の 3D（触って回せる）とキャプション。3D を読み込むまでと、「写真」に切り替えたときは額縁に入った写真を出す。
+// 3D で見る（台座の部屋）・おうちに飾る・編集・削除ができる。
 // その下の「おもいで」（MemorySection）に、作品に付けた写真・動画・声の記録を並べ、足す・消すができる。
 
 
 
-import { useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   useArtwork,
@@ -15,6 +16,7 @@ import {
 import {
   ActionMenu,
   ArtworkThumb,
+  ErrorBoundary,
   GlassButton,
   MemorySection,
   Screen,
@@ -31,7 +33,7 @@ import {
   ShareIcon,
 } from '../icons'
 import { useNav } from '../nav'
-import { warmUp3D } from '../three'
+import { ArtworkViewerScene, isTouchDevice, warmUp3D } from '../three'
 import './ArtworkDetail.css'
 
 export default function ArtworkDetail() {
@@ -49,6 +51,35 @@ export default function ArtworkDetail() {
 
   const artwork = detail.data?.artwork
   const related = detail.data?.related ?? []
+
+  // 上の 3D：開いたらすぐ置く（画面の移動を待つと、そのぶん 3D が出るのが遅れる。移動のアニメーションは
+  // View Transitions が合成側で動かすので、ここで 3D を作ってもすべりは止まらない）。読めなければ写真を出す。
+  // 戻るときも外さない（外すと、遷移が写す前に 3D が消えてしまう）
+  const [view, setView] = useState<'3d' | 'photo'>('3d')
+  const [viewerReady, setViewerReady] = useState(false)
+  const [viewerFailed, setViewerFailed] = useState(false)
+  const [touched, setTouched] = useState(false)
+  useEffect(() => { setViewerReady(false); setViewerFailed(false); setTouched(false) }, [artwork?.model_url])
+  const onViewerReady = useCallback(() => setViewerReady(true), [])
+  const onViewerTouch = useCallback(() => setTouched(true), [])
+  // 拡大：3D の上のホイール・ピンチだけ（OrbitControls）。拡大しているあいだは「元の大きさ」を出す
+  const [zoomed, setZoomed] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
+  const resetZoom = useCallback(() => setResetKey((k) => k + 1), [])
+  const [touchUi] = useState(isTouchDevice)
+  // 3D の上で 2 本指のときは、画面のスクロールを止めて、ピンチを 3D の拡大に使う
+  // （touch-action: pan-y のままだと、2 本指を縦に動かしたときに画面がスクロールしてピンチが途切れる）
+  const viewerBox = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = viewerBox.current
+    if (!el) return
+    const stop = (e: TouchEvent) => { if (e.touches.length >= 2) e.preventDefault() }
+    el.addEventListener('touchstart', stop, { passive: false })
+    el.addEventListener('touchmove', stop, { passive: false })
+    return () => { el.removeEventListener('touchstart', stop); el.removeEventListener('touchmove', stop) }
+  })
+  const show3d = !!artwork?.model_url && !viewerFailed && view === '3d'
+  const showing3d = show3d && viewerReady
 
   useEffect(() => {
     if (artwork?.model_url) {
@@ -122,8 +153,10 @@ export default function ArtworkDetail() {
         <div className="stage-top">
           <GlassButton
             label="戻る"
+            // 写真を出しているときだけ、一覧のサムネイルへつながって縮む。3D のときはつなぐ相手が無いので、
+            // 一覧ごとまとめて動かす（サムネイルだけが別に浮いて見えないように）
             onClick={() =>
-              nav.back('/collection', artwork?.id)
+              nav.back('/collection', show3d ? undefined : artwork?.id)
             }
           >
             <BackIcon size={20} strokeWidth={2.2} />
@@ -144,7 +177,9 @@ export default function ArtworkDetail() {
         </div>
 
         {artwork && (
-          <div className="framed" data-share={artwork.id}>
+          // 3D で見るときは、読み込み中も写真は出さない（写真がちらっと見えてから 3D に変わらないように）。
+          // 画面の移動で一覧のサムネイルから伸びる動き（data-share）も、写真を出すときだけにする
+          <div className={`framed${show3d ? ' is-hidden' : ''}`} data-share={show3d ? undefined : artwork.id}>
             <img
               src={artwork.image_url}
               alt={artwork.title}
@@ -155,6 +190,48 @@ export default function ArtworkDetail() {
                 background: `${artwork.tint} url(${artwork.thumb_url}) center / cover no-repeat`,
               }}
             />
+          </div>
+        )}
+
+        {/* 触って回せる 3D（読み込めたらふわっと出す） */}
+        {artwork && show3d && (
+          <div
+            ref={viewerBox}
+            className={`detail-viewer${viewerReady ? ' is-ready' : ''}`}
+            aria-label={`${artwork.title}の3D。ドラッグで回せます。${touchUi ? '2本指で' : 'ホイールで'}拡大できます`}
+            role="img"
+            onDoubleClick={resetZoom}
+          >
+            <ErrorBoundary fallback={() => <ViewerFailed onFail={() => setViewerFailed(true)} />}>
+              <Suspense fallback={null}>
+                <ArtworkViewerScene
+                  key={artwork.model_url}
+                  modelUrl={artwork.model_url}
+                  onReady={onViewerReady}
+                  onInteract={onViewerTouch}
+                  onZoomChange={setZoomed}
+                  resetKey={resetKey}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        )}
+
+        {artwork && show3d && !viewerReady && (
+          <p className="detail-viewer-status" role="status">3Dを読み込んでいます…</p>
+        )}
+        {showing3d && !touched && (
+          <p className="detail-viewer-hint" aria-hidden="true">{touchUi ? '指で回す・2本指で拡大' : 'ドラッグで回す・ホイールで拡大'}</p>
+        )}
+        {showing3d && zoomed && (
+          <button type="button" className="detail-viewer-reset glass" onClick={resetZoom}>元の大きさ</button>
+        )}
+
+        {/* 3D と写真の切り替え */}
+        {artwork?.model_url && !viewerFailed && (
+          <div className="detail-view-switch glass" role="group" aria-label="表示の切り替え">
+            <button type="button" aria-pressed={view === '3d'} onClick={() => setView('3d')}>3D</button>
+            <button type="button" aria-pressed={view === 'photo'} onClick={() => setView('photo')}>写真</button>
           </div>
         )}
       </div>
@@ -343,4 +420,10 @@ export default function ArtworkDetail() {
       </Sheet>
     </Screen>
   )
+}
+
+/** 3D を表示できなかったとき：写真に戻す（描画中に親の state を変えないよう、effect で知らせる） */
+function ViewerFailed({ onFail }: { onFail: () => void }) {
+  useEffect(() => { onFail() }, [onFail])
+  return null
 }
