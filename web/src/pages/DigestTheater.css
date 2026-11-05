@@ -1,18 +1,5 @@
-/* 期間をえらんで振り返るシアター（DigestTheater）。全画面の 3D と、その上に浮かぶ設定・メモ・再生の操作 */
-
-/* PC でも、スマホの枠をやめてウィンドウいっぱいに広げる（映像として見るため） */
-.app:has(.theater-screen) {
-  max-width: none;
-}
-
-@media (min-width: 600px) and (min-height: 700px) {
-  .app:has(.theater-screen) {
-    height: 100dvh;
-    margin-top: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-}
+/* 期間をえらんで振り返るシアター（DigestTheater）。画面いっぱいの 3D と、その上に浮かぶ設定・メモ・再生の操作。
+   PC でもほかの画面と同じスマホの枠の中で流す（大きく見たいときは、下の操作列の「全画面」ボタン） */
 
 .theater-screen {
   overflow: hidden;
@@ -330,7 +317,227 @@
   pointer-events: none;
 }
 
-/* ---------- 下：作品の名前と再生の操作 ---------- */
+/* ---------- 作品の名前（映画の字幕のように、映像の上に直接出す） ---------- */
+
+/* 字幕の後ろに、下から淡い紙の色をうっすら重ねて、どの背景でも読めるようにする */
+.theater-subtitle {
+  position: absolute;
+  left: calc(20px + var(--safe-left));
+  right: calc(20px + var(--safe-right));
+  bottom: calc(96px + var(--safe-bottom));
+  z-index: 4;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.9s var(--ease-out),
+    bottom 0.6s var(--ease-out);
+  /* 文字のまわりに紙の色の光をにじませる（背景が空でも草でも読める） */
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--paper) 95%, transparent),
+    0 0 4px color-mix(in srgb, var(--paper) 90%, transparent),
+    0 1px 1px color-mix(in srgb, var(--paper) 80%, transparent);
+}
+
+.theater-subtitle.is-shown {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* 去るときは、出るときより少し早く薄くなる */
+.theater-subtitle:not(.is-shown) {
+  transition-duration: 0.45s, 0.45s, 0.6s;
+}
+
+/* 操作が薄くなったら、その分だけ下へ */
+.theater-screen.is-idle .theater-subtitle {
+  bottom: calc(28px + var(--safe-bottom));
+}
+
+.theater-subtitle-count {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  color: var(--ink-2);
+}
+
+.theater-subtitle strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.theater-subtitle small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+
+.theater-subtitle small svg {
+  opacity: 0.6;
+}
+
+/* ---------- はじめの画面（ポスター） ---------- */
+
+.theater-poster {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  isolation: isolate;
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 0 calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
+  animation: theater-poster-in 0.9s var(--ease-out) both;
+}
+
+/* 下から紙の色を重ねて、文字を読みやすくする（上はすっと透けて、3D が見える） */
+.theater-poster::before {
+  content: '';
+  position: absolute;
+  inset: -140px 0 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--paper) 55%, transparent) 35%,
+    color-mix(in srgb, var(--paper) 92%, transparent) 70%
+  );
+  pointer-events: none;
+}
+
+.theater-poster h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+}
+
+.theater-poster-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.theater-poster-meta strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.theater-poster-note {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* 期間のチップは 1 行で、はみ出す分は横にすべらせる。
+   scroll-snap は付けない（読み込み後にチップが前へ足されると、ブラウザが前に合わせていたチップへ寄せ直して、行の終わりまで流れてしまう） */
+.theater-poster-periods {
+  display: flex;
+  gap: 6px;
+  width: calc(100% + 40px);
+  margin: 4px -20px 0;
+  padding: 2px 20px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+}
+
+.theater-poster-periods::-webkit-scrollbar {
+  display: none;
+}
+
+.theater-poster-periods button {
+  flex: none;
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.3s var(--spring);
+}
+
+.theater-poster-periods button:active {
+  transform: scale(0.95);
+}
+
+.theater-poster-periods button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+}
+
+.theater-poster-play {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding-block: 15px;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.theater-poster-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  justify-self: center;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.theater-poster-settings span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@keyframes theater-poster-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* ---------- 下：再生の操作 ---------- */
 
 .theater-bottom {
   position: absolute;
@@ -348,51 +555,17 @@
   pointer-events: auto;
 }
 
-.theater-caption {
+/* 読み込み中・おもいでの音の知らせは、上のタイトルの下に出す（下の字幕に重ならないように） */
+.theater-notices {
+  position: absolute;
+  top: calc(74px + var(--safe-top));
+  left: 0;
+  right: 0;
+  z-index: 5;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas:
-    'count title chevron'
-    'count date chevron';
-  align-items: center;
-  column-gap: 10px;
-  max-width: min(100%, 460px);
-  padding: 8px 14px 8px 10px;
-  border-radius: 18px;
-  color: var(--ink);
-  text-align: left;
-}
-
-.theater-caption-count {
-  grid-area: count;
-  padding: 4px 8px;
-  border-radius: 10px;
-  background: var(--accent-soft);
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-}
-
-.theater-caption strong {
-  grid-area: title;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  letter-spacing: 0.04em;
-}
-
-.theater-caption small {
-  grid-area: date;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-.theater-caption svg {
-  grid-area: chevron;
-  opacity: 0.6;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
 }
 
 .theater-status,
@@ -602,17 +775,30 @@
   left: 50%;
   bottom: calc(16px + var(--safe-bottom));
   display: grid;
-  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(calc(100% - 24px), 440px);
   max-height: calc(100% - 96px - var(--safe-top) - var(--safe-bottom));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 20px 20px 18px;
+  overflow: hidden;
   border-radius: 26px;
-  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
   transform: translateX(-50%);
   animation: theater-sheet 0.6s var(--spring) both;
+}
+
+/* 中身だけをスクロールする。見出しと下のボタンは動かない（ボタンが中身に重ならない） */
+.theater-setup-body {
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 20px 16px;
   scrollbar-width: thin;
+}
+
+.theater-setup-foot {
+  padding: 12px 20px 18px;
+  border-top: 1px solid var(--line);
 }
 
 @media (min-width: 900px) {
@@ -645,6 +831,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  padding: 20px 20px 12px;
 }
 
 .theater-setup-head h1 {
@@ -865,14 +1052,11 @@
   accent-color: var(--accent);
 }
 
-/* 設定が長くても、再生のボタンはいつも下に見えるようにする */
 .theater-start {
-  position: sticky;
-  bottom: 0;
   display: inline-flex;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 -10px 18px color-mix(in srgb, var(--paper) 80%, transparent);
+  width: 100%;
 }
 
 /* ---------- 読み込めなかったとき ---------- */
@@ -932,4 +1116,30 @@
   to {
     opacity: 0;
   }
+}
+
+/* ---------- 下の再生の操作列だけ、本物の Liquid Glass ----------
+   操作列（と中の再生ボタン）のうしろの 3D の絵を、操作列の形の中で屈折させて描く（three/scenes/theater/liquidGlass.ts。data-liquid の付いた要素）。
+   動いているあいだ（.is-liquid）は、操作列の背景を透明にして、アイコン・文字と外に落ちる影だけを描く。
+   3D がまだ出ていないとき・戻った直後の絵を重ねているときは、ほかの部品と同じ、ふつうのすりガラス（.glass）のまま */
+.theater-root.is-liquid .theater-controls[data-liquid] {
+  background: transparent;
+  border-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow:
+    0 8px 22px rgba(31, 45, 64, 0.14),
+    0 1px 3px rgba(31, 45, 64, 0.12);
+}
+
+.theater-root.is-liquid .theater-play[data-liquid] {
+  background: transparent;
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--accent) 34%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ガラスの中の、押せるアイコンの薄い背景（ホバー）は、白をうっすら重ねるだけにする（ガラスの上に濃い四角が乗らないように） */
+.theater-root.is-liquid .theater-controls .theater-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
 }

@@ -33,6 +33,8 @@ const speedHint = (speed: number) =>
 
 /** 何もしなければ、操作の表示をこれだけ経ってから薄くする */
 const HUD_IDLE_MS = 3200
+/** 作品の名前の字幕を、作品が去りはじめる（滞在が終わる）この長さ前に消しはじめる */
+const CAPTION_LEAD_MS = 450
 
 /**
  * 作品を押して詳細へ行くときに覚える、戻ってきたときの続きの位置（このタブの sessionStorage。1 回読んだら消す）。
@@ -179,12 +181,14 @@ function SetupPanel({
     <div className="theater-setup glass" role="dialog" aria-modal="false" aria-labelledby="theater-setup-title">
       <div className="theater-setup-head">
         <div>
-          <span className="theater-eyebrow">期間をえらんで振り返る</span>
-          <h1 id="theater-setup-title">{data?.title ?? '作品のシアター'}</h1>
+          <span className="theater-eyebrow">設定</span>
+          <h1 id="theater-setup-title">期間・速さ・音楽</h1>
         </div>
-        {started && <button type="button" className="theater-icon-btn" aria-label="設定を閉じる" onClick={onClose}><CloseIcon size={20} /></button>}
+        <button type="button" className="theater-icon-btn" aria-label="設定を閉じる" onClick={() => { stopPreview(); onClose() }}><CloseIcon size={20} /></button>
       </div>
 
+      {/* 中身だけをスクロールする（下のボタンが中身に重ならないように） */}
+      <div className="theater-setup-body">
       <section className="theater-setup-section" aria-labelledby="theater-period">
         <h2 id="theater-period">期間</h2>
         <div className="theater-presets" role="group" aria-label="よく使う期間">
@@ -260,14 +264,76 @@ function SetupPanel({
         </label>
         <label className="theater-switch">
           <input type="checkbox" checked={settings.stopMotion} onChange={(e) => onSettings({ ...settings, stopMotion: e.target.checked })} />
-          <span>コマ撮り風の動き</span>
+          <span>コマ撮り風の動き<small>作品が人形のように小さくゆれます</small></span>
         </label>
       </section>
+      </div>
 
-      <button type="button" className="btn btn-filled theater-start" disabled={!data || data.artwork_count === 0 || pending} onClick={() => { stopPreview(); onStart() }}>
-        <PlayIcon size={18} />{started ? 'この内容で最初から再生' : '再生する'}
-      </button>
+      <div className="theater-setup-foot">
+        <button type="button" className="btn btn-filled theater-start" disabled={!data || data.artwork_count === 0 || pending} onClick={() => { stopPreview(); onStart() }}>
+          <PlayIcon size={18} />{started ? 'この内容で最初から再生' : '再生する'}
+        </button>
+      </div>
     </div>
+  )
+}
+
+/**
+ * はじめの画面（再生する前）。設定を並べず、映画のポスターのように「何を・どれだけ見るか」と大きな再生ボタンだけを出す。
+ * 後ろでは 3D の大地がゆっくりゆれている（TheaterScene の attract）。日付・速さ・音楽は「設定」のシートで変える
+ */
+function TheaterPoster({
+  data,
+  pending,
+  from,
+  to,
+  onRange,
+  settings,
+  music,
+  onStart,
+  onOpenSettings,
+}: {
+  data: TheaterData | undefined
+  pending: boolean
+  from: string | null
+  to: string | null
+  onRange: (from: string, to: string) => void
+  settings: TheaterSettings
+  music: TheaterMusic | null
+  onStart: () => void
+  onOpenSettings: () => void
+}) {
+  const currentFrom = from ?? data?.from ?? ''
+  const currentTo = to ?? data?.to ?? ''
+  const presets = data?.available.presets ?? []
+  const activePreset = presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
+  const empty = !!data && data.artwork_count === 0
+  return (
+    <section className="theater-poster" aria-labelledby="theater-poster-title">
+      <span className="theater-eyebrow">期間をえらんで振り返る</span>
+      <h1 id="theater-poster-title">{data?.title ?? '作品のシアター'}</h1>
+      <p className="theater-poster-meta" aria-live="polite">
+        {pending ? '作品を数えています…'
+          : !data ? ''
+          : empty ? 'この期間の作品はありません'
+          : <><strong>{data.artwork_count}点</strong><span>{data.duration_label}</span><span>{data.period_label}</span></>}
+      </p>
+      {data?.truncated && <p className="theater-poster-note">作品が多いので、はじめの {data.artwork_count} 点を流します</p>}
+      <div className="theater-poster-periods" role="group" aria-label="よく使う期間">
+        {presets.map((p) => (
+          <button type="button" key={p.key} aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+        ))}
+        <button type="button" aria-pressed={!activePreset && presets.length > 0} onClick={onOpenSettings}>日付をえらぶ</button>
+      </div>
+      <button type="button" className="btn btn-filled theater-poster-play" disabled={!data || empty || pending} onClick={onStart}>
+        <PlayIcon size={20} />再生する
+      </button>
+      <button type="button" className="theater-poster-settings" onClick={onOpenSettings}>
+        <NoteIcon size={14} />
+        <span>{speedLabel(settings.speed)} · {music ? music.name : '音楽なし'}{settings.stopMotion ? ' · コマ撮り風' : ''}</span>
+        <ChevronRight size={14} />
+      </button>
+    </section>
   )
 }
 
@@ -296,7 +362,8 @@ export default function DigestTheater() {
   const { clock, playing, setPlaying, seek, version, view, videoFor } = playback
 
   const [started, setStarted] = useState(false)
-  const [setupOpen, setSetupOpen] = useState(true)
+  // 設定のシート（期間をくわしく・速さ・音楽）。はじめはポスター（TheaterPoster）だけを見せ、シートは閉じておく
+  const [setupOpen, setSetupOpen] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
   const [stageError, setStageError] = useState<Error | null>(null)
   const [viewer, setViewer] = useState<{ scene: number; index: number } | null>(null)
@@ -327,10 +394,10 @@ export default function DigestTheater() {
       setPlaying(resume.playing)
       return
     }
+    // 期間を変えたら、はじめの作品が着いたところでポスターに戻る（シートで変えたときは、シートは開いたまま）
     setPlaying(false)
     seek(shown.scenes[0]?.arrive_ms ?? 0)
     setStarted(false)
-    setSetupOpen(true)
   }, [revision]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scene = shown?.scenes[view.index]
@@ -428,7 +495,7 @@ export default function DigestTheater() {
       if (event.key === ' ') { event.preventDefault(); toggle(); wake() }
       else if (event.key === 'ArrowRight' && started) { jump(1); wake() }
       else if (event.key === 'ArrowLeft' && started) { jump(-1); wake() }
-      else if (event.key === 'Escape' && setupOpen && started) setSetupOpen(false)
+      else if (event.key === 'Escape' && setupOpen) setSetupOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -460,12 +527,17 @@ export default function DigestTheater() {
   const marks = useMemo(() => (shown ? chapterMarks(shown) : []), [shown])
   const total = shown?.total_ms ?? 0
   const status = view.waiting ? '作品の3Dを読み込んでいます…' : null
+  // 下の再生の操作列だけ、本物の Liquid Glass（3D の絵を操作列の形の中で屈折させる。liquidGlass.ts）。
+  // 3D が出ていて、撮っておいた絵を重ねていないときだけ。それ以外（準備中・戻った直後・3D を出せない端末）は、ふつうのすりガラス
+  const liquid = sceneReady && !freeze && !stageError && !!shown && shown.scenes.length > 0
+  // 字幕は、作品が着いてから、去りはじめる少し前まで
+  const captionShown = !!scene && view.phase === 'hold' && view.time < scene.arrive_ms + scene.hold_ms - CAPTION_LEAD_MS
   const fade = reducedMotion && shown && view.phase === 'rolling'
   const viewerScene = viewer ? shown?.scenes[viewer.scene] : null
 
   return (
     <Screen className={`theater-screen${hudVisible || !playing ? '' : ' is-idle'}`}>
-      <div className="theater-root" ref={root} onPointerMove={playing ? wake : undefined} onPointerDown={playing ? wake : undefined} onPointerDownCapture={(e) => { tapPoint.current = { x: e.clientX, y: e.clientY } }}>
+      <div className={`theater-root${liquid ? ' is-liquid' : ''}`} ref={root} onPointerMove={playing ? wake : undefined} onPointerDown={playing ? wake : undefined} onPointerDownCapture={(e) => { tapPoint.current = { x: e.clientX, y: e.clientY } }}>
         {query.isError ? (
           <div className="theater-message" role="alert">
             <h2>シアターを開けませんでした</h2>
@@ -497,6 +569,8 @@ export default function DigestTheater() {
                     clock={clock}
                     index={view.index}
                     playing={playing}
+                    attract={!started}
+                    glassRoot={root}
                     version={version}
                     stopMotion={settings.stopMotion}
                     reducedMotion={reducedMotion}
@@ -527,24 +601,41 @@ export default function DigestTheater() {
         {/* 上：戻る・期間・設定 */}
         <div className="stage-top theater-top theater-hud">
           <GlassButton label="memoriaへ戻る" onClick={() => { setPlaying(false); nav.back('/map') }}><BackIcon size={20} /></GlassButton>
-          {shown && <div className="stage-title glass theater-title"><span>{shown.title}</span><small>{shown.period_label}</small></div>}
+          {shown && started && <div className="stage-title glass theater-title"><span>{shown.title}</span><small>{shown.period_label}</small></div>}
           <GlassButton label="期間と音楽の設定" onClick={() => { setPlaying(false); setSetupOpen(true) }}><ThemeIcon size={20} /></GlassButton>
         </div>
 
-        {/* 下：作品の名前と、再生の操作 */}
+        {/* 作品の名前（映画の字幕のように、映像の上に直接出す）。作品が見えている間だけ出て、去るときに消える。
+            操作が薄くなっても残り、操作の分だけ下へ下がる。押すと作品の詳細へ */}
         {started && shown && scene && !setupOpen && (
-          <div className="theater-bottom theater-hud">
-            <button type="button" className="theater-caption glass" onClick={() => openArtwork(scene.artwork.id)}>
-              <span className="theater-caption-count">{view.index + 1} / {shown.scenes.length}</span>
-              <strong>{scene.artwork.title}</strong>
-              <small>{scene.artwork.date_long}{scene.artwork.age_month_label && <> · {scene.artwork.age_month_label}</>}</small>
-              <ChevronRight size={14} />
-            </button>
+          <button
+            type="button"
+            key={scene.artwork.id}
+            className={`theater-subtitle${captionShown ? ' is-shown' : ''}`}
+            onClick={() => openArtwork(scene.artwork.id)}
+            aria-hidden={!captionShown}
+            tabIndex={captionShown ? 0 : -1}
+          >
+            <span className="theater-subtitle-count">{view.index + 1} / {shown.scenes.length}</span>
+            <strong>{scene.artwork.title}</strong>
+            <small>{scene.artwork.date_long}{scene.artwork.age_month_label && <> · {scene.artwork.age_month_label}</>}<ChevronRight size={13} /></small>
+          </button>
+        )}
+
+        {/* 上のタイトルの下：読み込み中・おもいでの音の知らせ */}
+        {started && !setupOpen && (status || view.mediaAudible) && (
+          <div className="theater-notices theater-hud">
             {status && <p className="theater-status glass" role="status">{status}</p>}
             {view.mediaAudible && <p className="theater-audible glass" aria-hidden="true"><MicIcon size={13} />おもいでの音</p>}
-            <div className="theater-controls glass">
+          </div>
+        )}
+
+        {/* 下：再生の操作 */}
+        {started && shown && scene && !setupOpen && (
+          <div className="theater-bottom theater-hud">
+            <div className="theater-controls glass" data-liquid="clear">
               <button type="button" className="theater-icon-btn" aria-label="前の作品" disabled={view.index === 0 && view.phase !== 'hold'} onClick={() => jump(-1)}><BackIcon size={18} /></button>
-              <button type="button" className="theater-play" aria-label={view.ended ? 'もう一度' : playing ? '一時停止' : '再生'} onClick={toggle}>
+              <button type="button" className="theater-play" data-liquid="tint" aria-label={view.ended ? 'もう一度' : playing ? '一時停止' : '再生'} onClick={toggle}>
                 {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
               </button>
               <button type="button" className="theater-icon-btn" aria-label="次の作品" disabled={view.index + 1 >= shown.scenes.length} onClick={() => jump(1)}><ChevronRight size={18} /></button>
@@ -583,6 +674,20 @@ export default function DigestTheater() {
               <button type="button" className="btn-plain" onClick={() => nav.back('/map')}>memoriaへ戻る</button>
             </div>
           </div>
+        )}
+
+        {!started && !query.isError && !stageError && (
+          <TheaterPoster
+            data={shown}
+            pending={query.isFetching}
+            from={from}
+            to={to}
+            onRange={setRange}
+            settings={settings}
+            music={music}
+            onStart={start}
+            onOpenSettings={() => setSetupOpen(true)}
+          />
         )}
 
         {setupOpen && (

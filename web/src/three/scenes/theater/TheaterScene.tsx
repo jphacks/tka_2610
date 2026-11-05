@@ -15,6 +15,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import type { Artwork, TheaterData } from '../../../api'
 import { DioramaPost } from '../DioramaEffects'
 import { ShowcaseArtwork } from '../home/HomeObjects'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
+import { LiquidGlassShader, collectGlass, readCssColor, type GlassUniforms } from './liquidGlass'
 import { RADIUS, VISIBLE_FROM, VISIBLE_TO, backdropLayout, decorLayout, flowerLayout, placeOnGlobe, relativeAngle } from './globe'
 import { MediaStand, standSize } from './MediaStand'
 import { StageKit, loadStageManifest } from './stageProps'
@@ -27,6 +29,13 @@ export interface TheaterSceneProps {
   /** いまの場面（画面が clock から求めたもの。前後の作品を置き直すのに使う） */
   index: number
   playing: boolean
+  /** 再生する前のポスターの後ろで、大地をゆっくりゆらす（止めた時刻のまま、角度だけを少し前後させる） */
+  attract?: boolean
+  /**
+   * Liquid Glass にする画面の部品の入れ物（data-liquid の付いた要素を探す。今は下の再生の操作列だけ）。
+   * 渡すと、その部品のうしろの 3D の絵を、部品の形の中で屈折させて描く（liquidGlass.ts）
+   */
+  glassRoot?: RefObject<HTMLElement | null>
   /** シークしたときなどに増やす（止まっているときに描き直す） */
   version: number
   stopMotion: boolean
@@ -58,6 +67,9 @@ const FIT = 2.8
  * 家や木（VISIBLE_FROM / VISIBLE_TO）は背が高いので、もっと広い範囲で描く
  */
 const ART_VISIBLE_FROM = -0.5
+/** ポスターの後ろで大地がゆれる幅（角度）と、1 往復の長さ（秒） */
+const ATTRACT_SWAY = 0.08
+const ATTRACT_PERIOD_S = 40
 const ART_VISIBLE_TO = 0.75
 
 /** 作品を置いたときの見た目の半分の幅と高さ（FittedModel と同じ計算。実寸が無ければ目安） */
@@ -229,7 +241,45 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
   useEffect(() => { invalidate() }, [version, invalidate, index])
   const scene0Arrive = (i: number) => data.scenes[i]?.arrive_ms ?? 0
 
+  // Liquid Glass：画面の部品の形の中だけ、3D の絵を屈折させる仕上げ（色の仕上げのあと）
+  const glassRoot = props.glassRoot
+  const glass = useMemo(() => (glassRoot ? new ShaderPass(LiquidGlassShader) : null), [glassRoot])
+  useEffect(() => {
+    if (!glass || !glassRoot?.current) return
+    const u = glass.uniforms as unknown as GlassUniforms
+    readCssColor(u.uTint.value, glassRoot.current, '--accent')
+    return () => glass.dispose()
+  }, [glass, glassRoot])
+  // 止めているとき（frameloop demand）も、部品が動いたら（押した・操作が薄くなる）描き直す。
+  // 再生中とポスターのあいだは毎フレーム描いているので見張らない
+  const animating = props.playing || !!props.attract
+  useEffect(() => {
+    if (!glass || !glassRoot || animating) return
+    let raf = 0
+    let last = ''
+    const watch = () => {
+      const root = glassRoot.current
+      if (root) {
+        const u = glass.uniforms as unknown as GlassUniforms
+        collectGlass(u, root, gl.domElement)
+        let sig = `${u.uCount.value}`
+        for (let i = 0; i < u.uCount.value; i++) sig += `|${u.uRect.value[i].toArray().map((v) => v.toFixed(1)).join(',')},${u.uShape.value[i].y.toFixed(3)}`
+        if (sig !== last) { last = sig; invalidate() }
+      }
+      raf = requestAnimationFrame(watch)
+    }
+    raf = requestAnimationFrame(watch)
+    return () => cancelAnimationFrame(raf)
+  }, [glass, glassRoot, gl, invalidate, animating])
   useFrame(() => {
+    if (!glass) return
+    const root = glassRoot?.current
+    // 描くガラスが無ければ（ポスターのあいだ・操作列が消えているとき）、仕上げを 1 回分省く
+    glass.enabled = !!root && collectGlass(glass.uniforms as unknown as GlassUniforms, root, gl.domElement)
+  })
+
+  const attractStart = useRef<number | null>(null)
+  useFrame((state) => {
     const g = globe.current
     if (!g) return
     const t = clock.current ?? 0
@@ -242,6 +292,12 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
       // 動きを減らす設定では、流さずに作品ごとに切り替える（画面がふわっと白くして隠す）
       angle = (frame.phase === 'hold' || frame.phase === 'outro' || frame.travel >= 0.5 ? frame.index : frame.index - 1) * SLOT_ANGLE
     }
+    // ポスターの後ろ：最初の作品を見せたまま、大地が呼吸するようにゆっくり前後する（40 秒で 1 往復。0 から始めて、ガクッとしない）
+    if (props.attract && !reducedMotion) {
+      if (attractStart.current === null) attractStart.current = state.clock.elapsedTime
+      const s = state.clock.elapsedTime - attractStart.current
+      angle += Math.sin((s / ATTRACT_PERIOD_S) * Math.PI * 2) * ATTRACT_SWAY
+    } else attractStart.current = null
     g.rotation.x = angle
 
     for (const d of decor) {
@@ -367,7 +423,7 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
         })}
       </group>
       <primitive object={backdrop} />
-      <DioramaPost lite={lite} tilt={1.1} band={0.28} />
+      <DioramaPost lite={lite} tilt={1.1} band={0.28} afterOutput={glass ?? undefined} />
       <FirstFrame onReady={props.onReady} />
       {props.captureRef && <FrameCapture captureRef={props.captureRef} />}
     </>
@@ -453,7 +509,7 @@ export function TheaterScene(props: TheaterSceneProps) {
     <Canvas
       shadows={{ type: THREE.PCFShadowMap }}
       dpr={props.lite ? [1, 1.25] : [1, 1.6]}
-      frameloop={props.playing ? 'always' : 'demand'}
+      frameloop={props.playing || props.attract ? 'always' : 'demand'}
       gl={{ antialias: false, powerPreference: 'high-performance' }}
       camera={{ fov: 18, near: 0.5, far: 140, position: [0, 8, 45] }}
       onCreated={({ gl }) => {
