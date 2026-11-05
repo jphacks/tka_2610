@@ -15,6 +15,8 @@ export interface TheaterSettings {
   volume: number
   mediaSound: boolean
   stopMotion: boolean
+  /** 進む速さ（1 がふつう） */
+  speed: number
 }
 
 const DB = 'memoria-theater'
@@ -64,7 +66,7 @@ export async function saveMusic(music: TheaterMusic | null): Promise<void> {
   }
 }
 
-const DEFAULT_SETTINGS: TheaterSettings = { volume: 0.7, mediaSound: true, stopMotion: false }
+const DEFAULT_SETTINGS: TheaterSettings = { volume: 0.7, mediaSound: true, stopMotion: false, speed: 1 }
 
 export function loadSettings(): TheaterSettings {
   try {
@@ -75,6 +77,7 @@ export function loadSettings(): TheaterSettings {
       volume: typeof value.volume === 'number' ? Math.min(1, Math.max(0, value.volume)) : DEFAULT_SETTINGS.volume,
       mediaSound: typeof value.mediaSound === 'boolean' ? value.mediaSound : DEFAULT_SETTINGS.mediaSound,
       stopMotion: typeof value.stopMotion === 'boolean' ? value.stopMotion : DEFAULT_SETTINGS.stopMotion,
+      speed: typeof value.speed === 'number' && value.speed >= 0.25 && value.speed <= 4 ? value.speed : DEFAULT_SETTINGS.speed,
     }
   } catch {
     return DEFAULT_SETTINGS

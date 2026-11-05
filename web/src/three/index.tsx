@@ -39,12 +39,15 @@ export const MiniatureScene = lazy(() => load().then((m) => ({ default: m.Miniat
 export const TheaterScene = lazy(() => load().then((m) => ({ default: m.TheaterScene })))
 export {
   STOP_MOTION_FPS,
+  THEATER_SPEEDS,
   chapterMarks,
   clockLabel,
+  durationLabel,
   frameAt,
   memoLineAt,
   sceneEnd,
   sceneIndexAt,
+  scaleTheater,
   type TheaterFrame,
   type TheaterPhase,
 } from './scenes/theater/timeline'

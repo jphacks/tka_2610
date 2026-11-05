@@ -93,6 +93,46 @@ export function chapterMarks(data: TheaterData): number[] {
   return data.scenes.map((s) => s.arrive_ms / data.total_ms)
 }
 
+/** 選べる進む速さ（1 がふつう。2 なら全体が半分の長さになる） */
+export const THEATER_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
+
+/** 「約3分53秒」（theater.rs の duration_label と同じ書き方） */
+export function durationLabel(ms: number): string {
+  const seconds = Math.ceil(Math.max(0, ms) / 1000)
+  if (seconds < 60) return `約${seconds}秒`
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
+  return rest === 0 ? `約${minutes}分` : `約${minutes}分${rest}秒`
+}
+
+/**
+ * 進む速さに合わせて、時間割の時刻をすべて 1/speed 倍にする（大地が回る長さ・作品の滞在・写真の切り替え・メモ）。
+ * 作品・おもいでのオブジェクトはそのまま使い回す（3D の読み込みをやり直さないため）。
+ * 動画と声はいつもの速さで流すので、速くすると途中まで、遅くすると流し終えたあとも写真立ては立ったままになる。
+ */
+export function scaleTheater(data: TheaterData, speed: number): TheaterData {
+  if (!(speed > 0) || speed === 1) return data
+  const s = (ms: number) => Math.round(ms / speed)
+  const total = s(data.total_ms)
+  return {
+    ...data,
+    transition_ms: s(data.transition_ms),
+    outro_ms: s(data.outro_ms),
+    total_ms: total,
+    duration_label: durationLabel(total),
+    scenes: data.scenes.map((scene) => ({
+      ...scene,
+      start_ms: s(scene.start_ms),
+      arrive_ms: s(scene.arrive_ms),
+      hold_ms: s(scene.arrive_ms + scene.hold_ms) - s(scene.arrive_ms),
+      media: scene.media.map((m) => ({ ...m, show_ms: s(m.show_ms), hide_ms: s(m.hide_ms), play_ms: m.play_ms === null ? null : s(m.play_ms) })),
+      memo: scene.memo.map((line) => ({ ...line, show_ms: s(line.show_ms), hide_ms: s(line.hide_ms) })),
+      voice_at_ms: s(scene.voice_at_ms),
+      voice_ms: s(scene.voice_ms),
+    })),
+  }
+}
+
 /** 「1:05」 */
 export function clockLabel(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000))

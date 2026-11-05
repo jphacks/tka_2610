@@ -13,10 +13,22 @@ import { useTheater, type TheaterData } from '../api'
 import { ErrorBoundary, GlassButton, MemoryViewer, Screen } from '../components'
 import { BackIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
 import { useNav } from '../nav'
-import { StageShell, TheaterScene, chapterMarks, clockLabel, isTouchDevice } from '../three'
+import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, scaleTheater } from '../three'
 import { audioDuration, loadMusic, loadSettings, saveMusic, saveSettings, type TheaterMusic, type TheaterSettings } from './theaterMusic'
 import { useTheaterPlayback } from './theaterPlayback'
 import './DigestTheater.css'
+
+/** 「1.5×」 */
+const speedLabel = (speed: number) => `${speed}×`
+/** 下の操作列の速さボタン：押すたびに次の速さへ（いちばん速いあとは、いちばん遅いへ戻る） */
+const nextSpeed = (speed: number) => {
+  const i = THEATER_SPEEDS.findIndex((s) => s === speed)
+  return THEATER_SPEEDS[(i + 1) % THEATER_SPEEDS.length]
+}
+const speedHint = (speed: number) =>
+  speed < 1 ? 'ゆっくり進みます。メモをじっくり読めます。'
+  : speed > 1 ? '早く進みます。動画は途中までになることがあります。'
+  : 'ふつうの速さです。再生中も下の「1×」から変えられます。'
 
 /** 何もしなければ、操作の表示をこれだけ経ってから薄くする */
 const HUD_IDLE_MS = 3200
@@ -130,6 +142,16 @@ function SetupPanel({
         {data?.truncated && <p className="theater-note">作品が多いので、はじめの {data.artwork_count} 点を流します。期間をせまくすると全部見られます。</p>}
       </section>
 
+      <section className="theater-setup-section" aria-labelledby="theater-speed">
+        <h2 id="theater-speed">進む速さ</h2>
+        <div className="theater-presets" role="group" aria-label="進む速さ">
+          {THEATER_SPEEDS.map((speed) => (
+            <button type="button" key={speed} aria-pressed={settings.speed === speed} onClick={() => onSettings({ ...settings, speed })}>{speedLabel(speed)}</button>
+          ))}
+        </div>
+        <p className="theater-note">{speedHint(settings.speed)}</p>
+      </section>
+
       <section className="theater-setup-section" aria-labelledby="theater-music">
         <h2 id="theater-music"><NoteIcon size={16} />音楽</h2>
         <input ref={file} type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" hidden onChange={choose} />
@@ -185,10 +207,11 @@ export default function DigestTheater() {
   const to = params.get('to')
   const drawingsOnly = params.get('drawing') === '1'
   const query = useTheater(from, to, drawingsOnly)
-  const shown = query.data
 
   const [settings, setSettingsState] = useState<TheaterSettings>(loadSettings)
   const setSettings = useCallback((next: TheaterSettings) => { setSettingsState(next); saveSettings(next) }, [])
+  // 進む速さに合わせて時間割を縮める（3D・音・シークバーはすべてこちらを使う）
+  const shown = useMemo(() => (query.data ? scaleTheater(query.data, settings.speed) : undefined), [query.data, settings.speed])
   const [music, setMusicState] = useState<TheaterMusic | null>(null)
   useEffect(() => { let alive = true; void loadMusic().then((m) => { if (alive && m) setMusicState(m) }); return () => { alive = false } }, [])
   const setMusic = useCallback((next: TheaterMusic | null) => { setMusicState(next); void saveMusic(next) }, [])
@@ -198,7 +221,7 @@ export default function DigestTheater() {
   const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const onModelReady = useCallback((id: string, fallback: boolean) => setLoaded((before) => (before[id] === fallback ? before : { ...before, [id]: fallback })), [])
 
-  const playback = useTheaterPlayback(shown, { musicUrl, musicOffset: music?.offset ?? 0, volume: settings.volume, mediaSound: settings.mediaSound, loaded })
+  const playback = useTheaterPlayback(shown, { musicUrl, musicOffset: music?.offset ?? 0, volume: settings.volume, mediaSound: settings.mediaSound, loaded, speed: settings.speed })
   const { clock, playing, setPlaying, seek, version, view, videoFor } = playback
 
   const [started, setStarted] = useState(false)
@@ -419,6 +442,9 @@ export default function DigestTheater() {
                 </div>
               </div>
               <span className="theater-time">{clockLabel(view.time)}<span> / {clockLabel(total)}</span></span>
+              <button type="button" className="theater-speed" aria-label={`進む速さ ${speedLabel(settings.speed)}（押すと変わります）`} onClick={() => setSettings({ ...settings, speed: nextSpeed(settings.speed) })}>
+                {speedLabel(settings.speed)}
+              </button>
               <button type="button" className="theater-icon-btn theater-fullscreen" aria-label="全画面" onClick={fullscreen}><ExpandIcon size={18} /></button>
             </div>
           </div>
@@ -439,7 +465,7 @@ export default function DigestTheater() {
 
         {setupOpen && (
           <SetupPanel
-            data={query.data}
+            data={shown}
             pending={query.isFetching}
             from={from}
             to={to}

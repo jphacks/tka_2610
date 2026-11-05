@@ -5,7 +5,7 @@
 // だから、止める・シークする・前後の作品へ飛ぶ、のどれをしても音と映像がずれない。
 // 作品の 3D を読み込み中のあいだは、作品が着いた時刻で時計を止めて待つ（読めなければ 12 秒で写真に替わる）。
 // 動画の音や声が鳴っているあいだは、BGM を小さくする（ダッキング）。最後の余韻では BGM を小さくして終わる。
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { TheaterData } from '../api'
 import { frameAt, memoLineAt, type TheaterPhase } from '../three'
 
@@ -29,6 +29,8 @@ export interface PlaybackOptions {
   volume: number
   mediaSound: boolean
   loaded: Record<string, boolean>
+  /** 進む速さ。data はこの速さに合わせて時刻を縮めたもの（scaleTheater）を渡す */
+  speed: number
 }
 
 const DRIFT = 0.3
@@ -100,6 +102,20 @@ export function useTheaterPlayback(data: TheaterData | undefined, options: Playb
     videos.current.forEach((v) => { v.pause(); v.removeAttribute('src'); v.load() })
     videos.current.clear()
   }, [videoUrls])
+
+  // 進む速さを変えたら、いま見ている所のまま続ける（時計を新しい時間割に読み替える）。
+  // 曲は止めずにそのまま流すので、時計が縮んだ分を waitShift に足して、曲の位置が飛ばないようにする
+  const clockSpeed = useRef(options.speed)
+  useLayoutEffect(() => {
+    const before = clockSpeed.current
+    if (before === options.speed) return
+    clockSpeed.current = options.speed
+    const old = clock.current
+    const next = (old * before) / options.speed
+    waitShift.current += old - next
+    clock.current = next
+    setVersion((v) => v + 1)
+  }, [options.speed])
 
   const seek = useCallback((t: number) => {
     if (!data) return
