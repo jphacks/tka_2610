@@ -34,6 +34,10 @@ export interface PlaybackOptions {
 }
 
 const DRIFT = 0.3
+/** 時計が BGM から遅れた・進んだ分を、1 フレームにつきこの割合ずつ取り戻す（1 秒ほどで追いつく） */
+const BGM_FOLLOW = 0.08
+/** BGM とこれ以上ずれたら、少しずつではなく一度で合わせる（ミリ秒）。曲を引き戻す DRIFT（0.3 秒）より小さくして、曲が飛ばないようにする */
+const BGM_SNAP_MS = 250
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x))
 
 export function useTheaterPlayback(data: TheaterData | undefined, options: PlaybackOptions) {
@@ -64,6 +68,8 @@ export function useTheaterPlayback(data: TheaterData | undefined, options: Playb
   const gain = useRef(0)
   /** 前のフレームの BGM の再生位置（時計を BGM に合わせて進めるため） */
   const lastBgm = useRef<number | null>(null)
+  /** BGM が時計より先に進んでいる量（ミリ秒）。毎フレーム少しずつ時計に足して、なめらかに追いつく */
+  const bgmLead = useRef(0)
   /** 作品の読み込みを待っていたあいだの長さ。そのあいだも BGM は止めずに流すので、曲の位置をこの分だけ先へずらす */
   const waitShift = useRef(0)
 
@@ -140,13 +146,26 @@ export function useTheaterPlayback(data: TheaterData | undefined, options: Playb
         return scene && time >= scene.arrive_ms && o.loaded[scene.artwork.id] === undefined ? scene.arrive_ms : null
       }
       let waiting = pendingAt(t) !== null
-      // BGM が鳴っているあいだは、BGM の進んだ分だけ時計を進める（描画が遅い端末でも、音を引き戻して途切れさせない）
+      // BGM が鳴っているあいだも、時計はフレームの長さ（dt）でなめらかに進め、BGM とのずれ（bgmLead）を少しずつ足して追いつく。
+      // BGM の再生位置（currentTime）は段々にしか進まない（フレームによって 14〜17 ms、0 ms のときもある）ので、
+      // そのまま時計にすると、止まらずに流れる大地がカクつく。描画が遅い端末で時計が遅れても、ずれを足すので音から離れていかない
       const b0 = bgm.current
       let advance = dt
       if (b0 && !b0.paused && b0.readyState >= 2 && lastBgm.current !== null) {
         const advanced = (b0.currentTime - lastBgm.current) * 1000
-        if (advanced >= 0 && advanced < 1000) advance = advanced
-      }
+        if (advanced >= 0 && advanced < 1000) bgmLead.current += advanced - dt
+        else bgmLead.current = 0
+        if (Math.abs(bgmLead.current) > BGM_SNAP_MS) {
+          // 大きくずれた（タブが裏にあった・端末が固まった）ときは、一度で合わせる
+          advance += bgmLead.current
+          bgmLead.current = 0
+        } else {
+          const catchUp = Math.max(-dt * 0.5, Math.min(dt * 0.5, bgmLead.current * BGM_FOLLOW))
+          advance += catchUp
+          bgmLead.current -= catchUp
+        }
+      } else bgmLead.current = 0
+      advance = Math.max(0, advance)
       lastBgm.current = b0 && !b0.paused ? b0.currentTime : null
       if (isPlaying && waiting) waitShift.current += advance
       if (isPlaying && !waiting) {

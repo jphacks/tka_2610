@@ -1,13 +1,14 @@
 // 期間をえらんで振り返るシアターの 3D（/map/theater の DigestTheater が three/index.tsx 経由で使う）。
 //
-// 舞台：手描きの家・木・低木・丘が立つ、大きな球の大地（globe.ts・stageProps.ts）。大地が回ると、次の作品が奥から手前へ来る。
-// 作品：いまの場面と前後の作品だけを置く（ShowcaseArtwork。GLB を読めなければ写真）。
+// 舞台：手描きの家・木・低木・丘が立つ、大きな球の大地（globe.ts・stageProps.ts）。カメラは動かさず、大地が止まらずに回り続けて、
+//       作品が奥の稜線から現れ、頂上でゆっくりになり、手前の下へ流れていく（timeline.ts の globeAngleAt）。
+// 作品：いまの場面と、前の作品・次の 2 つの作品だけを置く（ShowcaseArtwork。GLB を読めなければ写真）。
 // 写真立て：いまの場面の作品の左右に、おもいでの写真・動画を立てる（MediaStand）。
 // メモ：3D の中には描かず、作品の上の位置を画面の座標にして memoAnchor（画面の要素）を動かす。
 //
 // 時刻は画面が持つ clock（ミリ秒）を毎フレーム読む。場面・段階・大地の角度はすべて timeline.ts の frameAt から決まるので、
 // シークしても止めても、3D と音（画面が合わせる）がずれない。
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type RefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -17,7 +18,7 @@ import { ShowcaseArtwork } from '../home/HomeObjects'
 import { RADIUS, VISIBLE_FROM, VISIBLE_TO, backdropLayout, decorLayout, flowerLayout, placeOnGlobe, relativeAngle } from './globe'
 import { MediaStand, standSize } from './MediaStand'
 import { StageKit, loadStageManifest } from './stageProps'
-import { SLOT_ANGLE, frameAt, standLift } from './timeline'
+import { SLOT_ANGLE, frameAt, standLift, stopMotionTime } from './timeline'
 
 export interface TheaterSceneProps {
   data: TheaterData
@@ -40,10 +41,24 @@ export interface TheaterSceneProps {
   onMedia: (sceneIndex: number, mediaIndex: number) => void
   onReady: () => void
   onStageError: (error: Error) => void
+  /**
+   * いまの 3D の 1 コマを ImageBitmap にする関数を入れてもらう入れ物。
+   * 作品の詳細へ行くときに撮っておき、戻ってきたら 3D の準備ができるまでその絵を見せる（画面がからっぽにならないように）
+   */
+  captureRef?: MutableRefObject<(() => Promise<ImageBitmap | null>) | null>
 }
 
 /** 作品を収める箱（ShowcaseArtwork の FittedModel と同じ値） */
 const FIT = 2.8
+
+/**
+ * 作品が画面に入る、大地の上の角度の範囲（頂上からの角度。正が奥）。framing のカメラ（横長・縦長）から求めた値に少し余裕を足したもの。
+ * 奥：カメラから見た地平線は頂上の約 0.23 奥で、高さ 2.8 m（FIT）の作品の頭も約 0.70 より奥では沈んで見えない。
+ * 手前：約 −0.40 より手前では、作品の頭まで画面の下へ抜けている（影は奥へ落ちるので、画面に残らない）。
+ * 家や木（VISIBLE_FROM / VISIBLE_TO）は背が高いので、もっと広い範囲で描く
+ */
+const ART_VISIBLE_FROM = -0.5
+const ART_VISIBLE_TO = 0.75
 
 /** 作品を置いたときの見た目の半分の幅と高さ（FittedModel と同じ計算。実寸が無ければ目安） */
 export function displayedSize(artwork: Artwork): { halfWidth: number; height: number } {
@@ -202,8 +217,8 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
     for (const m of [flowers.head, flowers.stem]) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); m.dispose() }
   }, [flowers])
 
-  // いまの場面と前後の作品
-  const nearby = useMemo(() => [index - 1, index, index + 1].filter((i) => i >= 0 && i < data.scenes.length), [index, data.scenes.length])
+  // いまの場面と、流れ去る前の作品・稜線から出てくる次の 2 つ（先に置いて、3D の読み込みを早めに始める）
+  const nearby = useMemo(() => [index - 1, index, index + 1, index + 2].filter((i) => i >= 0 && i < data.scenes.length), [index, data.scenes.length])
   const slots = useRef(new Map<number, THREE.Group>())
   const stands = useRef(new Map<number, THREE.Group>())
   const art = useRef(new Map<number, THREE.Group>())
@@ -212,16 +227,20 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
   const artSize = useMemo(() => (scene0 ? displayedSize(scene0.artwork) : { halfWidth: 1, height: 2 }), [scene0])
 
   useEffect(() => { invalidate() }, [version, invalidate, index])
+  const scene0Arrive = (i: number) => data.scenes[i]?.arrive_ms ?? 0
 
   useFrame(() => {
     const g = globe.current
     if (!g) return
     const t = clock.current ?? 0
-    const frame = frameAt(data, t, stopMotion)
+    const frame = frameAt(data, t)
+    // コマ撮り風：大地はなめらかに流したまま、作品のゆれと写真立ての動きだけを 1 秒 12 コマにする
+    const step = stopMotion && !reducedMotion
+    const poseT = step ? stopMotionTime(t) : t
     let angle = frame.angle
-    if (reducedMotion && frame.phase !== 'hold' && frame.phase !== 'outro') {
-      // 動きを減らす設定では、回さずに切り替える（画面がふわっと白くして隠す）
-      angle = (frame.travel < 0.5 ? frame.index - 1 : frame.index) * SLOT_ANGLE
+    if (reducedMotion) {
+      // 動きを減らす設定では、流さずに作品ごとに切り替える（画面がふわっと白くして隠す）
+      angle = (frame.phase === 'hold' || frame.phase === 'outro' || frame.travel >= 0.5 ? frame.index : frame.index - 1) * SLOT_ANGLE
     }
     g.rotation.x = angle
 
@@ -230,15 +249,19 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
       d.anchor.visible = rel > VISIBLE_FROM && rel < VISIBLE_TO
     }
 
-    // 作品：着いたとき、ほんの少し弾む
+    // 作品：大地と一緒に流れる。画面に入らない作品（地平線の向こうに沈んでいる・画面の下へ抜けた）は、影も含めて描かない。
+    // 次の次の作品は、読み込みを早めるために置いているだけで、ふつうは地平線の向こうにいる
     const current = data.scenes[frame.index]
+    for (const [i, group] of slots.current) {
+      const rel = relativeAngle(i * SLOT_ANGLE, angle)
+      group.visible = rel > ART_VISIBLE_FROM && rel < ART_VISIBLE_TO
+    }
+    // コマ撮り風のときだけ、作品が人形のように小さくゆれる（作品ごとに少しずらす）。それ以外は止まったまま
     for (const [i, group] of art.current) {
-      let s = 1
-      if (i === frame.index && frame.phase !== 'intro' && frame.local >= 0 && frame.local < 700 && !reducedMotion) {
-        const p = frame.local / 700
-        s = 1 + Math.sin(p * Math.PI * 2) * 0.035 * (1 - p)
-      }
-      group.scale.set(1 / Math.sqrt(s), s, 1 / Math.sqrt(s))
+      if (!step) { group.rotation.set(0, 0, 0); group.position.y = 0; continue }
+      const s = (poseT / 1000) * Math.PI * 2 * 0.55 + i * 1.7
+      group.rotation.set(0, Math.sin(s) * 0.045, Math.sin(s * 0.5 + 0.8) * 0.018)
+      group.position.y = Math.max(0, Math.sin(s * 2)) * 0.025
     }
 
     // 写真立て：底辺を軸に、後ろへ倒れた状態から起こす
@@ -246,7 +269,8 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
       for (const [m, group] of stands.current) {
         const slot = current.media[m]
         if (!slot) continue
-        const lift = frame.phase === 'hold' || frame.phase === 'outro' ? standLift(slot.show_ms, slot.hide_ms, frame.local) : 0
+        const local = poseT - scene0Arrive(frame.index)
+        const lift = frame.phase === 'hold' || frame.phase === 'outro' ? standLift(slot.show_ms, slot.hide_ms, local) : 0
         const eased = reducedMotion ? (lift > 0.01 ? 1 : 0) : 1 - (1 - lift) ** 3
         group.visible = lift > 0.001
         group.rotation.x = -(1 - eased) * Math.PI * 0.5
@@ -345,6 +369,7 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
       <primitive object={backdrop} />
       <DioramaPost lite={lite} tilt={1.1} band={0.28} />
       <FirstFrame onReady={props.onReady} />
+      {props.captureRef && <FrameCapture captureRef={props.captureRef} />}
     </>
   )
 }
@@ -357,6 +382,47 @@ function FirstFrame({ onReady }: { onReady: () => void }) {
     done.current = true
     requestAnimationFrame(() => onReady())
   })
+  return null
+}
+
+/**
+ * 頼まれたら、次に描いたコマを ImageBitmap にする。
+ * 仕上げ（DioramaPost の composer.render。優先度 1）のあとの優先度 2 で、描き終えた絵をそのまま写す
+ * （preserveDrawingBuffer なしでも、描いた直後の同じフレームの中なら写せる）。止めているとき（frameloop demand）は invalidate で 1 コマ描かせる。
+ * toDataURL（JPEG にする）は GPU から読み戻して CPU で圧縮するので、押してから画面が変わるまで止まってしまう。createImageBitmap は GPU の中で写すだけで軽い
+ */
+function FrameCapture({ captureRef }: { captureRef: MutableRefObject<(() => Promise<ImageBitmap | null>) | null> }) {
+  const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
+  const waiting = useRef<((bitmap: Promise<ImageBitmap | null>) => void)[]>([])
+  useEffect(() => {
+    captureRef.current = () => new Promise<ImageBitmap | null>((resolve) => {
+      let settled = false
+      const done = (bitmap: Promise<ImageBitmap | null>) => {
+        if (settled) return
+        settled = true
+        window.clearTimeout(timer)
+        void bitmap.then(resolve, () => resolve(null))
+      }
+      // 描かれないまま待ち続けないように
+      const timer = window.setTimeout(() => {
+        waiting.current = waiting.current.filter((w) => w !== done)
+        done(Promise.resolve(null))
+      }, 250)
+      waiting.current.push(done)
+      invalidate()
+    })
+    return () => { captureRef.current = null }
+  }, [captureRef, invalidate])
+  useFrame(() => {
+    if (waiting.current.length === 0) return
+    const list = waiting.current
+    waiting.current = []
+    let bitmap: Promise<ImageBitmap | null>
+    try { bitmap = createImageBitmap(gl.domElement) } catch { bitmap = Promise.resolve(null) }
+    // 1 枚を、待っている全員で使う
+    list.forEach((resolve) => resolve(bitmap))
+  }, 2)
   return null
 }
 

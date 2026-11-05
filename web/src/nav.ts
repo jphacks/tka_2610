@@ -5,6 +5,8 @@
 // modal   : 下からシートのようにせり上がる
 // dismiss : modal の逆
 // tab     : タブ切り替えは素早いクロスフェード
+// zoom    : 押した所を中心に、次の画面が小さい所から拡大しながら開き、前の画面は少し拡大して薄れる（3D の作品を押して詳細へ、など）
+// unzoom  : zoom の逆。zoom で開いた画面から nav.back で戻ると、自動でこれになる（押した所へ縮みながら消える）
 //
 // 対応していないブラウザでは普通に遷移する。
 // 動きそのもの（どこからどこへ動くか・長さ）は nav.css に書いてある。
@@ -16,7 +18,7 @@ import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate, type NavigateOptions, type To } from 'react-router-dom'
 import './nav.css'
 
-export type NavKind = 'push' | 'pop' | 'modal' | 'dismiss' | 'tab' | 'fade'
+export type NavKind = 'push' | 'pop' | 'modal' | 'dismiss' | 'tab' | 'fade' | 'zoom' | 'unzoom'
 
 type ViewTransitionLike = { finished: Promise<void>; skipTransition: () => void }
 type StartViewTransition = (cb: () => Promise<void> | void) => ViewTransitionLike
@@ -149,6 +151,33 @@ export function runTransition(kind: NavKind, go: () => void, shareId?: string) {
 
 const canGoBack = () => ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0
 
+/** zoom で開いた画面の履歴に残す、押した所（アプリの枠の中の割合 0〜100） */
+interface ZoomOrigin {
+  x: number
+  y: number
+}
+
+/** 画面の座標（clientX / clientY）を、アプリの枠（.app。PC では端末の枠）の中の割合にする */
+function zoomOrigin(clientX: number, clientY: number): ZoomOrigin {
+  const rect = document.querySelector('.app')?.getBoundingClientRect()
+  if (!rect || rect.width <= 0 || rect.height <= 0) return { x: 50, y: 50 }
+  const clamp = (v: number) => Math.min(100, Math.max(0, Math.round(v * 10) / 10))
+  return { x: clamp(((clientX - rect.left) / rect.width) * 100), y: clamp(((clientY - rect.top) / rect.height) * 100) }
+}
+
+/** nav.css の zoom / unzoom が、拡大・縮小の中心として読む */
+function setZoomOrigin(origin: ZoomOrigin) {
+  const style = document.documentElement.style
+  style.setProperty('--nav-x', `${origin.x}%`)
+  style.setProperty('--nav-y', `${origin.y}%`)
+}
+
+/** いまの画面が zoom で開かれていれば、その押した所（React Router が履歴の state.usr に入れる） */
+function currentZoom(): ZoomOrigin | null {
+  const zoom = (window.history.state as { usr?: { navZoom?: ZoomOrigin } } | null)?.usr?.navZoom
+  return zoom && typeof zoom.x === 'number' && typeof zoom.y === 'number' ? zoom : null
+}
+
 export function useNav() {
   const navigate = useNavigate()
 
@@ -160,8 +189,24 @@ export function useNav() {
       tab: (to: To) => runTransition('tab', () => navigate(to)),
       /** 履歴を置き換えて進む (登録 → プレビュー など) */
       replace: (to: To, kind: NavKind = 'fade') => runTransition(kind, () => navigate(to, { replace: true })),
-      back: (fallback: To = '/', share?: string) =>
-        runTransition('pop', () => (canGoBack() ? navigate(-1) : navigate(fallback, { replace: true })), share),
+      /**
+       * 押した所（画面の座標）を中心に、拡大しながら開く。開いた画面から nav.back で戻ると、同じ所へ縮んで閉じる。
+       * 3D の中の物を押して別の画面へ行くとき（作品の詳細など）に使う
+       */
+      zoom: (to: To, point: { x: number; y: number }) => {
+        const origin = zoomOrigin(point.x, point.y)
+        setZoomOrigin(origin)
+        runTransition('zoom', () => navigate(to, { state: { navZoom: origin } }))
+      },
+      back: (fallback: To = '/', share?: string) => {
+        const zoom = canGoBack() ? currentZoom() : null
+        if (zoom) {
+          setZoomOrigin(zoom)
+          runTransition('unzoom', () => navigate(-1))
+          return
+        }
+        runTransition('pop', () => (canGoBack() ? navigate(-1) : navigate(fallback, { replace: true })), share)
+      },
       dismiss: (fallback: To = '/') =>
         runTransition('dismiss', () => (canGoBack() ? navigate(-1) : navigate(fallback, { replace: true }))),
     }),

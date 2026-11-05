@@ -34,6 +34,23 @@
   background: var(--sky);
 }
 
+/* 作品の詳細から戻ったとき、3D の準備ができるまで見せる、離れる直前の 1 コマ（DigestTheater.tsx の freeze）。
+   3D の上・操作の下に重ね、3D が出たら薄くして消す（0.4 秒。FREEZE_FADE_MS と同じ） */
+.theater-freeze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.4s var(--ease-out);
+}
+
+.theater-freeze.is-fading {
+  opacity: 0;
+}
+
 /* ---------- 上の操作列 ---------- */
 
 .theater-top {

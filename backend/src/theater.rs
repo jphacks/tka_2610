@@ -22,19 +22,25 @@ use crate::{
 
 /// 1 回のシアターに出す作品の上限 (これより多いと truncated)
 const MAX_SCENES: usize = 200;
-/// 大地が回って次の作品が奥から手前へ来るまで
-const TRANSITION_MS: u32 = 2600;
-/// 最後の作品のあと、余韻を残して終わるまで
-const OUTRO_MS: u32 = 2400;
+// ---- テンポ (ふつうの速さ 1× のときの長さ。画面の「進む速さ」は、これを全部 1/速さ 倍にする) ----
+/// 前の作品が流れ去り、次の作品が奥の稜線の上に来るまで (大地は止まらずに回る)
+const TRANSITION_MS: u32 = 2000;
+/// 最後の作品のあと、流れ去って終わるまで
+const OUTRO_MS: u32 = 2000;
 /// 写真・動画が立ち上がる時刻 (作品が着いてから)
-const MEDIA_AT_MS: u32 = 700;
+const MEDIA_AT_MS: u32 = 500;
 /// メモが浮かび上がる時刻 (作品が着いてから)。写真が立ったあと、少し間をおく
-const MEMO_AT_MS: u32 = 1600;
+const MEMO_AT_MS: u32 = 1000;
 /// 作品だけの場面の長さ / おもいでがある場面の最低の長さ
-const BASE_HOLD_MS: u32 = 5200;
-const MEDIA_HOLD_MS: u32 = 6800;
+const BASE_HOLD_MS: u32 = 3800;
+const MEDIA_HOLD_MS: u32 = 5200;
 /// 写真 2 枚を見せる 1 回分の長さ
-const PHOTO_ROUND_MS: u32 = 4600;
+const PHOTO_ROUND_MS: u32 = 3400;
+/// メモの 1 行を読む時間 = LINE_BASE_MS + 文字数 × LINE_PER_CHAR_MS (LINE_MIN_MS〜LINE_MAX_MS)
+const LINE_BASE_MS: u32 = 800;
+const LINE_PER_CHAR_MS: u32 = 80;
+const LINE_MIN_MS: u32 = 1800;
+const LINE_MAX_MS: u32 = 4500;
 /// 動画は 1 本あたりこの長さまで流す。長さが分からない動画はこの長さとみなす
 const VIDEO_MAX_MS: u32 = 12_000;
 const VIDEO_UNKNOWN_MS: u32 = 8000;
@@ -218,7 +224,7 @@ fn wrap_sentence(sentence: &str) -> Vec<String> {
 
 /// メモの 1 行を読む時間 (文字数から)
 fn line_ms(text: &str) -> u32 {
-    (1400 + text.chars().count() as u32 * 120).clamp(2800, 7000)
+    (LINE_BASE_MS + text.chars().count() as u32 * LINE_PER_CHAR_MS).clamp(LINE_MIN_MS, LINE_MAX_MS)
 }
 
 /// 写真・動画の情報 (時間割を決めるのに使う分だけ)
