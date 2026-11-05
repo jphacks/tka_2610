@@ -7,6 +7,7 @@
 //     3. ティルトシフト：画面の上下だけをぼかし、精巧な模型を覗き込んでいるように見せる（真ん中の帯はぼかさない）
 //     4. 周辺減光：四隅をほんのり暗くする
 //     5. 色の仕上げ（OutputPass）：トーンマッピングと sRGB への変換（Canvas の設定を使う）
+//     6. （画面ごとに渡すとき）afterOutput：色の仕上げのあとの絵にかける仕上げ（シアターの Liquid Glass）
 // 影は、Stage の shadows で Canvas の影を有効にしたときだけ出る。建物（HouseShells）は影を受けない作りなので、
 // 読み込んだら（version が変わったら）場面の全部のメッシュに影を落とし・受けさせる（useShadowEverything）。
 // three.js に付属のものだけを使う（鑑賞モードの walk/PostEffects.tsx と同じ作り）。
@@ -18,6 +19,7 @@ import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import type { Pass } from 'three/addons/postprocessing/Pass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
@@ -136,7 +138,15 @@ const TiltShiftShader = {
 }
 
 /** 仕上げ。lite（タッチの端末）では隅の陰を省く */
-export function DioramaPost({ lite, tilt = 2.2, band = 0.2 }: { lite: boolean; /** ぼかしの強さ */ tilt?: number; /** ぼかさない真ん中の帯の半分の幅 */ band?: number }) {
+export function DioramaPost({ lite, tilt = 2.2, band = 0.2, afterOutput }: {
+  lite: boolean
+  /** ぼかしの強さ */
+  tilt?: number
+  /** ぼかさない真ん中の帯の半分の幅 */
+  band?: number
+  /** 色の仕上げ（sRGB にしたあと）にかける仕上げ。画面の色とそろえたいもの（シアターの Liquid Glass）に使う。同じものを渡し続けること */
+  afterOutput?: Pass
+}) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera)
@@ -165,8 +175,9 @@ export function DioramaPost({ lite, tilt = 2.2, band = 0.2 }: { lite: boolean; /
     vignette.uniforms.darkness.value = 0.55
     composer.addPass(vignette)
     composer.addPass(new OutputPass())
+    if (afterOutput) composer.addPass(afterOutput)
     return { composer, ao, tiltX, tiltY }
-  }, [gl, scene, camera, lite])
+  }, [gl, scene, camera, lite, afterOutput])
 
   useEffect(() => {
     composer.setPixelRatio(dpr)
