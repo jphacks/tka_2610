@@ -200,7 +200,7 @@ export default function Collection() {
         </div>
 
         {list.isPending ? (
-          <div className={`${gridClass} collection-body`} aria-label="作品を読み込み中" aria-busy="true">
+          <div className={`${gridClass} collection-body`} aria-label="Loading…" aria-busy="true">
             <ThumbSkeletons count={6} />
           </div>
         ) : list.isError ? (

@@ -132,7 +132,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
     setVoicePlaying(true)
     void element.play().catch(() => { setVoicePlaying(false); setVoiceError('この声を再生できませんでした。作品の詳細からもお試しください。') })
   }
-  const status = finished ? '見終わりました' : !started ? 'タップして再生' : !playing ? '一時停止中' : !arrived ? '次の作品へ' : !modelReady ? '3Dを読み込み中' : voicePlaying ? '声を聴いています' : 'おもいでを振り返っています'
+  const status = finished ? '見終わりました' : !started ? 'タップして再生' : !playing ? '一時停止中' : !arrived ? '次の作品へ' : !modelReady ? 'Loading…' : voicePlaying ? '声を聴いています' : 'おもいでを振り返っています'
 
   return (
     <div className="miniature-slot" style={expanded ? { height: previewHeight } : undefined}>
@@ -140,7 +140,7 @@ function MiniaturePlayback({ data, onOpenArtwork, onAudioPlay, onStart, suspende
       {expanded && <div className="miniature-expanded-heading"><span>作品と思い出</span><button type="button" aria-label="元の大きさに戻す" onClick={shrink}><CloseIcon size={22} /></button></div>}
       <div className="miniature-period"><span>{data.title}</span><small>{data.duration_label} · {index + 1} / {count}点</small></div>
       <ErrorBoundary fallback={() => <div className="miniature-error"><p>この端末では3Dを表示できませんでした。</p><button type="button" className="btn btn-outline btn-small" onClick={() => openArtwork(active.artwork.id)}>作品を開く</button></div>}>
-        <StageShell className="miniature-stage" ready={sceneReady} label="ミニチュアを準備しています…">
+        <StageShell className="miniature-stage" ready={sceneReady} label="Loading…">
           <Suspense fallback={null}>
             <MiniatureScene revision={revision} entries={data.entries} turn={turn} playing={playing && !voicePlaying} transitionMs={data.transition_ms} immersive={expanded}
               focusedArtworkId={started && arrived && modelReady ? active.artwork.id : null} onArtworkBottom={artworkFramed}
@@ -183,7 +183,7 @@ export function MiniatureDigest({ onOpenArtwork, onAudioPlay, onStart, suspended
     <section className="miniature-digest" aria-labelledby="miniature-heading">
       <div className="miniature-heading"><h1 id="miniature-heading">3Dで振り返る</h1><span>作品と思い出</span></div>
       <div className="miniature-options"><Segmented<DigestScope> label="3D鑑賞の期間" options={[{ value: 'all', label: 'これまで' }, { value: 'year', label: 'この1年' }]} value={scope} onChange={setScope} /><button type="button" className="miniature-filter" aria-pressed={drawingsOnly} onClick={() => setDrawingsOnly(before => !before)}>絵画だけ</button></div>
-      {query.isPending ? <div className="miniature-placeholder skeleton" aria-busy="true" aria-label="3D作品を読み込み中" /> : query.isError ? <div className="miniature-error" role="alert"><p>{query.error.message}</p><button type="button" className="btn btn-outline btn-small" onClick={() => query.refetch()}>もう一度読み込む</button></div> : query.data?.entries.length ? <MiniaturePlayback revision={`${scope}-${drawingsOnly}-${query.dataUpdatedAt}`} data={query.data} onOpenArtwork={onOpenArtwork} onAudioPlay={onAudioPlay} onStart={onStart} suspended={suspended || query.isPlaceholderData} onExpandedChange={onExpandedChange} /> : <div className="miniature-error"><p>この条件の作品はまだありません。</p><span>期間や「絵画だけ」の選択を変えてお試しください。</span></div>}
+      {query.isPending ? <div className="miniature-placeholder skeleton" aria-busy="true" aria-label="Loading…" /> : query.isError ? <div className="miniature-error" role="alert"><p>{query.error.message}</p><button type="button" className="btn btn-outline btn-small" onClick={() => query.refetch()}>もう一度読み込む</button></div> : query.data?.entries.length ? <MiniaturePlayback revision={`${scope}-${drawingsOnly}-${query.dataUpdatedAt}`} data={query.data} onOpenArtwork={onOpenArtwork} onAudioPlay={onAudioPlay} onStart={onStart} suspended={suspended || query.isPlaceholderData} onExpandedChange={onExpandedChange} /> : <div className="miniature-error"><p>この条件の作品はまだありません。</p><span>期間や「絵画だけ」の選択を変えてお試しください。</span></div>}
     </section>
   )
 }

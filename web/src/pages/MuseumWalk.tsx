@@ -156,7 +156,7 @@ export default function MuseumWalk() {
         <StageShell
           className="walk-stage"
           ready={ready || modelUrl === null}
-          label="おうちを読み込んでいます…"
+          label="Loading…"
           overlay={
             <>
               <div className="stage-top">

@@ -157,7 +157,7 @@ export function PhotoEditor({
               </div>
             </div>
           ) : (
-            <p className="hint">{error ?? '写真を読み込んでいます…'}</p>
+            <p className="hint">{error ?? 'Loading…'}</p>
           )}
         </div>
 

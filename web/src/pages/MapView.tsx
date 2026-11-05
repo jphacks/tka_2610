@@ -57,7 +57,7 @@ export default function MapView() {
       <NavBar title="memoria" />
       <div className="page recall-page">
         {recalls.isPending ? (
-          <div className="recall-loading" aria-busy="true" aria-label="思い出を読み込み中"><div className="recall-hero-placeholder skeleton" /><div className="recall-age-grid"><ThumbSkeletons count={4} /></div></div>
+          <div className="recall-loading" aria-busy="true" aria-label="Loading…"><div className="recall-hero-placeholder skeleton" /><div className="recall-age-grid"><ThumbSkeletons count={4} /></div></div>
         ) : recalls.isError ? (
           <div className="recall-empty" role="alert"><h2>思い出を読み込めませんでした</h2><p>{recalls.error.message}</p><button type="button" className="btn btn-outline" onClick={() => recalls.refetch()}>もう一度読み込む</button></div>
         ) : data?.total === 0 ? (
@@ -121,7 +121,7 @@ export default function MapView() {
 
         <details className="recall-rooms">
           <summary><RainbowIcon size={18} /><span>年齢ごとのおへや</span><ChevronRight size={16} /></summary>
-          {ages.isPending ? <p className="note">おへやを読み込んでいます…</p> : ages.isError ? <div className="recall-voice-empty"><p>おへやを読み込めませんでした</p><button type="button" className="btn btn-outline btn-small" onClick={() => ages.refetch()}>もう一度読み込む</button></div> : (
+          {ages.isPending ? <p className="note">Loading…</p> : ages.isError ? <div className="recall-voice-empty"><p>おへやを読み込めませんでした</p><button type="button" className="btn btn-outline btn-small" onClick={() => ages.refetch()}>もう一度読み込む</button></div> : (
             <div className="recall-room-list">
               {(ages.data?.ages ?? []).map(age => (
                 <section key={age.age} className="recall-room-age"><div className="recall-room-head"><h3>{age.label}</h3><button type="button" className="btn-plain" onClick={() => nav.tab(`/?age=${age.age}`)}>ホームで見る</button></div>

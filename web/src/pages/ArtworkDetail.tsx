@@ -218,7 +218,7 @@ export default function ArtworkDetail() {
         )}
 
         {artwork && show3d && !viewerReady && (
-          <p className="detail-viewer-status" role="status">3Dを読み込んでいます…</p>
+          <p className="detail-viewer-status" role="status">Loading…</p>
         )}
         {showing3d && !touched && (
           <p className="detail-viewer-hint" aria-hidden="true">{touchUi ? '指で回す・2本指で拡大' : 'ドラッグで回す・ホイールで拡大'}</p>
