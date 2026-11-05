@@ -6,9 +6,9 @@
 //   メモ … 作品の少し上に、ふわっと浮かび上がる（文ごとに順に）
 //   音楽 … この端末の音源ファイルを BGM にできる（サーバーへは送らない。theaterMusic.ts）
 // 場面の時刻はすべて Rust（/api/recollections/theater）が決め、再生の時計と音合わせは theaterPlayback.ts。
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigationType, useSearchParams } from 'react-router-dom'
 import { useTheater, type TheaterData } from '../api'
 import { ErrorBoundary, GlassButton, MemoryViewer, Screen } from '../components'
 import { BackIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
@@ -27,11 +27,82 @@ const nextSpeed = (speed: number) => {
 }
 const speedHint = (speed: number) =>
   speed < 1 ? 'ゆっくり進みます。メモをじっくり読めます。'
+  : speed >= 3 ? 'ざっと流して見ます。メモは読みきれず、動画や声は途中までになります。'
   : speed > 1 ? '早く進みます。動画は途中までになることがあります。'
   : 'ふつうの速さです。再生中も下の「1×」から変えられます。'
 
 /** 何もしなければ、操作の表示をこれだけ経ってから薄くする */
 const HUD_IDLE_MS = 3200
+
+/**
+ * 作品を押して詳細へ行くときに覚える、戻ってきたときの続きの位置（このタブの sessionStorage。1 回読んだら消す）。
+ * at はふつうの速さ（1×）での時刻なので、詳細にいる間に速さを変えても同じ場面から続く。
+ */
+interface TheaterResume {
+  revision: string
+  at: number
+  playing: boolean
+}
+const RESUME_KEY = 'theater-resume'
+/** 戻ってきたとき、これより前に覚えた位置は使わない（ずっと後に開き直したときは最初から） */
+const RESUME_TTL_MS = 30 * 60 * 1000
+
+function saveResume(resume: TheaterResume) {
+  try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ ...resume, savedAt: Date.now() })) } catch { /* 覚えられなくても、最初から見られる */ }
+}
+
+/**
+ * 作品の詳細へ行く直前に撮った 3D の 1 コマ（ImageBitmap。GPU の中の絵なので、写すのも描くのも軽い）。
+ * 戻ってきたとき、3D の準備ができるまで同じ絵を見せる。メモリに置くだけ（再読み込みすると消えるが、そのときは画面遷移も無い）
+ */
+let freezeFrame: { revision: string; bitmap: ImageBitmap } | null = null
+function takeFreeze(cameBack: boolean) {
+  const frame = freezeFrame
+  freezeFrame = null
+  if (frame && !cameBack) { frame.bitmap.close(); return null }
+  return frame
+}
+function keepFreeze(frame: { revision: string; bitmap: ImageBitmap } | null) {
+  freezeFrame?.bitmap.close()
+  freezeFrame = frame
+}
+
+/** 撮っておいた絵を、画面いっぱいのキャンバスに描く（描くのは最初の 1 回だけ。描いたら絵は手放す） */
+function FreezeFrame({ bitmap, fading }: { bitmap: ImageBitmap; fading: boolean }) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  // 描画の前に描く（戻る画面遷移の、新しい画面の写しに間に合わせる）。
+  // 手放した絵は幅が 0 になるので、2 回目（StrictMode など）は何もしない（キャンバスの大きさを変えると、描いた絵が消える）
+  useLayoutEffect(() => {
+    const el = canvas.current
+    if (!el || bitmap.width === 0) return
+    el.width = bitmap.width
+    el.height = bitmap.height
+    el.getContext('2d')?.drawImage(bitmap, 0, 0)
+    bitmap.close()
+  }, [bitmap])
+  return <canvas ref={canvas} className={`theater-freeze${fading ? ' is-fading' : ''}`} aria-hidden="true" />
+}
+
+/** 撮った絵を出したまま待つ、いちばん長い時間（3D がなかなか出なくても、いつかは消す） */
+const FREEZE_MAX_MS = 10_000
+/** 3D の準備ができてから、撮った絵を薄くして消す長さ（DigestTheater.css の .theater-freeze と同じ） */
+const FREEZE_FADE_MS = 400
+
+/** 覚えた位置を取り出して消す。戻ってきたとき（cameBack）で、同じ期間・同じ作品の並びのときだけ返す */
+function takeResume(revision: string, cameBack: boolean): TheaterResume | null {
+  try {
+    const raw = sessionStorage.getItem(RESUME_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(RESUME_KEY)
+    if (!cameBack) return null
+    const value = JSON.parse(raw) as Partial<TheaterResume & { savedAt: number }>
+    if (value.revision !== revision || typeof value.at !== 'number' || !(value.at >= 0)) return null
+    if (typeof value.savedAt !== 'number' || Date.now() - value.savedAt > RESUME_TTL_MS) return null
+    return { revision, at: value.at, playing: value.playing === true }
+  } catch {
+    return null
+  }
+}
 
 function SetupPanel({
   data,
@@ -235,10 +306,27 @@ export default function DigestTheater() {
   const memoAnchor = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
 
-  // 期間が変わったら、はじめの作品が着いたところを見せて止める
+  // 期間が変わったら、はじめの作品が着いたところを見せて止める。
+  // 作品を押して詳細へ行き、戻ってきたときは、押したところから続ける（takeResume）
   const revision = shown ? `${shown.from}-${shown.to}-${drawingsOnly}-${shown.artwork_count}` : ''
+  // 戻る操作でこの画面に来たか（メニューから開き直したときや、期間を変えたときは続きから始めない）
+  const navigationType = useNavigationType()
+  const cameBack = useRef(navigationType === 'POP')
+  // 戻ってきたときは、最初の描画から撮っておいた絵を出す（戻る画面遷移の新しい画面の写しにも、この絵が写る）
+  const [freeze, setFreeze] = useState(() => takeFreeze(navigationType === 'POP'))
+  const [freezeFading, setFreezeFading] = useState(false)
   useEffect(() => {
     if (!shown) return
+    const resume = takeResume(revision, cameBack.current)
+    cameBack.current = false
+    if (!resume || freeze?.revision !== revision) setFreeze(null)
+    if (resume) {
+      seek(Math.min(shown.total_ms, resume.at / settings.speed))
+      setStarted(true)
+      setSetupOpen(false)
+      setPlaying(resume.playing)
+      return
+    }
     setPlaying(false)
     seek(shown.scenes[0]?.arrive_ms ?? 0)
     setStarted(false)
@@ -246,6 +334,19 @@ export default function DigestTheater() {
   }, [revision]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scene = shown?.scenes[view.index]
+  // 撮っておいた絵は、舞台と、いまの作品の 3D が出たら薄くして消す（それまでは時計も作品の読み込みを待って止まっている）
+  const sceneArtworkReady = !!scene && sceneReady && loaded[scene.artwork.id] !== undefined
+  useEffect(() => {
+    if (!freeze || freezeFading) return
+    if (sceneArtworkReady) { setFreezeFading(true); return }
+    const t = window.setTimeout(() => setFreezeFading(true), FREEZE_MAX_MS)
+    return () => window.clearTimeout(t)
+  }, [freeze, freezeFading, sceneArtworkReady])
+  useEffect(() => {
+    if (!freezeFading) return
+    const t = window.setTimeout(() => { setFreeze(null); setFreezeFading(false) }, FREEZE_FADE_MS)
+    return () => window.clearTimeout(t)
+  }, [freezeFading])
   const setRange = (f: string, t: string) => {
     const next = new URLSearchParams(params)
     next.set('from', f)
@@ -277,7 +378,25 @@ export default function DigestTheater() {
     const s = shown.scenes[target]
     seek(delta < 0 && target === view.index ? s.arrive_ms : s.start_ms)
   }
-  const openArtwork = (id: string) => { setPlaying(false); nav.push(`/artworks/${id}`) }
+  // 作品を押した所（画面の座標）。詳細は、ここから丸く広がって開く（nav.zoom）
+  const tapPoint = useRef<{ x: number; y: number } | null>(null)
+  const captureRef = useRef<(() => Promise<ImageBitmap | null>) | null>(null)
+  const leaving = useRef(false)
+  const openArtwork = (id: string) => {
+    if (leaving.current) return
+    leaving.current = true
+    // 戻ってきたら続きから見られるよう、いまの位置（ふつうの速さでの時刻）と再生中だったかを覚えておく
+    if (started) saveResume({ revision, at: (clock.current ?? 0) * settings.speed, playing })
+    setPlaying(false)
+    const point = tapPoint.current ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    // 止めたコマを撮ってから移る（1 コマ分だけ待つ。撮れなくても移る）
+    void (captureRef.current?.() ?? Promise.resolve(null)).then((bitmap) => {
+      if (bitmap && !started) bitmap.close()
+      keepFreeze(bitmap && started ? { revision, bitmap } : null)
+      leaving.current = false
+      nav.zoom(`/artworks/${id}`, point)
+    })
+  }
   const openMedia = useCallback((sceneIndex: number, index: number) => { setPlaying(false); setViewer({ scene: sceneIndex, index }) }, [setPlaying])
 
   // 操作が無ければ HUD を薄くする（再生中だけ）
@@ -346,7 +465,7 @@ export default function DigestTheater() {
 
   return (
     <Screen className={`theater-screen${hudVisible || !playing ? '' : ' is-idle'}`}>
-      <div className="theater-root" ref={root} onPointerMove={playing ? wake : undefined} onPointerDown={playing ? wake : undefined}>
+      <div className="theater-root" ref={root} onPointerMove={playing ? wake : undefined} onPointerDown={playing ? wake : undefined} onPointerDownCapture={(e) => { tapPoint.current = { x: e.clientX, y: e.clientY } }}>
         {query.isError ? (
           <div className="theater-message" role="alert">
             <h2>シアターを開けませんでした</h2>
@@ -389,10 +508,12 @@ export default function DigestTheater() {
                     onMedia={openMedia}
                     onReady={() => setSceneReady(true)}
                     onStageError={setStageError}
+                    captureRef={captureRef}
                   />
                 </Suspense>
               )}
             </StageShell>
+            {freeze && <FreezeFrame bitmap={freeze.bitmap} fading={freezeFading} />}
           </ErrorBoundary>
         )}
 
