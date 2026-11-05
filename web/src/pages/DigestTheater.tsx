@@ -322,19 +322,20 @@ export default function DigestTheater() {
     else void el.requestFullscreen?.().catch(() => {})
   }
 
-  // メモ：いまの行を雲にする。行が変わったら、前の雲は上へ流れて消え（消え終わったら外す）、新しい雲がその下でふくらむ
+  // メモ：作品のメモ全体を 1 つの雲にして、一度に出す（最初の行が出る時刻から、最後の行が消える時刻まで）。
+  // 次の作品へ移ったら、前の雲は上へ流れて消え（消え終わったら外す）、新しい雲がその下でふくらむ
   const [clouds, setClouds] = useState<MemoCloud[]>([])
+  const memoText = scene ? (scene.artwork.memo.trim() || scene.memo.map((l) => l.text).join('')) : ''
   useEffect(() => {
-    const line = scene && view.line >= 0 ? scene.memo[view.line] : null
-    const key = line ? `${view.index}-${view.line}` : null
+    const key = memoText && view.line >= 0 ? `${view.index}` : null
     setClouds((before) => {
       if (key && before.some((c) => c.key === key && !c.leaving)) return before
       const fading = before.map((c) => (c.leaving ? c : { ...c, leaving: true }))
       const changed = fading.some((c, i) => c !== before[i])
-      if (!key || !line) return changed ? fading : before
-      return [...fading.filter((c) => c.key !== key).slice(-2), { key, text: line.text, leaving: false }]
+      if (!key) return changed ? fading : before
+      return [...fading.filter((c) => c.key !== key).slice(-2), { key, text: memoText, leaving: false }]
     })
-  }, [scene, view.index, view.line])
+  }, [memoText, view.index, view.line])
   const dropCloud = useCallback((key: string) => setClouds((before) => before.filter((c) => c.key !== key)), [])
 
   const marks = useMemo(() => (shown ? chapterMarks(shown) : []), [shown])
@@ -512,7 +513,7 @@ function MemoCloudView({ cloud, onGone }: { cloud: MemoCloud; onGone: (key: stri
   return (
     <div className="theater-memo">
       <div
-        className={`theater-cloud${cloud.leaving ? ' is-leaving' : ''}`}
+        className={`theater-cloud${cloud.text.length > 60 ? ' is-long' : ''}${cloud.leaving ? ' is-leaving' : ''}`}
         role="note"
         aria-hidden={cloud.leaving || undefined}
         onAnimationEnd={(e) => { if (cloud.leaving && e.target === e.currentTarget) onGone(cloud.key) }}

@@ -261,8 +261,8 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
       anchorPoint.current.set(0, artSize.height + 0.25, 0)
       slot.localToWorld(anchorPoint.current)
       anchorPoint.current.project(camera)
-      // 画面の端と、上の操作列に重ならないようにする（メモの幅は最大 340px）
-      const half = Math.min(170, size.width / 2 - 16)
+      // 画面の端と、上の操作列に重ならないようにする（メモの雲の幅は最大 420px）
+      const half = Math.min(210, size.width / 2 - 16)
       const x = THREE.MathUtils.clamp((anchorPoint.current.x * 0.5 + 0.5) * size.width, 16 + half, size.width - 16 - half)
       const y = THREE.MathUtils.clamp((-anchorPoint.current.y * 0.5 + 0.5) * size.height, 150, size.height - 220)
       memo.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`

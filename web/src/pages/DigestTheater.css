@@ -126,6 +126,16 @@
   animation: theater-cloud-out 1.3s ease-in both;
 }
 
+/* 長いメモは雲を横に広げ、字を少し小さくする */
+.theater-cloud.is-long {
+  max-width: min(420px, calc(100vw - 64px));
+}
+
+.theater-cloud.is-long p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
 /* 読んでいるあいだ、ゆっくり上下・左右にただよう */
 .theater-cloud-drift {
   position: absolute;
@@ -202,7 +212,8 @@
   text-align: center;
   color: var(--ink);
   line-break: strict;
-  text-wrap: balance;
+  white-space: pre-line;
+  text-wrap: pretty;
   animation: theater-cloud-text-in 0.9s var(--ease-out) 0.45s both;
 }
 
