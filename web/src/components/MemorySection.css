@@ -6,6 +6,7 @@
 .memories {
   margin-top: 8px;
   min-width: 0;
+  container-type: inline-size;
 }
  
 .memories .section-head {
@@ -348,6 +349,18 @@
 .memory-keepsakes > :only-child {
   grid-column: 1 / -1;
 }
+
+/* 内容が多いときは、声とメモそれぞれに横幅を使う */
+.memory-keepsakes-stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 画面の幅ではなく、カードを置ける実際の幅で切り替える */
+@container (max-width: 340px) {
+  .memory-keepsakes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
  
 /* ===== 写真・動画の追加 ===== */
  
@@ -633,6 +646,8 @@
  
 .memory-voice-title {
   margin-bottom: 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
  
 .memory-voice-meta {
