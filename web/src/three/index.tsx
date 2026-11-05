@@ -35,6 +35,22 @@ export { hasHouseModel, houseRoomsOf, shellUrlsOf } from './scenes/home/house'
 const load = () => import('./scenes')
 
 export const MiniatureScene = lazy(() => load().then((m) => ({ default: m.MiniatureScene })))
+// 期間をえらんで振り返るシアター（/map/theater）。時間割の読み方（timeline.ts）は three.js を使わないので、ここからそのまま渡す
+export const TheaterScene = lazy(() => load().then((m) => ({ default: m.TheaterScene })))
+export {
+  STOP_MOTION_FPS,
+  THEATER_SPEEDS,
+  chapterMarks,
+  clockLabel,
+  durationLabel,
+  frameAt,
+  memoLineAt,
+  sceneEnd,
+  sceneIndexAt,
+  scaleTheater,
+  type TheaterFrame,
+  type TheaterPhase,
+} from './scenes/theater/timeline'
 
 export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene })))
 export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))

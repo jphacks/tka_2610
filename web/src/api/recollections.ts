@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, keys, request } from './client'
-import type { ArtworkDigest, DigestScope, MiniatureDigestData, Recollections } from './types'
+import type { ArtworkDigest, DigestScope, MiniatureDigestData, Recollections, TheaterData } from './types'
 
 export function useRecollections(age?: string | null) {
   const search = new URLSearchParams()
@@ -53,6 +53,28 @@ export function useMiniatureDigest(scope: DigestScope, drawingsOnly: boolean) {
       try { return await request<MiniatureDigestData>(`/api/recollections/miniature?${search}`) }
       catch (error) {
         if (error instanceof SyntaxError) throw new ApiError(502, '3D鑑賞のAPIを読み込めませんでした。backendを再起動してください。')
+        throw error
+      }
+    },
+  })
+}
+
+
+/** 期間をえらんで振り返るシアター。from・to は YYYY-MM-DD（省くと作品のある全期間） */
+export function useTheater(from: string | null, to: string | null, drawingsOnly: boolean) {
+  const search = new URLSearchParams()
+  if (from) search.set('from', from)
+  if (to) search.set('to', to)
+  if (drawingsOnly) search.set('category', 'drawing')
+  return useQuery({
+    placeholderData: previous => previous,
+    queryKey: [...keys.recollections, 'theater', from, to, drawingsOnly],
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      try { return await request<TheaterData>(`/api/recollections/theater?${search}`) }
+      catch (error) {
+        if (error instanceof SyntaxError) throw new ApiError(502, 'シアターのAPIを読み込めませんでした。backendを再起動してください。')
         throw error
       }
     },

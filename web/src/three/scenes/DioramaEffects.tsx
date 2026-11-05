@@ -136,7 +136,7 @@ const TiltShiftShader = {
 }
 
 /** 仕上げ。lite（タッチの端末）では隅の陰を省く */
-export function DioramaPost({ lite }: { lite: boolean }) {
+export function DioramaPost({ lite, tilt = 2.2, band = 0.2 }: { lite: boolean; /** ぼかしの強さ */ tilt?: number; /** ぼかさない真ん中の帯の半分の幅 */ band?: number }) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera)
@@ -175,7 +175,11 @@ export function DioramaPost({ lite }: { lite: boolean }) {
     const h = size.height * dpr
     tiltX.uniforms.delta.value.set(1 / w, 0)
     tiltY.uniforms.delta.value.set(0, 1 / h)
-  }, [composer, tiltX, tiltY, size.width, size.height, dpr])
+    for (const pass of [tiltX, tiltY]) {
+      pass.uniforms.amount.value = tilt
+      pass.uniforms.band.value = band
+    }
+  }, [composer, tiltX, tiltY, size.width, size.height, dpr, tilt, band])
 
   // composer.dispose() は自分の描画用バッファしか片付けないので、隅の陰も片付ける
   useEffect(

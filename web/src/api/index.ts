@@ -78,3 +78,6 @@ export type { ArtworkDigest, DigestSlide, DigestScope } from './types'
 
 export { useMiniatureDigest } from './recollections'
 export type { MiniatureEntry, MiniatureDigestData } from './types'
+
+export { useTheater } from './recollections'
+export type { TheaterData, TheaterMediaSlot, TheaterMemoLine, TheaterPreset, TheaterScene, TheaterSide } from './types'

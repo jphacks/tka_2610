@@ -92,6 +92,20 @@ memoriaの上部に `MiniatureDigest` を埋め込んでいます。画面を開
 
 Canvasは停止中の連続描画を抑える `frameloop=demand` とDPR最大1.35を使います。「視差効果を減らす」設定では回転を即時切り替えにします。GLBを読めないときや12秒以上かかるときは作品画像で代替し、WebGL全体を利用できない場合は詳細画面への案内を出します。
 
+### 期間をえらんで振り返るシアター
+
+memoria（`/map`）の「期間をえらんで振り返る」から、全画面のシアター（`/map/theater`）を開きます。えらんだ期間に作った作品を全部、古い順に、手描きの家や木が立つ丸い大地の上で振り返ります。大地が回ると、次の作品が奥から手前へ来ます。作品の左右には、その作品のおもいでの写真・動画が写真立てとして立ち、作品の少し上にメモ全体が雲の形でふわっと浮かびます。この端末の音源ファイルを BGM にでき、曲のはじめの位置と音量を選べます。
+
+`GET /api/recollections/theater?from=YYYY-MM-DD&to=YYYY-MM-DD[&category=drawing]` は Rust の `theater.rs` が作る場面の時間割を返します。
+
+- 作品は `made_on` が期間内のものを全部（上限 200 点。超えたら `truncated`）。`to` は今日までに丸め、省くと作品のある全期間です。`from > to`・日付の形の誤り・不正な種類は 400 です。
+- おもいでは追加した日にかかわらず、作品と一緒に出します（写真・動画は 1 作品 6 件まで、声は最初の 1 件）。
+- 各場面は `start_ms`（大地が回りはじめる）・`arrive_ms`（作品が手前に着く）・`hold_ms`。写真立て（`media[]`）とメモの行（`memo[]`）と声の時刻は `arrive_ms` からの相対です。写真・動画は左右に 2 つずつ交互に出し、動画のある回はその長さ（12 秒まで）だけ見せます。メモは「。！？」と改行で文に分け（かっこの中では切らない）、長い文は読点で折って、読む時間を見積もります（画面では、最初の行が出る時刻から最後の行が消える時刻まで、メモ全体を 1 つの雲で出します）。場面の長さは、写真・動画を見る時間・メモを読む時間・声を聞く時間のいちばん長いものです。
+- `available.presets` は期間のボタン（これまで・この1年・今年・作品のある年齢ごと。年齢はお誕生日から）です。
+- 進む速さ（0.5×〜2×）は画面だけで変えます。`timeline.ts` の `scaleTheater` が時間割の時刻をすべて 1/速さ 倍にし、3D・音・シークバーはそれを使います。再生中に変えたときは、いま見ている所のまま続け、曲の位置も飛ばしません。動画と声はいつもの速さで流します。
+
+舞台の絵は `tools/digest-stage/generate_stage_textures.py` が作り、`backend/static/stage/` に置いて `/stage-assets/` で配信します（作り直し方は [tools/digest-stage/README.md](../tools/digest-stage/README.md)）。新しいマイグレーションはありません。
+
 ### AIで作品のメモの下書きを作る
 
 作品の詳細のメモから「AIで下書きをつくる」を押すと、Rust の `POST /api/artworks/{id}/memo-draft` が下書き `{ "memo": "..." }` を返します。生成ではDBを書き換えません。利用者が下書きを確認・編集して「保存する」を押したときだけ、既存の作品更新APIでメモを保存します。
@@ -550,6 +564,8 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | POST / DELETE | `/api/artworks/:id/display` | おうちに飾る・飾るのをやめる。POST の本文は任意で `{ "room_id"?, "parent_id"?, "surface"?, "position"?, "rotation_y"? }`（`surface` は `parent_id` と一緒に使う）。`room_id` はおへやの id（前の版の Web が送る `hub` は省いたのと同じ）。`room_id` を省くと、作品の年齢のおへやを 1 階から探して、空いている棚や机に自動で置く（作品の実寸で空きを探す。その年齢のおへやが 1 つも無ければ 1 階を作る）。全部いっぱいなら 409（「4 さいのおへやがいっぱいです。…」）。`room_id` を付けると、そのおへやの家具だけを探し、空きが無ければ 409。作品の年齢と違うおへやは 400。別のおへやに飾っていた作品は、そこから外して移す。`position` を付けて置き場所を決めるときは、`room_id` も要る（無いと 400）。出入口のある部屋では、置いた作品が出入口の前にかかると 400（今の家には出入口が無い） |
 | GET | `/media/*` | 生成した画像・サムネイル・GLB、おもいでのファイル（`memories/`。Range に対応）と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |
+| GET | `/api/recollections/theater` | 期間をえらんで振り返るシアターの時間割（`?from=`・`?to=`・`?category=drawing`。上の「期間をえらんで振り返るシアター」） |
+| GET | `/stage-assets/*` | シアターの舞台の絵と輪郭（`backend/static/stage/`。`tools/digest-stage` が作る） |
 | GET | `/healthz` | 死活確認 |
 
 作品の項目（`/api/artworks` の一覧・詳細など）の `model_size` は、GLB から測った実寸（`[幅, 高さ, 奥行き]`、m）です。測れなかった作品は null です。`age_at_made` は作ったときの子どもの年齢（お誕生日と作成日から。お誕生日が無ければ手入力の `age`）です。`age_month_label` は作ったときの年齢を月まで出した文字（「4さい 3か月」。お誕生日が無ければ null。`age.rs` の `months_on`。月の記念日がその月に無いとき（1/31 生まれの 2 月など）は翌月 1 日に数える）、`month_key`・`month_label` は作った月（「2026-10」・「2026年 10月」。作品一覧の見出し）です。`room_id`・`room_name` は、飾っているおへやの id と名前（「4さいのおへや 2」）で、飾っていなければ null です。`memory_counts` はおもいでの数（`{ photo, video, audio }`。`/api/museum` の `slots[].artwork` にもある）です。作品の詳細（`/api/artworks/:id`）は `memories` におもいでを足した順で返します（`kind`・`url`・写真の小さい画像 `thumb_url`・`duration_ms` と表示用の `duration_label`（「0:12」）・`caption`・足した日 `date_label` など）。
