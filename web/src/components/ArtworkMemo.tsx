@@ -24,8 +24,9 @@ export function ArtworkMemo({ artworkId, memo }: { artworkId: string; memo: stri
       <div className="memory-note">
         <span className="memory-note-label">メモ</span>
         {memo && <p>{memo}</p>}
-        <button type="button" className="btn btn-plain btn-small" onClick={start}>
-          {memo ? 'メモを編集・AIで下書きをつくる' : 'メモを書く・AIで下書きをつくる'}
+        <button type="button" className="memory-note-edit" onClick={start}
+          aria-label={memo ? 'メモを編集・AIで下書きをつくる' : 'メモを書く・AIで下書きをつくる'}>
+          {memo ? '編集・AI下書き' : '書く・AI下書き'}
         </button>
       </div>
       <Sheet open={open} title="作品のメモ" onClose={() => { if (!busy) setOpen(false) }}>
