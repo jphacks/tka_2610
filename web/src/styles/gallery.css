@@ -22,6 +22,8 @@
 
 .collection-grid .artwork-gallery-card .thumb img {
   object-fit: contain;
+  /* 写真の灰色の背景を、作品ごとに同じ明るさにそろえる（倍率 --tone は Img の evenTone が測って入れる。photoTone.ts） */
+  filter: brightness(var(--tone, 1));
   transition: opacity 0.4s var(--ease-out), transform 0.3s var(--ease-out);
 }
 

@@ -62,7 +62,7 @@ export function ArtworkThumb({
       onTouchStart={() => prefetchArtwork(client, artwork.id)}
       onFocus={() => prefetchArtwork(client, artwork.id)}
     >
-      <Img src={gallery ? artwork.image_url : artwork.thumb_url} tint={gallery ? undefined : artwork.tint} alt={artwork.title} share={artwork.id} eager={gallery && index < 4}>
+      <Img src={gallery ? artwork.image_url : artwork.thumb_url} tint={gallery ? undefined : artwork.tint} alt={artwork.title} share={artwork.id} eager={gallery && index < 4} evenTone={gallery}>
         {gallery && artwork.favorite && <span className="artwork-gallery-favorite" aria-label="お気に入り"><HeartIcon size={13} filled /></span>}
       </Img>
       {gallery && <p className="artwork-gallery-category">{artwork.category_label}</p>}
