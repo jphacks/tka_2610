@@ -1,25 +1,6 @@
 /* ⑫ 模様替え（HomeEdit）。全画面の 3D と、右上の「鑑賞モードへ」・下の部屋の切り替え・状態の表示とツールバー・追加とテーマのシートの中身。
-   上の操作列（.stage-top / .stage-title）は styles/stage-overlay.css */
-
-/* PC では、スマホの枠をやめてウィンドウいっぱいに広げる（物をドラッグする場所を広く取るため。鑑賞モードの MuseumWalk.css と同じ） */
-.app:has(.edit-screen) {
-  max-width: none;
-}
-
-@media (min-width: 600px) and (min-height: 700px) {
-  .app:has(.edit-screen) {
-    height: 100dvh;
-    margin-top: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-}
-
-/* 広い画面でも、シートはスマホの幅くらいにして真ん中に出す（Sheet.css の左右 8px を上書き） */
-.edit-screen .sheet {
-  left: max(8px, calc(50% - 260px));
-  right: max(8px, calc(50% - 260px));
-}
+   上の操作列（.stage-top / .stage-title）は styles/stage-overlay.css。
+   PC でも、ほかの画面と同じスマホの枠の中で模様替えする（ウィンドウいっぱいには広げない） */
 
 .edit-stage {
   position: absolute;

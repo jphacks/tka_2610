@@ -1,5 +1,6 @@
 /* memoria。作品を入口に、同じころの写真・声・年齢のおへやへ戻る。 */
-.recall-page { padding-top: 10px; }
+/* 上の余白は、作品一覧のアルバムの棚の中身（見出しの下に並ぶアルバム）と同じ高さから始まるように（見出しの段の 36px ぶん下げる） */
+.recall-page { padding-top: 46px; }
 .recall-section + .recall-section { margin-top: 30px; }
 .recall-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
 .recall-section-head h1, .recall-section-head h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 18px; line-height: 1.5; font-weight: 700; }
