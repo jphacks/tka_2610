@@ -113,21 +113,26 @@
 }
 
 /*
- * 雲：もこもこ（丸）をいくつか重ねた形。文字の長さで横に伸び、丸の大きさは雲の高さから決まる（上限あり）。
- * 出るとき … ぼやけた小さなかたまりから、丸がひとつずつふくらんで雲になり、少しあとで文字が浮かぶ。
+ * 雲：フェルトの雲の画像（assets/memo-cloud.webp）を、文字の入る箱いっぱいに敷く。文字の長さで横に伸び、高さは幅のおよそ半分（文字が多ければ伸びる）。
+ * 出るとき … ぼやけた小さなかたまりから雲がふくらみ、少しあとで文字が浮かぶ。
  * 消えるとき … 少し大きくなりながら上へ流れて、ぼやけて薄れる。次の行の雲は、その下で同時にふくらむ。
  */
 .theater-cloud {
   position: relative;
+  display: grid;
+  place-items: center;
   width: max-content;
-  min-width: 150px;
+  min-width: 170px;
   max-width: min(320px, calc(100vw - 64px));
-  padding: 16px 32px 14px;
+  aspect-ratio: 2.1;
+  /* 画像の雲は上のもこもこが高いので、文字は少し下に寄せて、雲の真ん中に見えるようにする */
+  padding: 34px 36px 22px;
   animation: theater-cloud-in 1.4s var(--ease-out) both;
 }
 
+/* 消える長さを変えたら、MEMO_LEAD_MS（DigestTheater.tsx）も見直す */
 .theater-cloud.is-leaving {
-  animation: theater-cloud-out 1.3s ease-in both;
+  animation: theater-cloud-out 1s ease-in both;
 }
 
 /* 長いメモは雲を横に広げ、字を少し小さくする */
@@ -147,62 +152,18 @@
   animation: theater-cloud-drift 7s ease-in-out 1.4s infinite;
 }
 
-/* 雲の形（本体＋丸）。影は形ぜんぶにひとつだけ落とす */
+/* 雲の画像。影は形にそって落とす。出るときにふくらみ、読んでいるあいだはゆっくり息をする */
 .theater-cloud-shape {
   position: absolute;
   inset: 0;
-  /* ふちを少しだけぼかして、空の雲のやわらかさに寄せる */
+  background: url('../assets/memo-cloud.webp') center / 100% 100% no-repeat;
   filter:
-    blur(0.6px)
     drop-shadow(0 10px 18px rgba(62, 97, 120, 0.16))
     drop-shadow(0 2px 3px rgba(62, 97, 120, 0.08));
-}
-
-.theater-cloud-shape::before,
-.theater-cloud-shape i {
-  position: absolute;
-  background: radial-gradient(
-    circle at 42% 30%,
-    var(--surface) 0%,
-    var(--surface) 52%,
-    color-mix(in srgb, var(--sky) 38%, var(--surface)) 100%
-  );
-}
-
-/* 本体（横長のまるい形） */
-.theater-cloud-shape::before {
-  content: '';
-  inset: 0;
-  z-index: 1;
-  border-radius: 999px;
-  background: linear-gradient(
-    to bottom,
-    var(--surface) 0%,
-    var(--surface) 55%,
-    color-mix(in srgb, var(--sky) 42%, var(--surface)) 100%
-  );
-}
-
-/* もこもこの丸。--x: 横の位置、--s: 大きさ（雲の高さに対する割合）、--y: 上下のずれ、--d: ふくらむ順番 */
-.theater-cloud-shape i {
-  left: var(--x);
-  height: min(var(--s), 72px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  translate: -50% 0;
   transform-origin: 50% 70%;
   animation:
-    theater-puff-in 0.9s var(--spring) calc(var(--d) * 0.07s) both,
-    theater-puff-breathe 5.5s ease-in-out calc(1.2s + var(--d) * 0.6s) infinite;
-}
-
-.theater-cloud-shape i.top {
-  bottom: calc(100% - var(--y));
-}
-
-.theater-cloud-shape i.bottom {
-  top: calc(100% - var(--y));
-  z-index: 0;
+    theater-puff-in 0.9s var(--spring) both,
+    theater-puff-breathe 5.5s ease-in-out 1.2s infinite;
 }
 
 .theater-cloud p {
@@ -1099,7 +1060,7 @@
     animation: theater-cloud-fade-out 0.5s ease-in both;
   }
   .theater-cloud-drift,
-  .theater-cloud-shape i,
+  .theater-cloud-shape,
   .theater-cloud p,
   .theater-cloud.is-leaving p {
     animation: none;

@@ -35,6 +35,8 @@ const speedHint = (speed: number) =>
 const HUD_IDLE_MS = 3200
 /** 作品の名前の字幕を、作品が去りはじめる（滞在が終わる）この長さ前に消しはじめる */
 const CAPTION_LEAD_MS = 450
+/** メモの雲を、作品が去りはじめるこの長さ前に消しはじめる。消える動き（.theater-cloud.is-leaving の 1 秒）が、作品が動き出す 1 秒前に終わる */
+const MEMO_LEAD_MS = 2000
 
 /**
  * 作品を押して詳細へ行くときに覚える、戻ってきたときの続きの位置（このタブの sessionStorage。1 回読んだら消す）。
@@ -528,12 +530,17 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
     else void el.requestFullscreen?.().catch(() => {})
   }
 
-  // メモ：作品のメモ全体を 1 つの雲にして、一度に出す（最初の行が出る時刻から、最後の行が消える時刻まで）。
-  // 次の作品へ移ったら、前の雲は上へ流れて消え（消え終わったら外す）、新しい雲がその下でふくらむ
+  // メモ：作品のメモ全体を 1 つの雲にして、一度に出す（最初の行が出る時刻から、作品が去りはじめる MEMO_LEAD_MS 前まで）。
+  // 消えるときは上へ流れて消え（消え終わったら外す）、次の作品の新しい雲がその下でふくらむ
   const [clouds, setClouds] = useState<MemoCloud[]>([])
   const memoText = scene ? (scene.artwork.memo.trim() || scene.memo.map((l) => l.text).join('')) : ''
+  // 速く進めて場面が短いときは、雲が出ている時間の半分は残す
+  const memoLeft = !!scene && scene.memo.length > 0 && view.time >= Math.max(
+    scene.arrive_ms + scene.hold_ms - MEMO_LEAD_MS,
+    scene.arrive_ms + (scene.memo[0].show_ms + scene.hold_ms) / 2,
+  )
   useEffect(() => {
-    const key = memoText && view.line >= 0 ? `${view.index}` : null
+    const key = memoText && view.line >= 0 && !memoLeft ? `${view.index}` : null
     setClouds((before) => {
       if (key && before.some((c) => c.key === key && !c.leaving)) return before
       const fading = before.map((c) => (c.leaving ? c : { ...c, leaving: true }))
@@ -541,7 +548,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
       if (!key) return changed ? fading : before
       return [...fading.filter((c) => c.key !== key).slice(-2), { key, text: memoText, leaving: false }]
     })
-  }, [memoText, view.index, view.line])
+  }, [memoText, memoLeft, view.index, view.line])
   const dropCloud = useCallback((key: string) => setClouds((before) => before.filter((c) => c.key !== key)), [])
 
   const marks = useMemo(() => (shown ? chapterMarks(shown) : []), [shown])
@@ -745,18 +752,6 @@ interface MemoCloud {
   leaving: boolean
 }
 
-/** 雲のもこもこ（x: 横の位置、s: 大きさ＝雲の高さに対する割合、y: 本体に重なる深さ、d: ふくらむ順番） */
-const PUFFS = [
-  { side: 'top', x: '14%', s: '64%', y: '30%', d: 2 },
-  { side: 'top', x: '32%', s: '104%', y: '44%', d: 0 },
-  { side: 'top', x: '56%', s: '118%', y: '48%', d: 1 },
-  { side: 'top', x: '78%', s: '84%', y: '38%', d: 3 },
-  { side: 'top', x: '91%', s: '52%', y: '30%', d: 4 },
-  { side: 'bottom', x: '24%', s: '66%', y: '58%', d: 5 },
-  { side: 'bottom', x: '52%', s: '58%', y: '56%', d: 6 },
-  { side: 'bottom', x: '76%', s: '62%', y: '58%', d: 7 },
-] as const
-
 function MemoCloudView({ cloud, onGone }: { cloud: MemoCloud; onGone: (key: string) => void }) {
   return (
     <div className="theater-memo">
@@ -767,11 +762,7 @@ function MemoCloudView({ cloud, onGone }: { cloud: MemoCloud; onGone: (key: stri
         onAnimationEnd={(e) => { if (cloud.leaving && e.target === e.currentTarget) onGone(cloud.key) }}
       >
         <div className="theater-cloud-drift" aria-hidden="true">
-          <div className="theater-cloud-shape">
-            {PUFFS.map((p, i) => (
-              <i key={i} className={p.side} style={{ '--x': p.x, '--s': p.s, '--y': p.y, '--d': p.d } as CSSProperties} />
-            ))}
-          </div>
+          <div className="theater-cloud-shape" />
         </div>
         <p>{cloud.text}</p>
       </div>
