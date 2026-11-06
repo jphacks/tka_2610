@@ -123,6 +123,12 @@ memoria（`/map`）の「期間をえらんで振り返る」から、全画面�
 
 実装で参照した公式仕様：[Geminiの音声入力](https://ai.google.dev/gemini-api/docs/generate-content/audio)、[生成API](https://ai.google.dev/api/generate-content)、[Files API](https://ai.google.dev/gemini-api/docs/files)。
 
+### アルバム（作品を自分でまとめる）
+
+作品一覧のいちばん上に、アルバムの棚が横に並びます。先頭の「新しく作る」で名前を入れてアルバムを作り、アルバムの画面の「作品を選ぶ」で、全部の作品からチェックを付けてまとめて入れる・外すことができます。作品の詳細の「⋯」→「アルバムに入れる」からも、1 つずつ入れられます。1 つの作品をいくつのアルバムにも入れられ、アルバムを消しても作品は残ります。
+
+お気に入り（作品のハート）は、最初からあるアルバム（id `favorites`）として棚の先頭に並びます。名前を変えたり消したりはできず、作品を入れる・外すと、ハートが付く・外れます。表は `albums`（名前）と `album_artworks`（アルバムに入れた作品。作品を消すと一緒に消える）で、`016_albums.sql` で足しました。処理は `backend/src/albums.rs` にあります。
+
 ### 作品を登録して飾るまで
 
 ```mermaid
@@ -479,6 +485,7 @@ PC でスマホの操作を試すときは、URL に `?input=touch` を付けて
 
 チームで 1 つのデータベース（Supabase など）を使うときは、`.env` の `DATABASE_URL` をその接続文字列にします（パスワードは各自の `.env` にだけ書きます）。Supabase は Session pooler（ポート 5432）の接続文字列を使います。作業の記録は [supabase.md](./supabase.md) にあります。
 
+- `016_albums.sql`（アルバムの表）が入った版を共有のデータベースで起動すると、それより古いビルドは `VersionMissing(16)` で起動できなくなります。表を足すだけで配置は変えないので、古いサーバーが配置を壊すことはありません。
 - 新しいマイグレーションや、壁紙と床材の新しい名前を共有のデータベースで使うときは、先に全員が最新を pull してビルドし直し、古いサーバーを止めます。古いサーバーは新しい配置を読めないと、初期配置に戻して保存してしまうためです（[AGENTS.md](../AGENTS.md) の「守ること」）。
 - Supabase の無料プランは、しばらく使わないとプロジェクトが一時停止（Paused）します。つながらないときは、ダッシュボードで「Restore」してから起動し直します。
 
@@ -556,10 +563,13 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | GET | `/api/museum` | おへや 1 つの全体像（`?room=<おへやの id>`。省くと今の年齢のいちばん下の階、無ければ最後に保存したおへや）。おへやの情報（`room`。id・`age`・`floor`・名前）、家の形（`house`。下の表）、配置 JSON（`layout`）、家具の一覧（`catalog`）、飾れる数（`capacity`。全部屋の合計）、飾っている作品の置き場所（`slots`。配置 JSON から Rust が計算した世界座標（部屋の中心込み）、作品のある部屋 `room_id`、作品を収める枠 `fit`、表示の倍率 `scale`（実寸 `artwork.model_size` × `scale` の大きさで置く。寸法が分からない作品は `model_size` と `scale` が null で、枠 `fit` に収める））、部屋ごとの数（`rooms`。今は hub の 1 件、`house.rooms` と同じ順。名前・説明・置き場所の数 `capacity`・飾っている数 `count`・最近飾った作品のサムネイル）。`model_url` はリビングだけの家の GLB（前の版の Web のため）。鑑賞モードは 3 秒ごとに取り直す |
 | GET / PUT | `/api/home/layout` | おへや 1 つの配置 JSON の読み書き（`?room=` は `/api/museum` と同じ。模様替えの画面の自動保存もこれ）。返す値に `room` が入る。ほかの年齢の作品を入れると 400。PUT は `{ "layout": 配置 JSON }` を送ると、検証して正規化した配置と `updated_at` を返す（後から保存したほうが勝つ。置けない配置は 400。`rooms` に hub 以外の部屋があっても 400。作品は実寸から決めた大きさで判定する。出入口のある部屋では、出入口の前を、保存されている配置と比べて新しく置いた物・動かした物だけ調べる。今は出入口が無い）。家具と作品の位置のほか、壁紙と床材（`rooms.hub.wall`・`floor`）もここで変える。配置から外した作品は「飾っていない」に戻る |
 | GET / PUT | `/api/settings` | 博物館の名前と利用者の名前、子どものお誕生日 `child_birthday`（`YYYY-MM-DD`。PUT で省くと今のまま。未来の日付は 400）。お誕生日を変えると、作品を年齢のおへやへ置き直す |
-| GET | `/api/artworks` | 作品の一覧（`category`・`sort`・`limit` で絞り込み） |
+| GET | `/api/artworks` | 作品の一覧（`category`・`sort`・`limit` で絞り込み。`album=<アルバムの id>` を付けると、そのアルバムの作品だけ。`album=favorites` はお気に入り。無いアルバムは 404） |
 | POST | `/api/artworks` | 作品の登録（multipart。`image` は必須、`model` に GLB を渡すとそれを使う）。飾るモデルの実寸を測って `model_size` に入れる |
 | GET / PATCH / DELETE | `/api/artworks/:id` | 作品の詳細（関連作品つき）・編集・削除（削除すると配置 JSON からも外れる）。編集でモデルを作り直したときは実寸を測り直す |
 | PUT | `/api/artworks/:id/favorite` | お気に入りの切り替え |
+| GET / POST | `/api/albums` | アルバムの一覧（先頭はお気に入り `favorites`、そのあとは新しく作った順。`id`・`name`・作品の数 `count`・表紙 `cover_url`（いちばん新しく作った作品のサムネイル。空なら null）・`cover_tint`・お気に入りなら `built_in: true`。`?artwork=<作品の id>` を付けると、その作品が入っているか `contains` も付く）・作る（`{ "name", "artwork_ids"? }`。名前は 1〜30 文字で、外れると 400。`artwork_ids` の作品も一緒に入れる。201 で作ったアルバムを返す） |
+| GET / PATCH / DELETE | `/api/albums/:id` | アルバム 1 つ（`:id` は UUID か `favorites`）・名前を変える（`{ "name" }`）・消す（入っていた作品は残る）。お気に入りの名前の変更と削除は 400、無いアルバムは 404 |
+| PUT | `/api/albums/:id/artworks` | 作品を入れる・外す（`{ "add": [作品の id], "remove": [作品の id] }`。無い作品は無視する。両方にある作品は入れる）。お気に入りなら、ハートを付ける・外す。変えたあとのアルバムを返す |
 | POST | `/api/artworks/:id/memories` | おもいでを 1 つ足す（multipart。`file` は必須、任意で `caption`（80 文字まで）・`duration_ms`・`width`・`height`（Web が測った長さと大きさ））。種類は Content-Type と拡張子で決める：写真（JPEG・PNG・WebP・GIF。長辺 1600px と 400px の正方形の JPEG に縮める）・動画（MP4・MOV・WebM。そのまま）・声（M4A・AAC・MP3・WebM・OGG・WAV。そのまま）。上限は写真と声 20 MB・動画 100 MB（超えると 413）、1 作品 30 個（超えると 409）。このルートだけ送信の上限が 110 MB（ほかの `/api` は 40 MB） |
 | PATCH / DELETE | `/api/artworks/:id/memories/:memory_id` | おもいでのひとことを変える（`{ "caption": "…" }`）・消す（ファイルも消える） |
 | POST / DELETE | `/api/artworks/:id/display` | おうちに飾る・飾るのをやめる。POST の本文は任意で `{ "room_id"?, "parent_id"?, "surface"?, "position"?, "rotation_y"? }`（`surface` は `parent_id` と一緒に使う）。`room_id` はおへやの id（前の版の Web が送る `hub` は省いたのと同じ）。`room_id` を省くと、作品の年齢のおへやを 1 階から探して、空いている棚や机に自動で置く（作品の実寸で空きを探す。その年齢のおへやが 1 つも無ければ 1 階を作る）。全部いっぱいなら 409（「4 さいのおへやがいっぱいです。…」）。`room_id` を付けると、そのおへやの家具だけを探し、空きが無ければ 409。作品の年齢と違うおへやは 400。別のおへやに飾っていた作品は、そこから外して移す。`position` を付けて置き場所を決めるときは、`room_id` も要る（無いと 400）。出入口のある部屋では、置いた作品が出入口の前にかかると 400（今の家には出入口が無い） |
