@@ -1,4 +1,4 @@
-// 作品のサムネイル（一覧・関連作品・模様替えの「追加」のシートで共通）と、読み込み中の仮表示。
+// 作品のサムネイル（一覧・関連作品・模様替えの「追加」のシート・アルバムの「作品を選ぶ」で共通）と、読み込み中の仮表示。
 import type { CSSProperties } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchArtwork, type Artwork } from '../api'
@@ -14,6 +14,7 @@ export function ArtworkThumb({
   index = 0,
   gallery = false,
   onSelect,
+  selected,
 }: {
   artwork: Artwork
   /** 展示中の作品に緑の点を付ける */
@@ -26,6 +27,8 @@ export function ArtworkThumb({
   gallery?: boolean
   /** 渡すと、詳細画面へのリンクではなく、押すとこれを呼ぶボタンになる（模様替えの「追加」のシート） */
   onSelect?: () => void
+  /** onSelect のときだけ。渡すと選ぶボタンになり、true なら選んだ印（右上のチェック）を付ける（アルバムの「作品を選ぶ」） */
+  selected?: boolean
 }) {
   const client = useQueryClient()
   const metaText = (meta === 'age' && artwork.age_month_label) || artwork.date_short
@@ -33,11 +36,14 @@ export function ArtworkThumb({
     return (
       <button
         type="button"
-        className="thumb-card thumb-button pressable"
+        className={`thumb-card thumb-button pressable${selected ? ' is-selected' : ''}`}
         style={{ '--i': Math.min(index, 12) } as CSSProperties}
+        aria-pressed={selected}
         onClick={onSelect}
       >
-        <Img src={artwork.thumb_url} tint={artwork.tint} alt={artwork.title} />
+        <Img src={artwork.thumb_url} tint={artwork.tint} alt={artwork.title}>
+          {selected !== undefined && <span className="thumb-check" aria-hidden="true" />}
+        </Img>
         <p className="thumb-title">{artwork.title}</p>
         <p className="thumb-meta">{metaText}</p>
       </button>

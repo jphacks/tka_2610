@@ -87,3 +87,39 @@
 
 .artwork-gallery-display { color: var(--green); white-space: nowrap; }
 .artwork-gallery-memories { gap: 7px; font-variant-numeric: tabular-nums; }
+
+/* 選ぶボタン（selected を渡したとき）：右上の丸。選ぶと塗ってチェックを付け、画像に枠を付ける */
+.thumb-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  box-shadow: 0 1px 4px var(--line-strong);
+  transition: background 0.2s, transform 0.3s var(--spring);
+}
+
+.thumb-button.is-selected .thumb-check {
+  background: var(--accent);
+  transform: scale(1.08);
+}
+
+/* チェックの印（線 2 本で描く） */
+.thumb-button.is-selected .thumb-check::after {
+  content: '';
+  position: absolute;
+  left: 6.5px;
+  top: 3px;
+  width: 6px;
+  height: 11px;
+  border: solid var(--surface);
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.thumb-button.is-selected .thumb::after {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}

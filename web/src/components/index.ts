@@ -1,6 +1,8 @@
 // 共通部品の入口。画面からは `import { ... } from '../components'` で読み込む。
 // 各部品の役割は docs/frontend.md の「共通部品」を参照。
 export { ActionMenu, type MenuItem } from './ActionMenu'
+export { AlbumNameSheet } from './AlbumNameSheet'
+export { AlbumSheet } from './AlbumSheet'
 export { ArtworkForm } from './ArtworkForm'
 export { ArtworkThumb, ThumbSkeletons } from './ArtworkThumb'
 export { ErrorBoundary } from './ErrorBoundary'
