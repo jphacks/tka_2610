@@ -18,3 +18,4 @@
 @import './list.css'; /* 設定アプリ風のリスト */
 @import './stage-overlay.css'; /* 3D や画像の上の操作列 */
 @import './caption.css'; /* 作品のキャプション */
+@import './gallery.css'; /* 作品の並び（作品一覧・アルバム） */
