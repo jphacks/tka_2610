@@ -1111,6 +1111,8 @@
 .theater-embedded { height: 100%; }
 .theater-embedded.is-compact {
   position: relative;
+  /* 枠の上でのホイール・縦スワイプを memoria の画面のスクロールへ渡す（全画面のときの none を外す） */
+  overscroll-behavior: auto;
   border: 1px solid var(--line);
   border-radius: 20px;
 }
