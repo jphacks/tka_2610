@@ -14,6 +14,7 @@ import AddArtwork from './pages/AddArtwork'
 import ArtworkDetail from './pages/ArtworkDetail'
 import ArtworkPreview from './pages/ArtworkPreview'
 import Collection from './pages/Collection'
+import AlbumView from './pages/AlbumView'
 import DigestTheater from './pages/DigestTheater'
 import EditArtwork from './pages/EditArtwork'
 import Home from './pages/Home'
@@ -36,6 +37,8 @@ export default function App() {
               <Route path="/" element={<Home />} />
               {/* ⑧ 作品一覧（タブ）。?category=種類 で絞り込む */}
               <Route path="/collection" element={<Collection />} />
+              {/* アルバム（push）。作品一覧の上の棚から開く。:id は UUID か favorites（お気に入り） */}
+              <Route path="/collection/albums/:id" element={<AlbumView />} />
               {/* ⑦ 博物館のマップ（タブ） */}
               <Route path="/map" element={<MapView />} />
               {/* 期間をえらんで振り返るシアター（push。?from=YYYY-MM-DD&to=YYYY-MM-DD&drawing=1）。手描きの町が回る大地の上で、作品とおもいでを順に見る */}

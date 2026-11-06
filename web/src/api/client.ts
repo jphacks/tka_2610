@@ -59,5 +59,11 @@ export const keys = {
   ageStack: (age: number) => ['ages', age] as const,
   settings: ['settings'] as const,
   artworks: (params: ListParams) => ['artworks', params] as const,
+  /** アルバムの共通の先頭（取り直すときはこれで全部） */
+  albums: ['albums'] as const,
+  /** アルバムの一覧（GET /api/albums?artwork=）。artworkId を渡すと、その作品が入っているか付き */
+  albumsOf: (artworkId?: string) => ['albums', 'list', artworkId ?? null] as const,
+  /** アルバム 1 つ（GET /api/albums/{id}） */
+  album: (id: string) => ['albums', 'one', id] as const,
   artwork: (id: string) => ['artwork', id] as const,
 }

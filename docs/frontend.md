@@ -85,7 +85,8 @@ import { HomeScene, StageShell } from '../three'
 | ⑥ | 作品の詳細（上は触って回せる・拡大できる作品の 3D（`ArtworkViewerScene`）。下に「おもいで」：写真・動画・声の記録） | `/artworks/:id` | `ArtworkDetail.tsx` / `.css` | push |
 | ⑦ | memoria（制作日から選んだ過去の作品、当時のおもいでの写真・声、年齢ごとの作品を振り返る。おへやの一覧は下部の「年齢ごとのおへや」から開く） | `/map`（`?age=年齢`） | `MapView.tsx` / `.css` | タブ |
 | ⑦' | 期間をえらんで振り返るシアター（えらんだ期間の作品を全部、手描きの町が回る丸い大地の上で古い順に。作品の左右に写真・動画の写真立て、上にメモが浮かぶ。この端末の音源を BGM にできる） | `/map/theater`（`?from=YYYY-MM-DD&to=YYYY-MM-DD`・`?drawing=1`） | `DigestTheater.tsx` / `.css`（再生の時計と音合わせは `theaterPlayback.ts`、BGM と設定の記憶は `theaterMusic.ts`） | push（⑦ の「期間をえらんで振り返る」から） |
-| ⑧ | 作品一覧（種類・年・月で絞り込む。はじめは「すべて」で、全部の作品を見出し無しで 2 列。「2列」「3列」で切り替えられ、`?view=compact` に保持する。作品全体を切り取らずに表示し、お気に入り・飾っている印・おもいでの種類ごとの件数を付ける。年を選ぶと、その年の作品を月ごとの見出しで区切って出し、月のダイヤルが現れる（横にスクロールして真ん中の枠に止まった月を選ぶ。押してもよい。`Collection.tsx` の `MonthScroller`）。月を選ぶとその月だけ。並びの上に、見ている範囲と点数。作品の下に作ったときの年齢「5さい 4か月」） | `/collection`（`?category=種類`・`?month=2026`（その年）・`?month=2026-10`（その月）。省くか、その種類の作品が無い年・月ならすべて） | `Collection.tsx` / `.css` | タブ |
+| ⑧ | 作品一覧（いちばん上はアルバムの棚（`AlbumShelf`）：「新しく作る」・お気に入り・作ったアルバムを横に並べ、押すとアルバムの画面へ。その下で、種類・年・月で絞り込む。はじめは「すべて」で、全部の作品を見出し無しで 2 列。「2列」「3列」で切り替えられ、`?view=compact` に保持する。作品全体を切り取らずに表示し、お気に入り・飾っている印・おもいでの種類ごとの件数を付ける。年を選ぶと、その年の作品を月ごとの見出しで区切って出し、月のダイヤルが現れる（横にスクロールして真ん中の枠に止まった月を選ぶ。押してもよい。`Collection.tsx` の `MonthScroller`）。月を選ぶとその月だけ。並びの上に、見ている範囲と点数。作品の下に作ったときの年齢「5さい 4か月」） | `/collection`（`?category=種類`・`?month=2026`（その年）・`?month=2026-10`（その月）。省くか、その種類の作品が無い年・月ならすべて） | `Collection.tsx` / `.css` | タブ |
+| ⑧' | アルバム（入っている作品を作品一覧と同じ 2 列で。「作品を選ぶ」のシートで全部の作品にチェックを付け外しして、「完了」でまとめて入れる・外す。右上の「⋯」で名前を変える・削除。お気に入り（`favorites`）は名前の変更と削除が無く、入れる・外すとハートが付く・外れる） | `/collection/albums/:id`（`:id` は UUID か `favorites`） | `AlbumView.tsx` / `.css` | push（⑧ の棚から） |
 | ⑨ | 作品を編集 | `/artworks/:id/edit` | `EditArtwork.tsx` | モーダル |
 | ⑩ | マイページ | `/settings` | `Settings.tsx` / `.css` | タブ |
 | ⑪ | 鑑賞モード（家の中を一人称で歩く。PC はキーボードとマウス、スマホはタッチ） | `/museum/walk`（`?room=おへやID`） | `MuseumWalk.tsx` / `.css` | push（②' の「歩く」、⑤ の「⋯」、⑫ の「鑑賞モードへ」から） |
@@ -121,7 +122,9 @@ import { HomeScene, StageShell } from '../three'
 | `Segmented.tsx` / `.css` | `Segmented` | 切り替えボタン（作品の種類など） |
 | `Toast.tsx` / `.css` | `ToastProvider` / `useToast` | 上から降りてくるお知らせ |
 | `Img.tsx` | `Img` | 画像。読み込みまでは API の `tint` を背景に敷く。見た目（`.thumb`）は `styles/common.css` |
-| `ArtworkThumb.tsx` / `.css` | `ArtworkThumb` / `ThumbSkeletons` | 作品のサムネイルと、読み込み中の仮表示。`gallery` は作品一覧向けの全体画像・お気に入り・展示中・おもいでの表示。`meta="age"` で、日付の代わりに作ったときの年齢（`age_month_label`。誕生日が無ければ日付）を出す（⑧）。`onSelect` を渡すと、詳細へのリンクではなく押すとそれを呼ぶボタンになる（⑫ の「追加」のシート） |
+| `ArtworkThumb.tsx` / `.css` | `ArtworkThumb` / `ThumbSkeletons` | 作品のサムネイルと、読み込み中の仮表示。`gallery` は作品一覧向けの全体画像・お気に入り・展示中・おもいでの表示。`meta="age"` で、日付の代わりに作ったときの年齢（`age_month_label`。誕生日が無ければ日付）を出す（⑧）。`onSelect` を渡すと、詳細へのリンクではなく押すとそれを呼ぶボタンになる（⑫ の「追加」のシート）。さらに `selected` を渡すと選ぶボタンになり、右上の丸にチェックを付ける（⑧' の「作品を選ぶ」） |
+| `AlbumNameSheet.tsx` | `AlbumNameSheet` | アルバムの名前を入れるシート（⑧ の「新しく作る」・⑧' の「名前を変える」） |
+| `AlbumSheet.tsx` / `.css` | `AlbumSheet` | ⑥ の「⋯」→「アルバムに入れる」のシート。アルバムを押すたびにその作品を入れる・外す（すぐ保存）。下の「新しいアルバムを作る」で、名前を入れて作ると同時にその作品を入れる |
 | `Loading.tsx` / `.css` | `Spinner` / `Busy` / `StageFallback` | 読み込み中の表示 |
 | `ArtworkForm.tsx` / `.css` | `ArtworkForm` | 作品の登録・編集フォーム（③と⑨で共通） |
 | `MemorySection.tsx` / `.css` | `MemorySection` | ⑥ の「おもいで」。写真と動画は 3 列のタイル（動画は最初のコマと長さ）、声はリストの行（その場で再生）。「＋ 追加」のシートから写真・動画・音声ファイルを選ぶ（1 つずつ順に送り、進み具合を出す）・声を録音する。スマホなど指で操作する端末（`pointer: coarse`）では「写真をとる」「動画をとる」も出し、その場でカメラを開く（`capture="environment"` の入力。PC では効かないので出さない）。「⋯」でひとことを変える・消す |
@@ -219,6 +222,7 @@ three.js はとても大きい（約 290 KB、gzip）ので、最初の読み込
 | `list.css` | 設定アプリ風のリスト（`.list-group`、`.list-item`） |
 | `stage-overlay.css` | 3D や画像の上に重ねる上部の操作列（詳細・3D プレビュー・おうちの中で共通） |
 | `caption.css` | 作品のキャプション（詳細・3D プレビューで共通） |
+| `gallery.css` | 作品の並び（`.collection-grid`。既定 2 列、`.compact` で 3 列）と、空のとき・読み込めなかったときの表示（`.collection-empty`）。⑧ 作品一覧と ⑧' アルバムで共通 |
 
 このほか、アプリの外枠（`.app`）は `App.css`、画面遷移のアニメーションは `nav.css` にあります。
 
@@ -245,6 +249,7 @@ Rust のファイルと対応するように分けています。
 | `ages.ts` | 年齢とおへや：`useAges`（`GET /api/ages`）、`useAgeStack(age)`（`GET /api/ages/{age}`）、`useAddRoom`（`POST /api/ages/{age}/rooms`）、`useDeleteRoom`（`DELETE /api/rooms/{id}`。② の「〇〇を消す」） | `ages_api.rs` |
 | `home.ts` | おへや 1 つの配置 JSON の読み書き（どれも `roomId` を取り、`?room=` を付ける）：`useLayout`（`GET /api/home/layout`）、`useSaveLayout`（`PUT`。保存すると、おうちの全体像と作品の一覧も取り直す。置き方がおかしいと 400 で、Rust の日本語の文言の `ApiError` になる）、`saveLayoutOnLeave`（画面を閉じるときに `keepalive` で送る。結果は待たない）。⑫ は配置を `useMuseum` から読み、`useLayout` は今は使っていない | `home_api.rs` |
 | `memories.ts` | 作品のおもいで：`useUploadMemory`（`XMLHttpRequest` で送り、進み具合を返す）・`useUpdateMemory`・`useDeleteMemory`（どれも作品の詳細・一覧・おへやを取り直す）、種類の判定 `kindOfFile`（Content-Type、無ければ拡張子）、動画と声の長さ・大きさを測る `probeMedia`、上限 `MEMORY_LIMITS`（Rust と同じ） | `memories.rs` |
+| `albums.ts` | アルバム：`useAlbums(artworkId?)`（`GET /api/albums`。作品の id を渡すと、入っているか `contains` 付き）、`useAlbum`、`useCreateAlbum`、`useRenameAlbum`、`useDeleteAlbum`、`useAlbumArtworks`（`PUT /api/albums/{id}/artworks`）。お気に入りの id は `FAVORITES_ALBUM`。アルバムの作品の並びは `useArtworks({ album })` で取る。変えるとアルバムと作品の一覧を取り直す（お気に入りなら作品の詳細も） | `albums.rs` |
 | `artworks.ts` | 作品：取得は `useArtworks`、`useArtwork`、画面の外から詳細を取る `fetchArtworkDetail`（⑪ の声）。変更は `useCreateArtwork`、`useUpdateArtwork`、`useDeleteArtwork`、`useFavorite`、`useDisplay`（おうちに飾る・飾るのをやめる。`roomId`（おへやの id）を渡すと本文 `{ room_id }` でそのおへやに飾る。省くと、作品の年齢のおへやにサーバーが置く） | `artworks.rs` |
 
 - 型は Rust の API の形と同じです。API の項目を増やしたら、`types.ts` の型も合わせます。

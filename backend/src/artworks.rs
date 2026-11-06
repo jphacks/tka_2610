@@ -18,7 +18,7 @@ use tokio::fs;
 use uuid::Uuid;
 
 use crate::{
-    age,
+    age, albums,
     error::{AppError, AppResult},
     glb::{self, Style},
     home::{self, ArtworkObject, DoorPolicy, LayoutObject},
@@ -393,6 +393,8 @@ pub struct ListQuery {
     /// drawing / craft / photo / other / all
     pub category: Option<String>,
     pub favorite: Option<bool>,
+    /// アルバムの id (UUID か "favorites")。そのアルバムに入っている作品だけ
+    pub album: Option<String>,
     /// recent (登録が新しい順, 既定) / made (制作日が新しい順)
     pub sort: Option<String>,
     pub limit: Option<i64>,
@@ -426,17 +428,21 @@ pub async fn list_artworks(
         _ => "created_at DESC",
     };
     let limit = query.limit.unwrap_or(200).clamp(1, 500);
+    let (album_favorite, album) = albums::list_filter(query.album.as_deref())?;
+    let favorite = query.favorite.or(album_favorite);
 
     let rows_sql = format!(
         "SELECT {COLUMNS} FROM artworks \
          WHERE ($1::text IS NULL OR category = $1) \
            AND ($2::bool IS NULL OR favorite = $2) \
+           AND ($4::uuid IS NULL OR id IN (SELECT artwork_id FROM album_artworks WHERE album_id = $4)) \
          ORDER BY {order} LIMIT $3"
     );
     let rows_query = sqlx::query_as::<_, ArtworkRow>(&rows_sql)
     .bind(&category)
-    .bind(query.favorite)
+    .bind(favorite)
     .bind(limit)
+    .bind(album)
     .fetch_all(&state.pool);
 
     let counts_query = sqlx::query_as::<_, (String, i64)>(

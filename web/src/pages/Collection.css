@@ -53,94 +53,15 @@
   box-shadow: 0 1px 4px var(--line);
 }
 
-.collection-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px 16px;
-}
-
-.collection-grid.compact {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px 10px;
-}
-
-/* 作品だけを見せる：白い台・影・縁の線は付けない */
-.collection-grid .artwork-gallery-card .thumb {
-  aspect-ratio: 1;
-  border-radius: 16px;
-  background: none;
-}
-
-.collection-grid .artwork-gallery-card .thumb img {
-  object-fit: contain;
-  transition: opacity 0.4s var(--ease-out), transform 0.3s var(--ease-out);
-}
-
-.collection-grid .artwork-gallery-card .thumb::after {
-  box-shadow: none;
-}
-
-.collection-grid .thumb-title {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  margin-top: 4px;
-  min-height: 42px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.collection-grid .thumb-meta {
-  margin-top: 4px;
-  font-size: 11px;
-}
-
-.collection-grid.compact .thumb-title {
-  font-size: 12px;
-  min-height: 36px;
-}
-
-.collection-grid.compact .thumb-meta { font-size: 10px; }
-
-.collection-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  margin-top: 24px;
-  padding: 40px 20px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  text-align: center;
-}
-
-.collection-empty > svg { color: var(--accent); }
-.collection-empty h2 { margin: 0; font-size: 17px; }
-.collection-empty p { margin: 0 0 6px; font-size: 13px; line-height: 1.9; color: var(--ink-2); }
-
 .collection-screen button:focus-visible,
 .collection-screen a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
 
-@media (hover: hover) {
-  .collection-grid .artwork-gallery-card:hover .thumb img { transform: scale(1.035); }
-}
-
 @media (max-width: 360px) {
   .collection-page { padding-inline: 16px; }
-  .collection-grid { gap: 20px 12px; }
   .collection-scope h2 { font-size: 14px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .collection-grid .thumb-card { animation: none; }
-  .collection-grid .artwork-gallery-card .thumb img { transition: none; }
-  .collection-grid .artwork-gallery-card:hover .thumb img { transform: none; }
 }
 
 .collection-body {
@@ -289,4 +210,102 @@
   flex: 1;
   height: 1px;
   background: var(--line);
+}
+
+/* アルバムの棚：いちばん上に横並び。画面の端までスクロールでき、1 枚ずつ止まる */
+.album-shelf {
+  margin: 0 0 18px;
+}
+
+.album-shelf-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.album-shelf-track {
+  display: flex;
+  gap: 12px;
+  margin: 0 -20px;
+  padding: 2px 20px 6px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 20px;
+  scrollbar-width: none;
+}
+
+.album-shelf-track::-webkit-scrollbar {
+  display: none;
+}
+
+.album-card {
+  display: grid;
+  flex: none;
+  align-content: start;
+  gap: 2px;
+  width: 104px;
+  scroll-snap-align: start;
+  color: var(--ink);
+  text-align: left;
+}
+
+.album-card-cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+}
+
+.album-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-card-cover.favorites {
+  color: var(--red);
+}
+
+/* 「新しく作る」：点線の枠 */
+.album-card-new .album-card-cover {
+  border: 1.5px dashed var(--line-strong);
+  background: none;
+  color: var(--accent);
+}
+
+/* お気に入りの表紙の右下の小さなハート */
+.album-card-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--red);
+}
+
+.album-card-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.album-card-count {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 360px) {
+  .album-shelf-track { margin: 0 -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
 }

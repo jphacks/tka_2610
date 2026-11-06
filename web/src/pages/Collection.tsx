@@ -1,4 +1,5 @@
 // ⑧ 作品一覧（/collection）。タブ。
+// いちばん上はアルバムの棚（AlbumShelf）。「新しく作る」・お気に入り・作ったアルバムを横に並べ、押すとアルバムの画面（AlbumView）へ。
 // 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のダイヤルで、見る範囲を絞り込む（?month=）。
 // 月のダイヤル（MonthScroller）は横にスクロールして、真ん中の枠に止まった月を選ぶ（押すと、その月が真ん中へすべって選ばれる）。
 //   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで並べる（既定2列・切り替えで3列）（はじめに開いたとき）
@@ -7,11 +8,11 @@
 // その種類の作品が無い年・月が URL にあれば、すべてにする（以前の ?month=all も、すべて）。
 // 並びのすぐ上に、いま見ている範囲と点数を 1 行で出す（「工作・2026年 10月　2点」）。作品名の下には作ったときの年齢（「5さい 4か月」）。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useArtworks, type Artwork, type Category } from '../api'
-import { ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons } from '../components'
-import { GalleryIcon } from '../icons'
+import { useAlbums, useArtworks, useCreateAlbum, type Artwork, type Category } from '../api'
+import { AlbumNameSheet, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons, TLink } from '../components'
+import { GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import './Collection.css'
 
@@ -157,6 +158,65 @@ function MonthScroller({
   )
 }
 
+/** 表紙の画像が読めない（ファイルが消えた）ときは、壊れた画像の印を出さずに表紙の色だけにする */
+const hideBroken = (e: SyntheticEvent<HTMLImageElement>) => {
+  e.currentTarget.style.visibility = 'hidden'
+}
+
+/**
+ * アルバムの棚。先頭は「新しく作る」（名前を入れて作ると、そのアルバムの画面へ進む）、次にお気に入り、そのあとは新しく作った順。
+ * 多ければ横にスクロールする
+ */
+function AlbumShelf() {
+  const nav = useNav()
+  const albums = useAlbums()
+  const create = useCreateAlbum()
+  const [creating, setCreating] = useState(false)
+
+  return (
+    <section className="album-shelf" aria-labelledby="album-shelf-title">
+      <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
+      <div className="album-shelf-track">
+        <button type="button" className="album-card album-card-new pressable" onClick={() => setCreating(true)}>
+          <span className="album-card-cover"><PlusIcon size={24} /></span>
+          <span className="album-card-name">新しく作る</span>
+        </button>
+        {albums.isPending
+          ? [0, 1].map((i) => <span key={i} className="album-card"><span className="album-card-cover skeleton" /></span>)
+          : albums.data?.items.map((album) => (
+              <TLink key={album.id} to={`/collection/albums/${album.id}`} className="album-card pressable">
+                <span className={`album-card-cover${album.built_in ? ' favorites' : ''}`} style={album.cover_tint ? { background: album.cover_tint } : undefined}>
+                  {album.cover_url ? <img src={album.cover_url} alt="" loading="lazy" onError={hideBroken} /> : album.built_in ? <HeartIcon size={24} filled /> : <GalleryIcon size={24} />}
+                  {album.built_in && album.cover_url && <span className="album-card-badge" aria-hidden="true"><HeartIcon size={12} filled /></span>}
+                </span>
+                <span className="album-card-name">{album.name}</span>
+                <span className="album-card-count num">{album.count}点</span>
+              </TLink>
+            ))}
+      </div>
+      <AlbumNameSheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="新しいアルバム"
+        submitLabel="作る"
+        busy={create.isPending}
+        error={create.error?.message}
+        onSubmit={(name) =>
+          create.mutate(
+            { name },
+            {
+              onSuccess: (album) => {
+                setCreating(false)
+                nav.push(`/collection/albums/${album.id}`)
+              },
+            },
+          )
+        }
+      />
+    </section>
+  )
+}
+
 export default function Collection() {
   const [params, setParams] = useSearchParams()
   const nav = useNav()
@@ -195,6 +255,7 @@ export default function Collection() {
     <Screen tabbar className="collection-screen">
       <NavBar title="作品一覧" />
       <div className="page collection-page">
+        <AlbumShelf />
         <div className="collection-filters">
         <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
         </div>

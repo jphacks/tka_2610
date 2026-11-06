@@ -1,5 +1,6 @@
 mod age;
 mod ages_api;
+mod albums;
 mod artworks;
 mod error;
 mod digest;
@@ -191,6 +192,13 @@ async fn main() {
                 .delete(artworks::delete_artwork),
         )
         .route("/artworks/{id}/favorite", put(artworks::set_favorite))
+        // アルバム (作品を自分で好きなグループにまとめる。id は UUID か "favorites")
+        .route("/albums", get(albums::list_albums).post(albums::create_album))
+        .route(
+            "/albums/{id}",
+            get(albums::get_album).patch(albums::update_album).delete(albums::delete_album),
+        )
+        .route("/albums/{id}/artworks", put(albums::update_artworks))
         .route("/artworks/{id}/memo-draft", post(memo_draft::generate))
         .route("/artworks/memo-draft", post(memo_draft::generate_upload))
         // おもいで (写真・動画・声の記録)。動画を送れるよう、このルートだけ送信の上限を上げる
