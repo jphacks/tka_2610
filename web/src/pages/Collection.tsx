@@ -1,5 +1,6 @@
 // ⑧ 作品一覧（/collection）。タブ。
 // いちばん上はアルバムの棚（AlbumShelf）。「新しく作る」・お気に入り・作ったアルバムを横に並べ、押すとアルバムの画面（AlbumView）へ。
+// 見出し「アルバム」の横の矢印を押すと、棚をたたむ・開く（この端末に覚える）。
 // 作品を長押しすると持ち上がり、上の棚のアルバムへ運んで入れられる（AlbumDrag）。運んでいる間、棚は画面の上に貼りつく。
 // 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のダイヤルで、見る範囲を絞り込む（?month=）。
 // 月のダイヤル（MonthScroller）は横にスクロールして、真ん中の枠に止まった月を選ぶ（押すと、その月が真ん中へすべって選ばれる）。
@@ -13,7 +14,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Synthet
 import { useSearchParams } from 'react-router-dom'
 import { useAlbums, useArtworks, useCreateAlbum, type Artwork, type Category } from '../api'
 import { AlbumNameSheet, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons, TLink } from '../components'
-import { GalleryIcon, HeartIcon, PlusIcon } from '../icons'
+import { BackIcon, GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import { AlbumDrag, NEW_ALBUM, type DragState } from './AlbumDrag'
 import './Collection.css'
@@ -165,9 +166,30 @@ const hideBroken = (e: SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.visibility = 'hidden'
 }
 
+/** アルバムの棚をたたんだかを覚える場所（この端末の localStorage。読めなくても、開いたまま使える） */
+const FOLDED_KEY = 'collection.albums-folded'
+
+function readFolded() {
+  try {
+    return localStorage.getItem(FOLDED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeFolded(folded: boolean) {
+  try {
+    if (folded) localStorage.setItem(FOLDED_KEY, '1')
+    else localStorage.removeItem(FOLDED_KEY)
+  } catch {
+    /* 覚えられなくても、今の画面ではたためる */
+  }
+}
+
 /**
  * アルバムの棚。先頭は「新しく作る」（名前を入れて作ると、そのアルバムの画面へ進む）、次にお気に入り、そのあとは新しく作った順。
  * 多ければ横にスクロールする。
+ * 見出しの横の矢印で、棚をたたむ・開く（たたんだかは、この端末に覚える）。たたんでいても、作品を持ち上げている間は開く。
  * 作品を持ち上げている間（drag）は、画面の上に貼りつき、指の下のアルバム（drag.over）をふくらませる。カードの data-album-drop が落とし先の印
  */
 function AlbumShelf({ drag }: { drag: DragState | null }) {
@@ -175,13 +197,26 @@ function AlbumShelf({ drag }: { drag: DragState | null }) {
   const albums = useAlbums()
   const create = useCreateAlbum()
   const [creating, setCreating] = useState(false)
+  const [folded, setFolded] = useState(readFolded)
+  const open = !folded || !!drag
+  const toggle = () => {
+    setFolded(!folded)
+    writeFolded(!folded)
+  }
 
   return (
-    <section className={`album-shelf${drag ? ' is-docked' : ''}`} aria-labelledby="album-shelf-title">
+    <section className={`album-shelf${drag ? ' is-docked' : ''}${open ? '' : ' is-folded'}`} aria-labelledby="album-shelf-title">
       <div className="album-shelf-head">
-        <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
-        <span className="album-shelf-hint">{drag ? (drag.over ? '離すと入れます' : 'ここへ運んで入れます') : '作品を長押しして、ここへ運べます'}</span>
+        <h2 id="album-shelf-title" className="album-shelf-title">
+          <button type="button" className="album-shelf-toggle" aria-expanded={open} aria-controls="album-shelf-body" onClick={toggle}>
+            アルバム
+            {albums.data && <span className="album-shelf-count num" aria-label={`${albums.data.items.length}こ`}>{albums.data.items.length}</span>}
+            <BackIcon size={16} strokeWidth={2.4} className="album-shelf-arrow" aria-hidden="true" />
+          </button>
+        </h2>
+        {open && <span className="album-shelf-hint">{drag ? (drag.over ? '離すと入れます' : 'ここへ運んで入れます') : '作品を長押しして、ここへ運べます'}</span>}
       </div>
+      <div id="album-shelf-body" className="album-shelf-body" aria-hidden={!open}>
       <div className="album-shelf-track">
         <button
           type="button"
@@ -209,6 +244,7 @@ function AlbumShelf({ drag }: { drag: DragState | null }) {
                 <span className="album-card-count num">{album.count}点</span>
               </TLink>
             ))}
+      </div>
       </div>
       <AlbumNameSheet
         open={creating}
