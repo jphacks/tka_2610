@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom'
 import { useNavigationType, useSearchParams } from 'react-router-dom'
 import { useTheater, type TheaterData } from '../api'
 import { ErrorBoundary, GlassButton, MemoryViewer } from '../components'
-import { BackIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
+import { BackIcon, CalendarIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
 import { useNav } from '../nav'
 import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, scaleTheater } from '../three'
 import { audioDuration, loadMusic, loadSettings, saveMusic, saveSettings, type TheaterMusic, type TheaterSettings } from './theaterMusic'
@@ -310,6 +310,35 @@ function TheaterPoster({
   const presets = data?.available.presets ?? []
   const activePreset = presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
   const empty = !!data && data.artwork_count === 0
+  // えらんでいるチップが列の外（右のぼかしの向こう）にあれば、見える所まで横にすべらせる
+  const chips = useRef<HTMLDivElement>(null)
+  // 端のぼかしは、その向こうにまだチップがある側だけに付ける（全部見えているときは、どのチップもぼかさない）
+  const [more, setMore] = useState({ left: false, right: false })
+  const updateMore = useCallback(() => {
+    const row = chips.current
+    if (!row) return
+    const left = row.scrollLeft > 1
+    const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 1
+    setMore((m) => (m.left === left && m.right === right ? m : { left, right }))
+  }, [])
+  useEffect(() => {
+    const row = chips.current
+    if (!row) return
+    updateMore()
+    const observer = new ResizeObserver(updateMore)
+    observer.observe(row)
+    return () => observer.disconnect()
+  }, [updateMore, presets.length])
+  useEffect(() => {
+    const row = chips.current
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!row || !chip) return
+    const fade = 24
+    const left = chip.offsetLeft - row.offsetLeft
+    const right = left + chip.offsetWidth
+    if (left < row.scrollLeft + fade) row.scrollTo({ left: Math.max(0, left - fade), behavior: 'smooth' })
+    else if (right > row.scrollLeft + row.clientWidth - fade) row.scrollTo({ left: right - row.clientWidth + fade, behavior: 'smooth' })
+  }, [activePreset])
   return (
     <section className="theater-poster" aria-labelledby="theater-poster-title">
       <span className="theater-eyebrow">期間をえらんで振り返る</span>
@@ -321,14 +350,32 @@ function TheaterPoster({
           : <><strong>{data.artwork_count}点</strong><span>{data.duration_label}</span><span>{data.period_label}</span></>}
       </p>
       {data?.truncated && <p className="theater-poster-note">作品が多いので、はじめの {data.artwork_count} 点を流します</p>}
-      <div className="theater-poster-periods" role="group" aria-label="よく使う期間">
-        {presets.map((p) => (
-          <button type="button" key={p.key} aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
-        ))}
-        <button type="button" aria-pressed={!activePreset && presets.length > 0} onClick={onOpenSettings}>日付をえらぶ</button>
+      {/* 「これまで」と年齢は横にすべる列、「日付をえらぶ」は右端にいつも出す（年齢が増えても外へ押し出されない） */}
+      <div className="theater-poster-periods">
+        <div
+          className={`theater-poster-chips${more.left ? ' more-left' : ''}${more.right ? ' more-right' : ''}`}
+          ref={chips}
+          role="group"
+          aria-label="よく使う期間"
+          onScroll={updateMore}
+        >
+          {presets.map((p) => (
+            <button type="button" key={p.key} aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="theater-poster-date"
+          aria-label="日付をえらぶ"
+          title="日付をえらぶ"
+          aria-pressed={!activePreset && presets.length > 0}
+          onClick={onOpenSettings}
+        >
+          <CalendarIcon size={18} />
+        </button>
       </div>
       <button type="button" className="btn btn-filled theater-poster-play" disabled={!data || empty || pending} onClick={onStart}>
-        <PlayIcon size={20} />再生する
+        <PlayIcon size={16} />再生する
       </button>
       <button type="button" className="theater-poster-settings" onClick={onOpenSettings}>
         <NoteIcon size={14} />
