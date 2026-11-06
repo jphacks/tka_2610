@@ -130,8 +130,9 @@
   animation: theater-cloud-in 1.4s var(--ease-out) both;
 }
 
+/* 消える長さを変えたら、MEMO_LEAD_MS（DigestTheater.tsx）も見直す */
 .theater-cloud.is-leaving {
-  animation: theater-cloud-out 1.3s ease-in both;
+  animation: theater-cloud-out 1s ease-in both;
 }
 
 /* 長いメモは雲を横に広げ、字を少し小さくする */
