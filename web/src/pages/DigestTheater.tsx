@@ -745,18 +745,6 @@ interface MemoCloud {
   leaving: boolean
 }
 
-/** 雲のもこもこ（x: 横の位置、s: 大きさ＝雲の高さに対する割合、y: 本体に重なる深さ、d: ふくらむ順番） */
-const PUFFS = [
-  { side: 'top', x: '14%', s: '64%', y: '30%', d: 2 },
-  { side: 'top', x: '32%', s: '104%', y: '44%', d: 0 },
-  { side: 'top', x: '56%', s: '118%', y: '48%', d: 1 },
-  { side: 'top', x: '78%', s: '84%', y: '38%', d: 3 },
-  { side: 'top', x: '91%', s: '52%', y: '30%', d: 4 },
-  { side: 'bottom', x: '24%', s: '66%', y: '58%', d: 5 },
-  { side: 'bottom', x: '52%', s: '58%', y: '56%', d: 6 },
-  { side: 'bottom', x: '76%', s: '62%', y: '58%', d: 7 },
-] as const
-
 function MemoCloudView({ cloud, onGone }: { cloud: MemoCloud; onGone: (key: string) => void }) {
   return (
     <div className="theater-memo">
@@ -767,11 +755,7 @@ function MemoCloudView({ cloud, onGone }: { cloud: MemoCloud; onGone: (key: stri
         onAnimationEnd={(e) => { if (cloud.leaving && e.target === e.currentTarget) onGone(cloud.key) }}
       >
         <div className="theater-cloud-drift" aria-hidden="true">
-          <div className="theater-cloud-shape">
-            {PUFFS.map((p, i) => (
-              <i key={i} className={p.side} style={{ '--x': p.x, '--s': p.s, '--y': p.y, '--d': p.d } as CSSProperties} />
-            ))}
-          </div>
+          <div className="theater-cloud-shape" />
         </div>
         <p>{cloud.text}</p>
       </div>
