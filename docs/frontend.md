@@ -274,6 +274,7 @@ iOS 風のアニメーションは、ブラウザの View Transitions API で作
   | `nav.replace(to)` | 履歴を置き換えて進む（登録 → プレビューなど） |
 
 - リンクには `TLink`（`kind` で種類を選ぶ）を使います。普通の `<a>` や React Router の `Link` だと、アニメーションが付きません。
+- `App.tsx` の `BrowserRouter` は `useTransitions={false}` にしています。React Router の内部の `startTransition` によって、3D の Suspense と画面の移動が待ち合わせになるのを避けるためです。画面遷移のアニメーションは引き続き `nav.ts` の View Transitions API で行います。
 - 仕組み：
   1. `nav.ts` が `<html>` に `data-nav="push"` などの印を付けて、`document.startViewTransition` を始める。
   2. その中で画面を切り替え、`App.tsx` に置いた `RouteRendered` が「新しい画面の描画が終わった」と知らせる。

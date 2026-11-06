@@ -29,7 +29,8 @@ import './App.css'
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* 3D の Suspense に画面の移動を待たせない。遷移アニメーションは nav.ts が担当する。 */}
+      <BrowserRouter useTransitions={false}>
         <div className="app">
           <ToastProvider>
             <Routes>
