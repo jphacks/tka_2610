@@ -53,5 +53,6 @@
 .digest-dialog button:focus-visible { outline: 2px solid var(--sun); outline-offset: 3px; }
 @keyframes digest-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes digest-drift { from { transform: scale(1); } to { transform: scale(1.025); } }
-@media (min-width: 600px) and (min-height: 700px) { .digest-dialog { height: min(calc(100dvh - 48px), 932px); border-radius: 40px; } }
+/* PC では、端末の画面（App.css の .device と同じ大きさ・角の丸み）に重ねる */
+@media (min-width: 600px) and (min-height: 700px) { .digest-dialog { width: var(--device-w); height: var(--device-h); border-radius: var(--screen-radius); } }
 @media (prefers-reduced-motion: reduce) { .digest-single, .digest-single .digest-image, .digest-comparison { animation: none; } }
