@@ -374,8 +374,8 @@ function TheaterPoster({
           <CalendarIcon size={18} />
         </button>
       </div>
-      <button type="button" className="btn btn-filled theater-poster-play" disabled={!data || empty || pending} onClick={onStart}>
-        <PlayIcon size={16} />再生する
+      <button type="button" className="btn btn-filled theater-poster-play" aria-label="再生する" disabled={!data || empty || pending} onClick={onStart}>
+        <PlayIcon size={16} /><span className="theater-poster-play-label">再生する</span>
       </button>
       <button type="button" className="theater-poster-settings" onClick={onOpenSettings}>
         <NoteIcon size={14} />
@@ -500,6 +500,15 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
     if (embedded) { setExpanded(false); setStarted(false) }
     else nav.back('/map')
   }
+  // memoria の小さい枠では設定のシートが収まらないので、開くときは画面全体へ広げ、閉じたら（再生していなければ）枠に戻す
+  const openSettings = () => {
+    if (embedded) setExpanded(true)
+    setSetupOpen(true)
+  }
+  const closeSettings = () => {
+    setSetupOpen(false)
+    if (embedded && !started) setExpanded(false)
+  }
   useEffect(() => { if (suspended) { setPlaying(false); setExpanded(false); setStarted(false); setSetupOpen(false) } }, [suspended, setPlaying])
   const toggle = () => {
     if (!shown) return
@@ -564,7 +573,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
       if (event.key === ' ') { event.preventDefault(); toggle(); wake() }
       else if (event.key === 'ArrowRight' && started) { jump(1); wake() }
       else if (event.key === 'ArrowLeft' && started) { jump(-1); wake() }
-      else if (event.key === 'Escape') { if (setupOpen) setSetupOpen(false); else if (embedded && expanded) close() }
+      else if (event.key === 'Escape') { if (setupOpen) closeSettings(); else if (embedded && expanded) close() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -761,7 +770,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
             settings={settings}
             music={music}
             onStart={start}
-            onOpenSettings={() => setSetupOpen(true)}
+            onOpenSettings={openSettings}
           />
         )}
 
@@ -779,7 +788,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
             settings={settings}
             onSettings={setSettings}
             onStart={start}
-            onClose={() => setSetupOpen(false)}
+            onClose={closeSettings}
             started={started}
           />
         )}

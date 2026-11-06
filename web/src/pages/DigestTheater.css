@@ -1131,9 +1131,10 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* memoriaでは元のプレビュー枠に収め、再生時にアプリ全体へ広げる。 */
+/* memoriaでは低いプレビュー枠に収め、再生時（と設定のシートを開くとき）にアプリ全体へ広げる。
+   枠の高さと下の余白は、作品一覧のいちばん上のアルバムの段（.album-shelf。高さ 190px・下 18px）とそろえる */
 .theater-page { height: 100%; }
-.theater-embed-slot { height: clamp(420px, 62svh, 540px); margin-bottom: 24px; }
+.theater-embed-slot { height: 190px; margin-bottom: 18px; }
 .theater-embedded { height: 100%; }
 .theater-embedded.is-compact {
   position: relative;
@@ -1147,17 +1148,48 @@
   inset: 0;
   z-index: 31;
 }
+/* 枠の中のポスター（低い枠なので詰めて並べる）：
+     作品名        ( ▶ )
+     33点 · 約4分
+     [これまで][3さい]…  📅
+   上の小さな見出し・作品が多いときの注意・速さと音楽の行は出さない（速さと音楽は 📅 から開く設定のシートで変える） */
 .theater-screen.is-compact .theater-poster {
-  --poster-pad: 16px;
-  gap: 7px;
-  padding: 0 16px 14px;
+  --poster-pad: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'title play'
+    'meta play'
+    'periods periods';
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 0;
+  padding: 0 14px 12px;
 }
-.theater-screen.is-compact .theater-poster h1 { font-size: 23px; }
-.theater-screen.is-compact .theater-poster-meta { font-size: 12px; }
-.theater-screen.is-compact .theater-poster-play { min-height: 42px; }
-.theater-screen.is-compact .theater-poster-settings { font-size: 11px; }
+.theater-screen.is-compact .theater-poster::before { inset: -60px 0 0; }
+.theater-screen.is-compact .theater-poster h1 {
+  grid-area: title;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.theater-screen.is-compact .theater-poster-meta { grid-area: meta; flex-wrap: nowrap; font-size: 12px; white-space: nowrap; }
+/* 期間の日付（「2025.2.11 — 2026.11.6」）は、枠では出さない（1 行に収める） */
+.theater-screen.is-compact .theater-poster-meta > span + span { display: none; }
+.theater-screen.is-compact .theater-poster-periods { grid-area: periods; margin-top: 8px; }
+.theater-screen.is-compact .theater-poster-play {
+  grid-area: play;
+  width: 48px;
+  height: 48px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+}
+.theater-screen.is-compact .theater-poster-play svg { width: 20px; height: 20px; }
+.theater-screen.is-compact .theater-poster-play-label,
+.theater-screen.is-compact .theater-poster .theater-eyebrow,
+.theater-screen.is-compact .theater-poster-note,
+.theater-screen.is-compact .theater-poster-settings { display: none; }
 .theater-screen.is-compact .theater-stage canvas { touch-action: pan-y; }
-.theater-screen.is-compact .theater-setup {
-  bottom: 8px;
-  max-height: calc(100% - 16px);
-}
