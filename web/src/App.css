@@ -1,11 +1,18 @@
-/* アプリの外枠（App.tsx の .app）。スマホでは画面いっぱい、PC ではスマホ端末のように見せる */
+/* アプリの外枠（App.tsx の .device と .app）。スマホでは画面いっぱい、PC ではスマホ端末のように見せる。
+   .device は端末（ふち・横のボタン・ステータスバー・ホームバー。飾りは components/DeviceFrame）、.app はその画面 */
 
-.app {
+.device {
   position: relative;
   width: 100%;
   max-width: 440px;
   height: 100dvh;
   margin: 0 auto;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
   background: var(--paper);
   overflow: hidden;
   /* hidden だけだと、シートの入力欄にフォーカスしたときにブラウザが枠ごとスクロールさせ、画面の下半分が空く。clip はスクロールさせない */
@@ -14,22 +21,86 @@
   view-transition-name: app;
 }
 
-/* PC ではスマホ端末のように見せる */
+/* PC では iPhone の形に見せる（ふち・ボタン・アイランド・角の丸みの割合は 15 Pro Max。画面 430 × 932 pt・角の丸み 55 pt）。
+   画面の大きさは枠を付ける前のまま（下の .device）。
+   ふちは外から、チタンの金属のふち（--metal）と、ガラスの黒いふち（--glass）。.device の ::before と ::after で、画面（.app）のまわりに描く。
+   ふちは .app ではなく .device に描く（.app は画面の遷移で写しを動かす。.app に描くと、遷移のあいだ、ふちが切れたり一緒に動いたりする）。
+   画面の上下は、ステータスバー（--device-top）とホームバー（--device-bottom）の分だけ、--safe-top・--safe-bottom で空ける（iPhone の安全な余白と同じ値）。
+   どの画面も上と下の余白にこの値を使っているので、画面ごとに直さなくてよい */
 @media (min-width: 600px) and (min-height: 700px) {
-  .app {
-    height: min(calc(100dvh - 48px), 932px);
-    margin-top: max(24px, calc((100dvh - 932px) / 2));
-    border-radius: 40px;
-    box-shadow:
-      0 0 0 1px rgba(31, 26, 23, 0.08),
-      0 24px 60px rgba(40, 28, 18, 0.16);
+  /* 端末の上の余白（margin-top）が #root と body の外へ抜けて、ページの上に色の違う帯ができないようにする */
+  #root {
+    display: flow-root;
   }
-}
 
-/* 角を iOS のような曲線に（対応ブラウザだけ） */
-@supports (corner-shape: squircle) {
+  .device {
+    --metal: 4px;
+    --glass: 11px;
+    --bezel: calc(var(--metal) + var(--glass));
+    /* 画面の大きさと位置は、枠を付ける前（幅 440px・高さはウィンドウから上下 24px ずつ空けて 932px まで）と同じ。
+       ふちはその 24px の余白の中に描くので、画面は小さくならない。
+       ウィンドウが低いときだけ、横長になりすぎないよう幅を高さの 0.49 倍までにする（ふつうの高さでは 440px のまま。比率 0.47〜0.49） */
+    --device-h: min(calc(100dvh - 48px), 932px);
+    --device-w: min(440px, calc(var(--device-h) * 0.49));
+    --screen-radius: calc(var(--device-w) * 55 / 430);
+    --device-top: 59px;
+    --device-bottom: 34px;
+    width: var(--device-w);
+    max-width: none;
+    height: var(--device-h);
+    margin-top: calc((100dvh - var(--device-h)) / 2);
+    isolation: isolate;
+  }
+
+  .device::before,
+  .device::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* チタンの金属のふち。斜めの光の照り返しと、外側の暗い線・内側の明るい線（ふちの丸み）。端末の影もここ */
+  .device::before {
+    inset: calc(-1 * var(--bezel));
+    border-radius: calc(var(--screen-radius) + var(--bezel));
+    background: linear-gradient(
+      155deg,
+      var(--device-metal-light) 0%,
+      var(--device-metal) 14%,
+      var(--device-metal-dark) 34%,
+      var(--device-metal) 52%,
+      var(--device-metal-dark) 72%,
+      var(--device-metal) 88%,
+      var(--device-metal-light) 100%
+    );
+    box-shadow:
+      inset 0 0 0 0.75px var(--device-metal-dark),
+      inset 0 0 0 1.75px color-mix(in srgb, var(--device-metal-light) 70%, transparent),
+      0 2px 4px var(--device-shadow),
+      0 28px 64px var(--device-shadow);
+  }
+
+  /* ガラスの黒いふち（画面のまわり）。金属との継ぎ目の暗い線と、ガラスのふちのかすかな照り返し */
+  .device::after {
+    inset: calc(-1 * var(--glass));
+    border-radius: calc(var(--screen-radius) + var(--glass));
+    background: var(--device-black);
+    box-shadow:
+      0 0 0 0.75px var(--device-black),
+      inset 0 0 0 1px color-mix(in srgb, var(--surface) 6%, transparent);
+  }
+
   .app {
-    corner-shape: squircle;
+    --safe-top: var(--device-top);
+    --safe-bottom: var(--device-bottom);
+    border-radius: var(--screen-radius);
+  }
+
+  /* 全画面にした要素（シアター・3D プレビューの全画面ボタン）は端末の枠の外なので、本物の余白に戻す */
+  .app :fullscreen {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 

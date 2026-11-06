@@ -1,0 +1,160 @@
+/* PC で見たときの iPhone の飾り（DeviceFrame）。.device（App.css）の中で、アプリの画面の上に重ねる。
+   寸法は iPhone 15 Pro Max（pt）：ダイナミックアイランド 126 × 37（上から 11）、ステータスバーの文字の中心はアイランドの中心の高さ、
+   ホームバー 134 × 5（下から 8）。横のボタンの位置は端末の高さに対する割合。
+   スマホ（App.css と同じ条件に当てはまらない幅・高さ）では出さない。
+   時刻・アイコン・ホームバーの色は --device-ink（暗い画面では白にする。下の :has） */
+
+.device-chrome {
+  display: none;
+}
+
+@media (min-width: 600px) and (min-height: 700px) {
+  .device-chrome {
+    --device-ink: var(--device-status-ink);
+    --island-top: 11px;
+    --island-h: 37px;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    pointer-events: none;
+    color: var(--device-ink);
+    /* 画面の遷移でアプリの画面が動いても、飾りは動かさずにいつも上に出す（nav.css） */
+    view-transition-name: device-chrome;
+  }
+
+  /* 暗い画面（おもいでを全画面で見ているとき）では、時刻とホームバーを白にする */
+  .device:has(.memory-viewer) .device-chrome {
+    --device-ink: var(--paper);
+  }
+
+  /* ---------- 横のボタン（金属のふちから少し出た、角の丸い棒） ---------- */
+
+  .device-btn {
+    position: absolute;
+    width: 6px;
+    border-radius: 3px;
+    background: linear-gradient(
+      to right,
+      var(--device-metal-dark),
+      var(--device-metal-light) 35%,
+      var(--device-metal) 60%,
+      var(--device-metal-dark)
+    );
+    box-shadow: inset 0 0 0 0.5px var(--device-metal-dark);
+  }
+
+  /* 左：アクションボタン・音量を上げる・下げる。ふちの外へ 3px 出る */
+  .device-btn:not(.is-power) {
+    left: calc(-1 * var(--bezel) - 3px);
+  }
+
+  .device-btn.is-action {
+    top: 17.5%;
+    height: 3.4%;
+  }
+
+  .device-btn.is-volume-up {
+    top: 24.5%;
+    height: 6.6%;
+  }
+
+  .device-btn.is-volume-down {
+    top: 33%;
+    height: 6.6%;
+  }
+
+  /* 右：電源（サイドボタン） */
+  .device-btn.is-power {
+    right: calc(-1 * var(--bezel) - 3px);
+    top: 27%;
+    height: 10.6%;
+    background: linear-gradient(
+      to left,
+      var(--device-metal-dark),
+      var(--device-metal-light) 35%,
+      var(--device-metal) 60%,
+      var(--device-metal-dark)
+    );
+  }
+
+  /* ---------- 上のステータスバー（左に時刻、右に電波・Wi-Fi・電池。真ん中はアイランド） ---------- */
+
+  .device-status {
+    position: absolute;
+    top: calc(var(--island-top) + var(--island-h) / 2 - 11px);
+    left: 0;
+    right: 0;
+    height: 22px;
+    display: grid;
+    grid-template-columns: 1fr 126px 1fr;
+    align-items: center;
+    padding: 0 10px;
+  }
+
+  .device-time {
+    grid-column: 1;
+    justify-self: center;
+    padding-left: 6px;
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .device-icons {
+    grid-column: 3;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 4px;
+  }
+
+  .device-icons svg {
+    display: block;
+  }
+
+  /* ---------- ダイナミックアイランド ---------- */
+
+  .device-island {
+    position: absolute;
+    top: var(--island-top);
+    left: 50%;
+    width: 126px;
+    height: var(--island-h);
+    margin-left: -63px;
+    border-radius: 999px;
+    background: var(--device-black);
+  }
+
+  /* 前面カメラのレンズ（右寄りの小さな丸。中心が少し青く光る） */
+  .device-island::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 12px;
+    height: 12px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 36% 34%, color-mix(in srgb, var(--device-metal-light) 50%, transparent) 0 1.2px, transparent 2.2px),
+      radial-gradient(circle, var(--device-lens) 0 2.6px, color-mix(in srgb, var(--device-lens) 55%, var(--device-black)) 3.4px 4.4px, var(--device-black) 5px);
+  }
+
+  /* ---------- ホームバー ---------- */
+
+  .device-home {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    width: 134px;
+    height: 5px;
+    margin-left: -67px;
+    border-radius: 999px;
+    background: var(--device-ink);
+  }
+}

@@ -39,6 +39,15 @@
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
+  /* PC で見たときのスマホ端末の枠（App.css の .device・components/DeviceFrame.css） */
+  --device-black: #0B0B0D;
+  --device-metal: #8E9298;
+  --device-metal-light: #C6C9CE;
+  --device-metal-dark: #4F5358;
+  --device-status-ink: #111214;
+  --device-lens: #1B2133;
+  --device-shadow: rgba(40, 28, 18, 0.22);
+
   /* 画面の余白 */
   --tabbar-space: 96px;
   --safe-top: env(safe-area-inset-top, 0px);
