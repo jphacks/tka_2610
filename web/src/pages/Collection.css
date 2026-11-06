@@ -270,7 +270,7 @@
 .album-shelf-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 2px 10px;
   margin: 0 0 10px;
@@ -280,6 +280,60 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
+}
+
+/* 見出しと、たたむ・開く矢印。見出しごと押せる */
+.album-shelf-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: -4px 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+}
+
+.album-shelf-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* 矢印：開いているときは下向き、たたんでいるときは右向き */
+.album-shelf-arrow {
+  color: var(--ink-2);
+  transform: rotate(-90deg);
+  transition: transform 0.3s var(--spring);
+}
+
+.album-shelf.is-folded .album-shelf-arrow {
+  transform: rotate(180deg);
+}
+
+/* 棚の中身。高さを 0 から中身の高さまで、なめらかにたたむ・開く */
+.album-shelf-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.35s var(--ease-out), opacity 0.25s;
+}
+
+.album-shelf-body > .album-shelf-track {
+  min-height: 0;
+}
+
+.album-shelf.is-folded .album-shelf-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.album-shelf.is-folded .album-shelf-track {
+  overflow: hidden;
+  padding-block: 0;
 }
 
 /* 作品を長押しして運べることの案内 */
@@ -372,6 +426,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .album-shelf-arrow,
+  .album-shelf-body,
   .album-card,
   .album-card-cover {
     transition: none;
