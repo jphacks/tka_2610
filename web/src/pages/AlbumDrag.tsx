@@ -1,29 +1,36 @@
-// ⑧ 作品一覧で、作品を長押しして持ち上げ、アルバムへ運んで入れる（Collection.tsx が作品の並びを包む）。
-//   長押し（PRESS_MS）… 作品が指にくっついて持ち上がり、画面の下にアルバムの列がせり上がる
-//   運んで離す       … 指の下のアルバムに入れる（「＋ 新しいアルバム」なら、名前を入れて作ると同時に入れる）。アルバムの外で離すと何もしない
+// ⑧ 作品一覧で、作品を長押しして持ち上げ、上のアルバムの棚へ運んで入れる（Collection.tsx が作品の並びを包む）。
+//   長押し（PRESS_MS）… 作品が指にくっついて持ち上がる。棚は画面の上に貼りつく（下のほうの作品からでも届くように。Collection.tsx の AlbumShelf）
+//   運んで離す       … 指の下の棚のアルバムに入れる（「新しく作る」なら、名前を入れて作ると同時に入れる）。アルバムの外で離すと何もしない
+//   棚の左右の端へ寄せる … アルバムが多くて棚からはみ出していれば、棚が横に流れる（EDGE_PX・EDGE_SPEED）
 // 長押しの前に指が動いたら、ふつうのスクロールとして何もしない。持ち上げたあとは画面をスクロールさせず、離したあとの「詳細を開く」も止める。
 // iPhone の Safari はブラウザ標準のドラッグ＆ドロップが指では動かないので、指（Pointer Events）を自分で追う。
-// 作品のカードは ArtworkThumb の data-artwork-id で見分け、アルバムは data-album-drop（"new" は新しいアルバム）で見分ける。
+// 作品のカードは ArtworkThumb の data-artwork-id で見分け、アルバムは棚のカードの data-album-drop（NEW_ALBUM は「新しく作る」）で見分ける。
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent, type SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { useAlbumArtworks, useAlbums, useCreateAlbum, type Album, type Artwork } from '../api'
+import { useAlbumArtworks, useAlbums, useCreateAlbum, type Artwork } from '../api'
 import { AlbumNameSheet, useToast } from '../components'
-import { GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import './AlbumDrag.css'
 
 /** これだけ押し続けたら持ち上げる（ms） */
 const PRESS_MS = 420
 /** 持ち上げる前に指がこれ以上動いたら、スクロールとみなしてやめる（px） */
 const MOVE_TOLERANCE = 10
-/** 新しいアルバムの落とし先の印 */
-const NEW_ALBUM = 'new'
+/** 棚の左右の端からこの幅に指が入ったら、棚を横に流す（px）と、その速さ（px / コマ） */
+const EDGE_PX = 44
+const EDGE_SPEED = 9
+/** 「新しく作る」の落とし先の印（棚の data-album-drop） */
+export const NEW_ALBUM = 'new'
+
+/** 棚に知らせる、持ち上げている間のようす。over は指の下のアルバムの id（NEW_ALBUM は「新しく作る」）、無ければ null */
+export interface DragState {
+  over: string | null
+}
 
 interface Drag {
   artwork: Artwork
   /** 指の位置（.app の左上から） */
   x: number
   y: number
-  /** 指の下のアルバムの id（NEW_ALBUM は新しいアルバム）。無ければ null */
   over: string | null
 }
 
@@ -32,30 +39,46 @@ const hideBroken = (e: SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.visibility = 'hidden'
 }
 
-/** 画面の外枠（.app）。持ち上げた作品とアルバムの列は、ここに重ねる（PC ではスマホの枠の中に出すため） */
+/** 画面の外枠（.app）。持ち上げた作品はここに重ねる（PC ではスマホの枠の中に出すため） */
 const appRoot = () => document.querySelector<HTMLElement>('.app') ?? document.body
 
-export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; children: ReactNode }) {
+export function AlbumDrag({
+  artworks,
+  onChange,
+  children,
+}: {
+  artworks: Artwork[]
+  /** 持ち上げた・指の下のアルバムが変わった（state）、置いた・やめた（null） */
+  onChange: (state: DragState | null) => void
+  children: ReactNode
+}) {
   const toast = useToast()
   const albums = useAlbums()
   const move = useAlbumArtworks()
   const create = useCreateAlbum()
   const [drag, setDrag] = useState<Drag | null>(null)
-  // 新しいアルバムに落とした作品（名前のシートを出している間）
+  // 「新しく作る」に落とした作品（名前のシートを出している間）
   const [creatingFor, setCreatingFor] = useState<Artwork | null>(null)
 
-  // 押している間の情報（描き直しに関わらないので ref）
-  const press = useRef<{ id: string; pointerId: number; startX: number; startY: number; timer: number; lifted: boolean } | null>(null)
+  // 押している間の情報（描き直しに関わらないので ref）。clientX・clientY は最後の指の位置（棚を横に流すのに使う）
+  const press = useRef<{ id: string; pointerId: number; startX: number; startY: number; clientX: number; clientY: number; timer: number; lifted: boolean } | null>(null)
   // 持ち上げたあとの指の離し（click）で、詳細を開かないようにする
   const swallowClick = useRef(false)
-  const latest = useRef({ artworks, albums: albums.data?.items ?? [], drag })
-  latest.current = { artworks, albums: albums.data?.items ?? [], drag }
+  const latest = useRef({ artworks, albums: albums.data?.items ?? [], drag, onChange })
+  latest.current = { artworks, albums: albums.data?.items ?? [], drag, onChange }
 
   /** 指の位置（画面の座標）を .app の中の座標にし、その下のアルバムを探す */
   const locate = (clientX: number, clientY: number) => {
     const box = appRoot().getBoundingClientRect()
     const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-album-drop]')
     return { x: clientX - box.left, y: clientY - box.top, over: target?.dataset.albumDrop ?? null }
+  }
+
+  /** 持ち上げている作品を動かす（指の下のアルバムが変わったら棚に知らせる） */
+  const follow = (clientX: number, clientY: number) => {
+    const at = locate(clientX, clientY)
+    if (at.over !== latest.current.drag?.over) latest.current.onChange({ over: at.over })
+    setDrag((d) => (d ? { ...d, ...at } : d))
   }
 
   const drop = (artwork: Artwork, over: string) => {
@@ -70,17 +93,23 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
     )
   }
 
+  const cancel = () => {
+    if (press.current) window.clearTimeout(press.current.timer)
+    press.current = null
+  }
+
   // 押しているあいだだけ、画面全体の指の動きを見る
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const p = press.current
       if (!p || e.pointerId !== p.pointerId) return
+      p.clientX = e.clientX
+      p.clientY = e.clientY
       if (!p.lifted) {
         if (Math.hypot(e.clientX - p.startX, e.clientY - p.startY) > MOVE_TOLERANCE) cancel()
         return
       }
-      const at = locate(e.clientX, e.clientY)
-      setDrag((d) => (d ? { ...d, ...at } : d))
+      follow(e.clientX, e.clientY)
     }
     const finish = (e: PointerEvent, dropIt: boolean) => {
       const p = press.current
@@ -92,6 +121,7 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
         const over = dropIt ? locate(e.clientX, e.clientY).over : null
         if (over) drop(d.artwork, over)
         setDrag(null)
+        latest.current.onChange(null)
         // 離した直後の click だけを止める（click が来なかったときのために、少しあとで戻す）
         window.setTimeout(() => (swallowClick.current = false), 400)
       }
@@ -117,14 +147,33 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
       window.removeEventListener('pointercancel', onCancel)
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('contextmenu', onContextMenu)
+      cancel()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 最新の値は latest から読む
   }, [])
 
-  const cancel = () => {
-    if (press.current) window.clearTimeout(press.current.timer)
-    press.current = null
-  }
+  // 持ち上げている間、指が棚の左右の端にあれば、棚を横に流す（流れたぶん、指の下のアルバムも変わる）
+  const lifted = !!drag
+  useEffect(() => {
+    if (!lifted) return
+    let frame = 0
+    const tick = () => {
+      frame = requestAnimationFrame(tick)
+      const p = press.current
+      const track = document.querySelector<HTMLElement>('.album-shelf-track')
+      if (!p?.lifted || !track) return
+      const box = track.getBoundingClientRect()
+      if (p.clientY < box.top - 12 || p.clientY > box.bottom + 12) return
+      const step = p.clientX < box.left + EDGE_PX ? -EDGE_SPEED : p.clientX > box.right - EDGE_PX ? EDGE_SPEED : 0
+      if (!step) return
+      const before = track.scrollLeft
+      track.scrollLeft += step
+      if (track.scrollLeft !== before) follow(p.clientX, p.clientY)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 持ち上げている間だけ回す
+  }, [lifted])
 
   const onPointerDown = (e: ReactPointerEvent) => {
     if (e.button !== 0 || press.current) return
@@ -139,14 +188,12 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
       p.lifted = true
       swallowClick.current = true
       navigator.vibrate?.(12)
-      setDrag({ artwork, ...locate(clientX, clientY) })
+      const at = locate(p.clientX, p.clientY)
+      setDrag({ artwork, ...at })
+      latest.current.onChange({ over: at.over })
     }, PRESS_MS)
-    press.current = { id, pointerId, startX: clientX, startY: clientY, timer, lifted: false }
+    press.current = { id, pointerId, startX: clientX, startY: clientY, clientX, clientY, timer, lifted: false }
   }
-
-  useEffect(() => cancel, [])
-
-  const albumList = albums.data?.items ?? []
 
   return (
     <>
@@ -168,25 +215,11 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
 
       {drag &&
         createPortal(
-          <>
-            <div className="album-drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
-              <span style={{ background: drag.artwork.tint }}>
-                <img src={drag.artwork.thumb_url} alt="" onError={hideBroken} />
-              </span>
-            </div>
-            <div className="album-drop-bar glass" role="list" aria-label="入れるアルバム">
-              <p className="album-drop-hint">{drag.over ? '離すと入れます' : `「${drag.artwork.title}」をアルバムへ`}</p>
-              <div className="album-drop-targets">
-                {albumList.map((album) => (
-                  <DropTarget key={album.id} album={album} active={drag.over === album.id} />
-                ))}
-                <div role="listitem" data-album-drop={NEW_ALBUM} className={`album-drop-target is-new${drag.over === NEW_ALBUM ? ' is-over' : ''}`}>
-                  <span className="album-drop-cover"><PlusIcon size={20} /></span>
-                  <span className="album-drop-name">新しく作る</span>
-                </div>
-              </div>
-            </div>
-          </>,
+          <div className="album-drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
+            <span style={{ background: drag.artwork.tint }}>
+              <img src={drag.artwork.thumb_url} alt="" onError={hideBroken} />
+            </span>
+          </div>,
           appRoot(),
         )}
 
@@ -211,22 +244,5 @@ export function AlbumDrag({ artworks, children }: { artworks: Artwork[]; childre
         }
       />
     </>
-  )
-}
-
-function DropTarget({ album, active }: { album: Album; active: boolean }) {
-  return (
-    <div role="listitem" data-album-drop={album.id} className={`album-drop-target${active ? ' is-over' : ''}`}>
-      <span className={`album-drop-cover${album.built_in ? ' favorites' : ''}`} style={album.cover_tint ? { background: album.cover_tint } : undefined}>
-        {album.cover_url ? (
-          <img src={album.cover_url} alt="" onError={hideBroken} />
-        ) : album.built_in ? (
-          <HeartIcon size={20} filled />
-        ) : (
-          <GalleryIcon size={20} />
-        )}
-      </span>
-      <span className="album-drop-name">{album.name}</span>
-    </div>
   )
 }

@@ -214,7 +214,57 @@
 
 /* アルバムの棚：いちばん上に横並び。画面の端までスクロールでき、1 枚ずつ止まる */
 .album-shelf {
+  position: relative;
   margin: 0 0 18px;
+}
+
+/* 作品を持ち上げている間：棚をナビゲーションバーのすぐ下に貼りつけ、下のほうの作品からでも届くようにする */
+.album-shelf.is-docked {
+  position: sticky;
+  top: calc(54px + var(--safe-top));
+  z-index: 25;
+}
+
+/* 貼りついた棚の後ろに、画面の端までのすりガラスを敷く */
+.album-shelf.is-docked::before {
+  content: '';
+  position: absolute;
+  inset: -10px -20px -4px;
+  z-index: -1;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 0.5px solid var(--line);
+  box-shadow: 0 10px 24px var(--line);
+  animation: album-shelf-dock 0.3s var(--ease-out) both;
+}
+
+@keyframes album-shelf-dock {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 運んでいる間は、棚を少しずつ横に流すので、1 枚ずつ止める動きを止める（止めると流したぶんが戻ってしまう） */
+.album-shelf.is-docked .album-shelf-track {
+  scroll-snap-type: none;
+}
+
+/* 指の下のアルバム：ふくらんで、縁に色を付けて受け止める */
+.album-card {
+  transition: transform 0.25s var(--spring);
+}
+
+.album-card-cover {
+  transition: box-shadow 0.2s;
+}
+
+.album-card.is-over {
+  transform: scale(1.08);
+}
+
+.album-card.is-over .album-card-cover {
+  box-shadow: 0 0 0 3px var(--accent);
 }
 
 .album-shelf-head {
@@ -321,6 +371,17 @@
   color: var(--ink-2);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .album-card,
+  .album-card-cover {
+    transition: none;
+  }
+  .album-shelf.is-docked::before {
+    animation: none;
+  }
+}
+
 @media (max-width: 360px) {
+  .album-shelf.is-docked::before { inset-inline: -16px; }
   .album-shelf-track { margin: 0 -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
 }

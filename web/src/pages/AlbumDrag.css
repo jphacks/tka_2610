@@ -1,4 +1,5 @@
-/* ⑧ 作品一覧の、作品を長押ししてアルバムへ運ぶ操作（AlbumDrag）。持ち上げた作品とアルバムの列は .app に重ねる */
+/* ⑧ 作品一覧の、作品を長押しして上のアルバムの棚へ運ぶ操作（AlbumDrag）。持ち上げた作品は .app に重ねる。
+   運んでいる間の棚のようす（画面の上に貼りつく・指の下のアルバムがふくらむ）は Collection.css */
 
 /* 長押しで、文字の選択やリンクの長押しメニュー（iPhone）を出さない */
 .album-drag-area .thumb-card {
@@ -47,108 +48,8 @@
   }
 }
 
-/* 下からせり上がるアルバムの列（タブバーの上に重ねる） */
-.album-drop-bar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: calc(12px + var(--safe-bottom));
-  z-index: 65;
-  padding: 12px 12px 14px;
-  border-radius: 26px;
-  animation: album-drop-in 0.4s var(--spring) both;
-}
-
-@keyframes album-drop-in {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-}
-
-.album-drop-hint {
-  margin: 0 4px 10px;
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--ink-2);
-}
-
-/* 運んでいる間はスクロールできないので、多ければ折り返して全部見せる */
-.album-drop-targets {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 8px;
-  max-height: 46vh;
-  overflow: hidden;
-}
-
-.album-drop-target {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  width: 72px;
-  transition: transform 0.25s var(--spring);
-}
-
-.album-drop-cover {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  overflow: hidden;
-  border-radius: 16px;
-  background: var(--paper-2);
-  color: var(--ink-2);
-  box-shadow: 0 0 0 0 var(--accent);
-  transition: box-shadow 0.2s;
-}
-
-.album-drop-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.album-drop-cover.favorites {
-  color: var(--red);
-}
-
-.album-drop-target.is-new .album-drop-cover {
-  border: 1.5px dashed var(--line-strong);
-  background: none;
-  color: var(--accent);
-}
-
-.album-drop-name {
-  width: 100%;
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* 指の下のアルバム：ふくらんで、縁に色を付けて受け止める */
-.album-drop-target.is-over {
-  transform: scale(1.12);
-}
-
-.album-drop-target.is-over .album-drop-cover {
-  box-shadow: 0 0 0 3px var(--accent);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .album-drag-ghost,
-  .album-drop-bar {
+  .album-drag-ghost {
     animation: none;
-  }
-  .album-drop-target {
-    transition: none;
   }
 }
