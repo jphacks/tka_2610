@@ -12,6 +12,7 @@ function listUrl(params: ListParams) {
   if (params.category && params.category !== 'all') search.set('category', params.category)
   if (params.sort) search.set('sort', params.sort)
   if (params.limit) search.set('limit', String(params.limit))
+  if (params.album) search.set('album', params.album)
   const qs = search.toString()
   return `/api/artworks${qs ? `?${qs}` : ''}`
 }
@@ -89,6 +90,8 @@ function useInvalidate() {
       // 飾る・外す・削除で、配置 JSON とおへやの数も変わる
       client.invalidateQueries({ queryKey: keys.layout }),
       client.invalidateQueries({ queryKey: keys.ages }),
+      // 作品を消すとアルバムの点数と表紙が変わる
+      client.invalidateQueries({ queryKey: keys.albums }),
       ...extra.map((queryKey) => client.invalidateQueries({ queryKey })),
     ])
   }
@@ -159,6 +162,8 @@ export function useFavorite() {
       client.invalidateQueries({ queryKey: keys.artwork(id) })
       client.invalidateQueries({ queryKey: keys.recollections })
       client.invalidateQueries({ queryKey: ['artworks'] })
+      // お気に入りは最初からあるアルバムでもある
+      client.invalidateQueries({ queryKey: keys.albums })
     },
   })
 }

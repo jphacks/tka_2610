@@ -113,6 +113,29 @@ export interface ListParams {
   category?: Category | 'all'
   sort?: 'recent' | 'made'
   limit?: number
+  /** アルバムの id（UUID か "favorites"）。そのアルバムの作品だけ */
+  album?: string
+}
+
+// ---------- アルバム（backend/src/albums.rs） ----------
+
+/** 作品を自分で好きなグループにまとめたもの。id が "favorites" のものは最初からあるお気に入り（built_in） */
+export interface Album {
+  id: string
+  name: string
+  count: number
+  /** 表紙（いちばん新しく作った作品のサムネイル）。空のアルバムは null */
+  cover_url: string | null
+  cover_tint: string | null
+  /** お気に入り。名前を変えたり消したりできない */
+  built_in: boolean
+  /** GET /api/albums?artwork= のときだけ：その作品が入っているか */
+  contains?: boolean
+}
+
+export interface AlbumList {
+  /** 先頭はお気に入り、そのあとは新しく作った順 */
+  items: Album[]
 }
 
 // ---------- おうちの配置（backend/src/home.rs・home_api.rs） ----------
