@@ -1,0 +1,55 @@
+/* ⑧ 作品一覧の、作品を長押しして上のアルバムの棚へ運ぶ操作（AlbumDrag）。持ち上げた作品は .app に重ねる。
+   運んでいる間の棚のようす（画面の上に貼りつく・指の下のアルバムがふくらむ）は Collection.css */
+
+/* 長押しで、文字の選択やリンクの長押しメニュー（iPhone）を出さない */
+.album-drag-area .thumb-card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 持ち上げている間：並びの作品を少し引っこめて、運んでいる作品を目立たせる */
+.album-drag-area.is-dragging .thumb-card {
+  opacity: 0.55;
+  transition: opacity 0.25s;
+}
+
+/* 指にくっついて動く作品。指の少し上に出して、指で隠れないようにする */
+.album-drag-ghost {
+  position: absolute;
+  z-index: 70;
+  width: 92px;
+  height: 92px;
+  margin: -112px 0 0 -46px;
+  pointer-events: none;
+  animation: album-drag-lift 0.28s var(--spring) both;
+}
+
+.album-drag-ghost > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 14px 30px var(--line-strong), 0 2px 6px var(--line);
+  transform: rotate(-4deg);
+}
+
+.album-drag-ghost img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes album-drag-lift {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-drag-ghost {
+    animation: none;
+  }
+}

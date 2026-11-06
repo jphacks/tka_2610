@@ -1,5 +1,6 @@
 // ⑧ 作品一覧（/collection）。タブ。
 // いちばん上はアルバムの棚（AlbumShelf）。「新しく作る」・お気に入り・作ったアルバムを横に並べ、押すとアルバムの画面（AlbumView）へ。
+// 作品を長押しすると持ち上がり、上の棚のアルバムへ運んで入れられる（AlbumDrag）。運んでいる間、棚は画面の上に貼りつく。
 // 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のダイヤルで、見る範囲を絞り込む（?month=）。
 // 月のダイヤル（MonthScroller）は横にスクロールして、真ん中の枠に止まった月を選ぶ（押すと、その月が真ん中へすべって選ばれる）。
 //   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで並べる（既定2列・切り替えで3列）（はじめに開いたとき）
@@ -14,6 +15,7 @@ import { useAlbums, useArtworks, useCreateAlbum, type Artwork, type Category } f
 import { AlbumNameSheet, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons, TLink } from '../components'
 import { GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
+import { AlbumDrag, NEW_ALBUM, type DragState } from './AlbumDrag'
 import './Collection.css'
 
 type Tab = Category | 'all'
@@ -165,26 +167,40 @@ const hideBroken = (e: SyntheticEvent<HTMLImageElement>) => {
 
 /**
  * アルバムの棚。先頭は「新しく作る」（名前を入れて作ると、そのアルバムの画面へ進む）、次にお気に入り、そのあとは新しく作った順。
- * 多ければ横にスクロールする
+ * 多ければ横にスクロールする。
+ * 作品を持ち上げている間（drag）は、画面の上に貼りつき、指の下のアルバム（drag.over）をふくらませる。カードの data-album-drop が落とし先の印
  */
-function AlbumShelf() {
+function AlbumShelf({ drag }: { drag: DragState | null }) {
   const nav = useNav()
   const albums = useAlbums()
   const create = useCreateAlbum()
   const [creating, setCreating] = useState(false)
 
   return (
-    <section className="album-shelf" aria-labelledby="album-shelf-title">
-      <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
+    <section className={`album-shelf${drag ? ' is-docked' : ''}`} aria-labelledby="album-shelf-title">
+      <div className="album-shelf-head">
+        <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
+        <span className="album-shelf-hint">{drag ? (drag.over ? '離すと入れます' : 'ここへ運んで入れます') : '作品を長押しして、ここへ運べます'}</span>
+      </div>
       <div className="album-shelf-track">
-        <button type="button" className="album-card album-card-new pressable" onClick={() => setCreating(true)}>
+        <button
+          type="button"
+          className={`album-card album-card-new pressable${drag?.over === NEW_ALBUM ? ' is-over' : ''}`}
+          data-album-drop={NEW_ALBUM}
+          onClick={() => setCreating(true)}
+        >
           <span className="album-card-cover"><PlusIcon size={24} /></span>
           <span className="album-card-name">新しく作る</span>
         </button>
         {albums.isPending
           ? [0, 1].map((i) => <span key={i} className="album-card"><span className="album-card-cover skeleton" /></span>)
           : albums.data?.items.map((album) => (
-              <TLink key={album.id} to={`/collection/albums/${album.id}`} className="album-card pressable">
+              <TLink
+                key={album.id}
+                to={`/collection/albums/${album.id}`}
+                className={`album-card pressable${drag?.over === album.id ? ' is-over' : ''}`}
+                data-album-drop={album.id}
+              >
                 <span className={`album-card-cover${album.built_in ? ' favorites' : ''}`} style={album.cover_tint ? { background: album.cover_tint } : undefined}>
                   {album.cover_url ? <img src={album.cover_url} alt="" loading="lazy" onError={hideBroken} /> : album.built_in ? <HeartIcon size={24} filled /> : <GalleryIcon size={24} />}
                   {album.built_in && album.cover_url && <span className="album-card-badge" aria-hidden="true"><HeartIcon size={12} filled /></span>}
@@ -224,6 +240,8 @@ export default function Collection() {
   const compact = params.get('view') === 'compact'
   const gridClass = `collection-grid${compact ? ' compact' : ''}`
   const list = useArtworks({ category, sort: 'made' })
+  // 作品を持ち上げている間のようす（棚を貼りつけ、指の下のアルバムをふくらませる）
+  const [drag, setDrag] = useState<DragState | null>(null)
 
   const items = list.data?.items ?? []
   const months = byMonth(items)
@@ -255,7 +273,7 @@ export default function Collection() {
     <Screen tabbar className="collection-screen">
       <NavBar title="作品一覧" />
       <div className="page collection-page">
-        <AlbumShelf />
+        <AlbumShelf drag={drag} />
         <div className="collection-filters">
         <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
         </div>
@@ -281,6 +299,7 @@ export default function Collection() {
             </button>
           </div>
         ) : (
+          <AlbumDrag artworks={items} onChange={setDrag}>
           <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'} aria-busy={list.isFetching}>
             {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
             <div className="collection-years" role="tablist" aria-label="作った年">
@@ -357,6 +376,7 @@ export default function Collection() {
               })
             )}
           </div>
+          </AlbumDrag>
         )}
       </div>
 

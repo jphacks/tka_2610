@@ -53,6 +53,8 @@ export function ArtworkThumb({
     <TLink
       to={`/artworks/${artwork.id}`}
       share={artwork.id}
+      // 作品一覧で長押ししてアルバムへ運ぶとき（pages/AlbumDrag.tsx）に、どの作品かを見分ける
+      data-artwork-id={artwork.id}
       className={`thumb-card pressable${gallery ? ' artwork-gallery-card' : ''}`}
       style={{ '--i': Math.min(index, 12) } as CSSProperties}
       // 指を置いた時点で詳細データを先読みしておく
