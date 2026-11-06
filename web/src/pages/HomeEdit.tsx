@@ -12,7 +12,7 @@
 //   - 部屋（house.rooms にある部屋だけ。今はリビングだけなので切り替えは出ない）を選ぶと、カメラがその部屋へ寄り、テーマ・家具の追加・作品の追加はその部屋に入る
 //     （作品は POST /display の本文 { room_id } で送り、その部屋に空きが無ければ 409）。切り替えると、選んでいる物とドラッグはやめる。
 //     物は自分の部屋の中でだけ動かせる（部屋をまたぐ移動はしない）。house の無い古いサーバーでは部屋の切り替えを出さない（リビングだけ）
-// PC の広い画面では、スマホの枠をやめてウィンドウいっぱいに広げる（ドラッグしやすいように。HomeEdit.css）。
+// PC でも、ほかの画面と同じスマホの枠の中で模様替えする（ウィンドウいっぱいには広げない）。
 // 右上の「鑑賞モードへ」から ⑪ 鑑賞モードへ進める（PC でもスマホでも出す。スマホではタッチで歩ける）。
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
