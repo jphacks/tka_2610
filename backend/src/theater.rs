@@ -7,7 +7,7 @@ use axum::{
     Json,
     extract::{Query, State},
 };
-use chrono::{Datelike, Local, Months, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -106,7 +106,7 @@ pub struct TheaterScene {
     voice_ms: u32,
 }
 
-/// 期間をえらぶボタン (これまで・この1年・今年・年齢ごと)
+/// 期間をえらぶボタン (これまで・作品のある年齢ごと)
 #[derive(Serialize, Debug, PartialEq, Eq)]
 pub struct TheaterPreset {
     key: String,
@@ -358,22 +358,8 @@ pub fn presets(dates: &[NaiveDate], today: NaiveDate, birthday: Option<NaiveDate
         from: iso(first.min(today)),
         to: iso(today),
     });
-    let year_ago = today.checked_sub_months(Months::new(12)).expect("valid date");
-    out.push(TheaterPreset {
-        key: "year".into(),
-        label: "この1年".into(),
-        title: "この1年の作品".into(),
-        from: iso(year_ago),
-        to: iso(today),
-    });
-    let jan1 = NaiveDate::from_ymd_opt(today.year(), 1, 1).expect("valid date");
-    out.push(TheaterPreset {
-        key: format!("y{}", today.year()),
-        label: format!("{}年", today.year()),
-        title: format!("{}年の作品", today.year()),
-        from: iso(jan1),
-        to: iso(today),
-    });
+    // ほかは年齢ごとだけ (「この1年」「2026年」のような暦の区切りは、年齢と単位が混ざって分かりにくいので出さない。
+    // それ以外の期間は「日付をえらぶ」で)
     if let Some(birthday) = birthday {
         let mut ages: Vec<i16> = dates
             .iter()
@@ -653,24 +639,23 @@ mod tests {
     }
 
     #[test]
-    fn presets_cover_all_year_and_each_age() {
+    fn presets_cover_all_and_each_age() {
         let today = d(2026, 11, 5);
         let birthday = d(2021, 6, 1);
         let dates = [d(2024, 9, 1), d(2025, 7, 1), d(2026, 2, 1)];
         let p = presets(&dates, today, Some(birthday));
         let keys: Vec<&str> = p.iter().map(|x| x.key.as_str()).collect();
-        assert_eq!(keys, vec!["all", "year", "y2026", "age3", "age4"]);
+        assert_eq!(keys, vec!["all", "age3", "age4"]);
         assert_eq!((p[0].from.as_str(), p[0].to.as_str()), ("2024-09-01", "2026-11-05"));
-        assert_eq!(p[1].from, "2025-11-05");
-        assert_eq!((p[3].from.as_str(), p[3].to.as_str()), ("2024-06-01", "2025-05-31"));
-        assert_eq!((p[4].from.as_str(), p[4].to.as_str()), ("2025-06-01", "2026-05-31"));
+        assert_eq!((p[1].from.as_str(), p[1].to.as_str()), ("2024-06-01", "2025-05-31"));
+        assert_eq!((p[2].from.as_str(), p[2].to.as_str()), ("2025-06-01", "2026-05-31"));
         // 今の年齢の期間は今日まで
         let now = presets(&[d(2026, 7, 1)], today, Some(birthday));
-        assert_eq!((now[3].label.as_str(), now[3].to.as_str()), ("5さい", "2026-11-05"));
+        assert_eq!((now[1].label.as_str(), now[1].to.as_str()), ("5さい", "2026-11-05"));
         let leap = presets(&[d(2025, 3, 2)], today, Some(d(2020, 2, 29)));
-        assert_eq!((leap[3].from.as_str(), leap[3].to.as_str()), ("2025-03-01", "2026-02-28"));
-        // 誕生日が無ければ年齢のボタンは無い
-        assert_eq!(presets(&dates, today, None).len(), 3);
+        assert_eq!((leap[1].from.as_str(), leap[1].to.as_str()), ("2025-03-01", "2026-02-28"));
+        // 誕生日が無ければ「これまで」だけ
+        assert_eq!(presets(&dates, today, None).len(), 1);
     }
 
     #[test]
