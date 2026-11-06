@@ -1,0 +1,62 @@
+/* アルバムの画面（AlbumView）。作品の並び（.collection-grid）と空のときの表示は styles/gallery.css */
+
+.album-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.album-more {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+}
+
+.album-page {
+  padding-top: 4px;
+}
+
+.album-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 14px;
+}
+
+.album-toolbar .btn {
+  width: auto;
+}
+
+/* 作品を入れ直して、新しい並びが届くまで */
+.album-stale {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+.album-delete-hint {
+  margin: 4px 8px 0;
+  text-align: center;
+}
+
+/* 「作品を選ぶ」のシート：3 列。作品が多ければ、並びだけをスクロールする */
+.album-picker-hint {
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.album-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 10px;
+  max-height: min(56vh, 520px);
+  margin: 0 -6px;
+  padding: 4px 6px 8px;
+  overflow-y: auto;
+}
+
+.album-picker-grid .thumb-title {
+  font-size: 12px;
+}
+
+.album-picker-grid .thumb-meta {
+  font-size: 10px;
+}
