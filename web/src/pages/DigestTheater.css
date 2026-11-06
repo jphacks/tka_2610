@@ -125,8 +125,8 @@
   min-width: 170px;
   max-width: min(320px, calc(100vw - 64px));
   aspect-ratio: 2.1;
-  /* 画像の雲は下のもこもこが厚いので、文字は少し上に寄せる */
-  padding: 24px 36px 30px;
+  /* 画像の雲は上のもこもこが高いので、文字は少し下に寄せて、雲の真ん中に見えるようにする */
+  padding: 34px 36px 22px;
   animation: theater-cloud-in 1.4s var(--ease-out) both;
 }
 
