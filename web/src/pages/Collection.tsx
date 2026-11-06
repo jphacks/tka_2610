@@ -1,5 +1,6 @@
 // ⑧ 作品一覧（/collection）。タブ。
 // いちばん上はアルバムの棚（AlbumShelf）。「新しく作る」・お気に入り・作ったアルバムを横に並べ、押すとアルバムの画面（AlbumView）へ。
+// 作品を長押しすると持ち上がり、画面の下に出るアルバムへ運んで入れられる（AlbumDrag）。
 // 上から、種類の切り替え（?category=種類）・年の切り替え・（年を選んだときだけ）月のダイヤルで、見る範囲を絞り込む（?month=）。
 // 月のダイヤル（MonthScroller）は横にスクロールして、真ん中の枠に止まった月を選ぶ（押すと、その月が真ん中へすべって選ばれる）。
 //   省く      … すべて。全部の作品を、作成日の新しい順に見出し無しで並べる（既定2列・切り替えで3列）（はじめに開いたとき）
@@ -14,6 +15,7 @@ import { useAlbums, useArtworks, useCreateAlbum, type Artwork, type Category } f
 import { AlbumNameSheet, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons, TLink } from '../components'
 import { GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
+import { AlbumDrag } from './AlbumDrag'
 import './Collection.css'
 
 type Tab = Category | 'all'
@@ -175,7 +177,10 @@ function AlbumShelf() {
 
   return (
     <section className="album-shelf" aria-labelledby="album-shelf-title">
-      <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
+      <div className="album-shelf-head">
+        <h2 id="album-shelf-title" className="album-shelf-title">アルバム</h2>
+        <span className="album-shelf-hint">作品を長押しして、アルバムへ運べます</span>
+      </div>
       <div className="album-shelf-track">
         <button type="button" className="album-card album-card-new pressable" onClick={() => setCreating(true)}>
           <span className="album-card-cover"><PlusIcon size={24} /></span>
@@ -281,6 +286,7 @@ export default function Collection() {
             </button>
           </div>
         ) : (
+          <AlbumDrag artworks={items}>
           <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'} aria-busy={list.isFetching}>
             {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
             <div className="collection-years" role="tablist" aria-label="作った年">
@@ -357,6 +363,7 @@ export default function Collection() {
               })
             )}
           </div>
+          </AlbumDrag>
         )}
       </div>
 
