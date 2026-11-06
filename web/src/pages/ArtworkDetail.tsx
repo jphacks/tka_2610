@@ -15,6 +15,7 @@ import {
 } from '../api'
 import {
   ActionMenu,
+  AlbumSheet,
   ArtworkThumb,
   ErrorBoundary,
   GlassButton,
@@ -27,6 +28,7 @@ import {
   BackIcon,
   CloseIcon,
   DocIcon,
+  GalleryIcon,
   HeartIcon,
   MoreIcon,
   RainbowIcon,
@@ -47,6 +49,7 @@ export default function ArtworkDetail() {
   const remove = useDeleteArtwork()
 
   const [menu, setMenu] = useState(false)
+  const [albumSheet, setAlbumSheet] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const artwork = detail.data?.artwork
@@ -356,6 +359,11 @@ export default function ArtworkDetail() {
             onSelect: toggleDisplay,
           },
           {
+            label: 'アルバムに入れる',
+            icon: <GalleryIcon size={19} />,
+            onSelect: () => setAlbumSheet(true),
+          },
+          {
             label: '削除',
             icon: <CloseIcon size={19} />,
             destructive: true,
@@ -363,6 +371,9 @@ export default function ArtworkDetail() {
           },
         ]}
       />
+
+      {/* ===== アルバムに入れる ===== */}
+      {artwork && <AlbumSheet open={albumSheet} onClose={() => setAlbumSheet(false)} artworkId={artwork.id} />}
 
       {/* ===== 削除確認 ===== */}
       <Sheet
