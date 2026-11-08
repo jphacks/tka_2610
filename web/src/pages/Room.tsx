@@ -3,11 +3,11 @@
 // 作品をタップすると ⑥ 作品の詳細へ。
 // 3D の上に浮かぶ UI は 2 段だけ：上に戻るボタンとおへやの名前、下に飾っている数と「歩く」（⑪ 鑑賞モード）・「模様替え」（⑫）の丸いボタン。
 // どちらもこのおへやを ?room= で渡す。
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useMuseum } from '../api'
-import { GlassButton, Screen } from '../components'
-import { BackIcon, SofaIcon, WalkIcon } from '../icons'
+import { useAges, useMuseum } from '../api'
+import { GlassButton, Screen, Sheet } from '../components'
+import { BackIcon, ChevronRight, SofaIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
 import { HomeScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, warmUp3D } from '../three'
 import './Room.css'
@@ -16,7 +16,44 @@ export default function Room() {
   const { roomId = '' } = useParams()
   const museum = useMuseum({ roomId })
   const nav = useNav()
-  const [ready, setReady] = useState(false)
+  const [readyRoomId, setReadyRoomId] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const ages = useAges()
+  const titleButton = useRef<HTMLButtonElement>(null)
+  const closeButton = useRef<HTMLButtonElement>(null)
+  const closePicker = () => {
+    setPickerOpen(false)
+    titleButton.current?.focus()
+  }
+  useEffect(() => {
+    if (!pickerOpen) return
+    const focusFrame = requestAnimationFrame(() => closeButton.current?.focus())
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setPickerOpen(false)
+        titleButton.current?.focus()
+      }
+      if (event.key === 'Tab') {
+        const buttons = closeButton.current?.closest('.sheet')?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+        if (!buttons?.length) return
+        const first = buttons[0]
+        const last = buttons[buttons.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      cancelAnimationFrame(focusFrame)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [pickerOpen])
 
   useEffect(() => {
     if (museum.data) warmUp3D(shellUrlsOf(museum.data), furnitureUrlsOf(museum.data))
@@ -30,14 +67,20 @@ export default function Room() {
     <Screen className="room-screen">
       <StageShell
         className="room-stage"
-        ready={ready || (!!data && !hasHouseModel(data)) || museum.isError}
+        ready={readyRoomId === roomId || (!!data && !hasHouseModel(data)) || museum.isError}
         overlay={
           <>
             <div className="stage-top room-top">
               <GlassButton label="戻る" onClick={() => nav.back(back)}>
                 <BackIcon size={20} strokeWidth={2.2} />
               </GlassButton>
-              {room && <span className="stage-title glass room-title">{room.name}</span>}
+              {room && (
+                <button ref={titleButton} type="button" className="stage-title glass room-title"
+                  aria-label={`${room.name}。おへやを切り替える`} aria-haspopup="dialog"
+                  aria-expanded={pickerOpen} onClick={() => setPickerOpen(true)}>
+                  <span>{room.name}</span><ChevronRight size={16} />
+                </button>
+              )}
             </div>
             <div className="room-dock">
               {data && (
@@ -59,12 +102,44 @@ export default function Room() {
       >
         {data && (
           <Suspense fallback={null}>
-            <HomeScene museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReady(true)} />
+            <HomeScene key={roomId} museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReadyRoomId(roomId)} />
           </Suspense>
         )}
         {data && !hasHouseModel(data) && <div className="stage-fallback">家の 3D モデル (GLB) が見つかりません</div>}
         {museum.isError && <div className="stage-fallback">このおへやは見つかりません</div>}
       </StageShell>
+      <Sheet open={pickerOpen} onClose={closePicker} title="おへやをえらぶ">
+        <div className="room-picker-list">
+          {ages.isPending ? <p role="status">Loading…</p> : ages.isError ? (
+            <div role="alert"><p>おへやを読み込めませんでした</p>
+              <button type="button" className="btn btn-outline" onClick={() => ages.refetch()}>もう一度読み込む</button>
+            </div>
+          ) : (
+            <>
+              {ages.data.ages.filter(age => age.rooms.length > 0).map(age => (
+                <section key={age.age} className="room-picker-age" aria-label={age.label}>
+                  <h4>{age.label}</h4>
+                  <div className="room-picker-floors">
+                    {age.rooms.map(target => (
+                      <button key={target.id} type="button" className="room-picker-floor"
+                        aria-label={`${target.name}、${target.floor + 1}かい${target.id === roomId ? '、いまのおへや' : ''}`}
+                        aria-current={target.id === roomId ? 'location' : undefined}
+                        onClick={() => {
+                          closePicker()
+                          if (target.id !== roomId) nav.replace(`/rooms/${target.id}`, 'fade')
+                        }}>
+                        <span>{target.floor + 1}かい</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+              {!ages.data.ages.some(age => age.rooms.length > 0) && <p>おへやはまだありません</p>}
+            </>
+          )}
+        </div>
+        <button ref={closeButton} type="button" autoFocus className="btn btn-gray room-picker-close" onClick={closePicker}>閉じる</button>
+      </Sheet>
     </Screen>
   )
 }

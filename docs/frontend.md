@@ -78,7 +78,7 @@ import { HomeScene, StageShell } from '../three'
 | 番号 | 画面 | URL | ファイル | 開き方 |
 |---|---|---|---|---|
 | ② | ホーム（年齢のチップと、その年齢のおへやを積み上げた 3D の建物） | `/`（`?age=年齢`） | `Home.tsx` / `.css` | タブ |
-| ②' | おへや（画面いっぱいの 3D のおへや。はじめはリビングの中の近景で、引けば家全体。ドラッグで見回し、放っておくとゆっくり回る） | `/rooms/:roomId` | `Room.tsx` / `.css` | push（② の建物の階・「1かい」などのボタン） |
+| ②' | おへや（画面いっぱいの 3D のおへや。はじめはリビングの中の近景で、引けば家全体。ドラッグで見回し、放っておくとゆっくり回る。上部のおへやの名前を押すと、年齢・階の一覧から別のおへやへ直接移動できる） | `/rooms/:roomId` | `Room.tsx` / `.css` | push（② の建物の階・「1かい」などのボタン） |
 | ③ | 作品を追加 | `/add` | `AddArtwork.tsx` | モーダル |
 | ④ | 3D プレビュー | `/artworks/:id/preview` | `ArtworkPreview.tsx` / `.css` | モーダル |
 | ⑤ | おうちの中 | `/museum`（`?focus=作品ID` / `?room=部屋ID`） | `MuseumView.tsx` / `.css` | push |
