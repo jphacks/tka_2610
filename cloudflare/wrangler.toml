@@ -6,12 +6,14 @@ compatibility_date = "2026-10-01"
 [build]
 command = "PATH=$HOME/.cargo/bin:$PATH worker-build --release"
 
-# 画面・家具・建物・サンプルの作品は静的ファイル。/api と /media だけ Worker を通す
+# 画面・家具・建物・サンプルの作品は静的ファイル。
+# /api・/media と画面の HTML は Worker を通す (HTML で家の Cookie を付けるため。src/house.rs)。
+# JS・CSS・家具・舞台などは Worker を通さない (! のパターン)
 [assets]
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/media/*", "/healthz"]
+run_worker_first = ["/*", "!/assets/*", "!/home-assets/*", "!/stage-assets/*", "!/favicon.svg", "!/house.png"]
 
 [[durable_objects.bindings]]
 name = "MUSEUM"

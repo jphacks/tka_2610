@@ -1,6 +1,6 @@
 //! Durable Object「Museum」。backend の main.rs の代わりに、起動時の処理と API のルートを持つ。
 //!
-//! おうちは 1 つなので、この Durable Object も 1 つ (lib.rs が id "main" で呼ぶ)。
+//! 体験用の家ごとに 1 つ (lib.rs が house.rs の `object_name` で呼ぶ。前の、みんなで 1 つの家は "main")。
 //! 中の SQLite がデータベースとファイルの置き場所 (schema.rs・store.rs)。
 //! 起動時の処理 (表の用意・おへやの用意・整理・サンプルの登録) は、起きてから最初の要求のときに 1 回だけ行う。
 
