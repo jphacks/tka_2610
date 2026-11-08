@@ -68,12 +68,18 @@ npm run dev        # http://localhost:8787 (wrangler dev。Durable Object とそ
 |---|---|
 | PR | backend の `cargo test`・web の `npm run build` と `npm run check:placement`・Cloudflare 版のビルド（`wrangler deploy --dry-run`。公開はしない） |
 | main に入ったとき | 上が全部通ったら、memoria-try に公開する |
+| PR のテストが全部通ったとき | その PR を自動でマージして、main の CI を起動する（下の「自動マージ」） |
 | Actions の画面の「Run workflow」（main） | 同じテストのあとに公開する（自動の公開を止めているときに使う） |
 
 - backend を直したときも、Cloudflare 版のビルドが通るかを PR で確かめられます（`home.rs` などを共有しているため）。
 - 実行結果の Summary に、Worker の大きさ（無料プランの上限は gzip で 3 MB）が出ます。
 - 公開には、リポジトリの secrets の `CLOUDFLARE_API_TOKEN` を使います。Cloudflare のダッシュボードの「My Profile → API Tokens」で、テンプレートの「Edit Cloudflare Workers」から作ったトークンです。アカウント ID は `ci.yml` に書いてあります（秘密の値ではない）。
-- **自動の公開を止めるとき**（発表の直前など）：リポジトリの Settings → Secrets and variables → Actions → Variables で、`CLOUDFLARE_AUTO_DEPLOY` を `false` にします。テストとビルドは今までどおり動きます。戻すときは変数を消すか `true` にします。
+- **自動マージ**：PR のテスト（`backend`・`web`・`cloudflare`）が全部通ると、`automerge` のジョブがその PR をマージします。
+  - **作りかけの PR は Draft で出してください。** Draft はマージしません。「Ready for review」にするとテストが動き、通ればマージされます。
+  - テストのあとに新しい push があった PR はマージしません（新しい版のテストが通ってからマージする）。フォークからの PR もマージしません。
+  - GitHub の決まりで、`GITHUB_TOKEN` がマージした push ではワークフローが起動しません。そのため、マージのあとに main の CI を workflow_dispatch で起動して公開しています。
+  - main は保護していて、3 つのテストが通らない PR はマージできません。管理者以外は main に直接 push できません。
+- **自動の公開を止めるとき**（発表の直前など）：リポジトリの Settings → Secrets and variables → Actions → Variables で、`CLOUDFLARE_AUTO_DEPLOY` を `false` にします。テストとビルドと自動マージは今までどおり動きます（マージだけして、公開はしない）。戻すときは変数を消すか `true` にします。
 
 ### 公開したあとの確かめ方
 
