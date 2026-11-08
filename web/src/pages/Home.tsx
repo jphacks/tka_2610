@@ -1,6 +1,6 @@
 // ② ホーム（/）。タブ。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
-// 建物の階か、その下の「1かい」「2かい」のボタン（おへやが 1 つなら「はいる」）を押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
+// 建物の階か、その下の「1かい」「2かい」のボタンを押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
 // いちばん上の階に作品を飾っていなければ、「〇〇を消す」で消せる（確かめのシートを出す。作品のある階や途中の階はサーバーが断る）。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
@@ -8,7 +8,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAddRoom, useAgeStack, useAges, useDeleteRoom } from '../api'
 import { NavBar, Screen, Sheet, TLink, useToast } from '../components'
-import { HomeIcon, PlusIcon } from '../icons'
+import { PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import { StackScene, StageShell, warmUp3D } from '../three'
 import './Home.css'
@@ -95,21 +95,10 @@ export default function Home() {
             className={`age-chip${a.age === selected?.age ? ' selected' : ''}`}
             onClick={() => choose(a.age)}
           >
-            {a.age === selected?.age && <HomeIcon size={17} />}
             {a.label}
           </button>
         ))}
       </div>
-
-      {selected && (
-        <div className="home-heading">
-          <span className="home-heading-name">{selected.label}のおへや</span>
-          <span className="home-heading-count num">{selected.displayed_count}</span>
-          {selected.artwork_count > selected.displayed_count && (
-            <span className="home-heading-stored">しまってある {selected.artwork_count - selected.displayed_count}</span>
-          )}
-        </div>
-      )}
 
       <StageShell
         className="home-stage"
@@ -141,11 +130,6 @@ export default function Home() {
           </>
         )}
         <div className="home-buttons">
-          {rooms.length === 1 && (
-            <button type="button" className="btn btn-filled home-enter" onClick={() => enter(rooms[0].id)}>
-              はいる
-            </button>
-          )}
           {selected && (
             <button type="button" className="btn btn-outline home-add" disabled={addRoom.isPending} onClick={add}>
               <PlusIcon size={17} strokeWidth={2.2} />
