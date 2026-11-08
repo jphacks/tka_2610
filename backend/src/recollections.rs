@@ -16,6 +16,11 @@ use crate::{
     state::{AppState, MediaKind, media_url},
 };
 
+/// memoriaではこのサンプルを表示しない。作品一覧やおへやのデータは残す。
+pub(crate) fn hidden_artwork_id() -> uuid::Uuid {
+    crate::seed::seed_id("13_forest_birdhouse")
+}
+
 #[derive(Default, Deserialize)]
 pub struct RecallQuery {
     age: Option<i16>,
@@ -128,8 +133,8 @@ pub async fn overview(
     }
     let today = Local::now().date_naive();
     let rows = sqlx::query_as::<_, ArtworkRow>(&format!(
-        "SELECT {COLUMNS} FROM artworks WHERE made_on <= $1 ORDER BY made_on DESC, created_at DESC, id"
-    )).bind(today).fetch_all(&state.pool).await?;
+        "SELECT {COLUMNS} FROM artworks WHERE made_on <= $1 AND id <> $2 ORDER BY made_on DESC, created_at DESC, id"
+    )).bind(today).bind(hidden_artwork_id()).fetch_all(&state.pool).await?;
     let ctx = DtoContext::load(&state.pool).await?;
     let dates: Vec<_> = rows.iter().map(|r| r.made_on).collect();
     let (moment_title, indices) = moment_indices(&dates, today);

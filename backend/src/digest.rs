@@ -110,8 +110,8 @@ async fn selection(state: &AppState, query: &DigestQuery) -> AppResult<Selection
     }
     let today = Local::now().date_naive();
     let rows = sqlx::query_as::<_, ArtworkRow>(&format!(
-        "SELECT {COLUMNS} FROM artworks WHERE made_on <= $1 AND ($2::text IS NULL OR category = $2) ORDER BY made_on ASC, created_at ASC, id"
-    )).bind(today).bind(category).fetch_all(&state.pool).await?;
+        "SELECT {COLUMNS} FROM artworks WHERE made_on <= $1 AND ($2::text IS NULL OR category = $2) AND id <> $3 ORDER BY made_on ASC, created_at ASC, id"
+    )).bind(today).bind(category).bind(recollections::hidden_artwork_id()).fetch_all(&state.pool).await?;
     let ctx = DtoContext::load(&state.pool).await?;
     let indices = pick_indices(
         &rows.iter().map(|r| r.made_on).collect::<Vec<_>>(),
