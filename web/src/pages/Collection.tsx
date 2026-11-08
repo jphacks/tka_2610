@@ -171,16 +171,16 @@ const FOLDED_KEY = 'collection.albums-folded'
 
 function readFolded() {
   try {
-    return localStorage.getItem(FOLDED_KEY) === '1'
+    return localStorage.getItem(FOLDED_KEY) !== '0'
   } catch {
-    return false
+    return true
   }
 }
 
 function writeFolded(folded: boolean) {
   try {
     if (folded) localStorage.setItem(FOLDED_KEY, '1')
-    else localStorage.removeItem(FOLDED_KEY)
+    else localStorage.setItem(FOLDED_KEY, '0')
   } catch {
     /* 覚えられなくても、今の画面ではたためる */
   }
@@ -278,6 +278,7 @@ export default function Collection() {
   const list = useArtworks({ category, sort: 'made' })
   // 作品を持ち上げている間のようす（棚を貼りつけ、指の下のアルバムをふくらませる）
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const items = list.data?.items ?? []
   const months = byMonth(items)
@@ -310,33 +311,11 @@ export default function Collection() {
       <NavBar title="作品一覧" />
       <div className="page collection-page">
         <AlbumShelf drag={drag} />
-        <div className="collection-filters">
-        <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
-        </div>
-
-        {list.isPending ? (
-          <div className={`${gridClass} collection-body`} aria-label="Loading…" aria-busy="true">
-            <ThumbSkeletons count={6} />
-          </div>
-        ) : list.isError ? (
-          <div className="collection-empty" role="alert">
-            <GalleryIcon size={30} />
-            <h2>作品を読み込めませんでした</h2>
-            <p>接続を確認して、もう一度お試しください。</p>
-            <button type="button" className="btn btn-outline btn-small" disabled={list.isFetching} onClick={() => list.refetch()}>もう一度読み込む</button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="collection-empty">
-            <GalleryIcon size={30} />
-            <h2>{category === 'all' ? 'まだ作品がありません' : 'この種類の作品はまだありません'}</h2>
-            <p>作品の写真を撮るか、画像を選んで追加できます。</p>
-            <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
-              作品を追加
-            </button>
-          </div>
-        ) : (
-          <AlbumDrag artworks={items} onChange={setDrag}>
-          <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'} aria-busy={list.isFetching}>
+        <details className="collection-filter-panel" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
+          <summary><span>絞り込み</span><span className="collection-filter-current">{scopeLabel}</span><BackIcon size={14} className="collection-filter-arrow" /></summary>
+          {filtersOpen && (
+            <div className="collection-filter-options">
+              <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
             {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
             <div className="collection-years" role="tablist" aria-label="作った年">
               <button
@@ -374,6 +353,34 @@ export default function Collection() {
               />
             )}
 
+              <button type="button" className="btn btn-plain collection-filter-done" onClick={() => setFiltersOpen(false)}>閉じる</button>
+            </div>
+          )}
+        </details>
+
+        {list.isPending ? (
+          <div className={`${gridClass} collection-body`} aria-label="Loading…" aria-busy="true">
+            <ThumbSkeletons count={6} />
+          </div>
+        ) : list.isError ? (
+          <div className="collection-empty" role="alert">
+            <GalleryIcon size={30} />
+            <h2>作品を読み込めませんでした</h2>
+            <p>接続を確認して、もう一度お試しください。</p>
+            <button type="button" className="btn btn-outline btn-small" disabled={list.isFetching} onClick={() => list.refetch()}>もう一度読み込む</button>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="collection-empty">
+            <GalleryIcon size={30} />
+            <h2>{category === 'all' ? 'まだ作品がありません' : 'この種類の作品はまだありません'}</h2>
+            <p>作品の写真を撮るか、画像を選んで追加できます。</p>
+            <button className="btn btn-outline btn-small" onClick={() => nav.modal('/add')}>
+              作品を追加
+            </button>
+          </div>
+        ) : (
+          <AlbumDrag artworks={items} onChange={setDrag}>
+          <div className={list.isPlaceholderData ? 'collection-body stale' : 'collection-body'} aria-busy={list.isFetching}>
             <div className="collection-toolbar">
               <div className="collection-scope" aria-live="polite">
                 <h2>{scopeLabel}</h2>
