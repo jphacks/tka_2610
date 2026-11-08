@@ -26,7 +26,8 @@ export default function Home() {
 
   const data = ages.data
   // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
-  const fromUrl = Number(params.get('age'))
+  const ageParam = params.get('age')
+  const fromUrl = ageParam !== null && ageParam.trim() !== '' ? Number(ageParam) : null
   const list = data?.ages ?? []
   const selected =
     list.find((a) => a.age === fromUrl) ??
