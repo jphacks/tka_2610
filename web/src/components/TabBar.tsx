@@ -64,14 +64,14 @@ export function TabBar() {
                   if (i !== active) nav.tab(tab.to)
                 }}
               >
-                <Icon size={23} strokeWidth={i === active ? 2.1 : 1.8} />
+                <Icon size={21} strokeWidth={i === active ? 2.1 : 1.8} />
                 <span>{tab.label}</span>
               </a>
             )
           })}
         </nav>
         <button className="tab-add" aria-label="作品を追加" onClick={() => nav.modal('/add')}>
-          <PlusIcon size={26} strokeWidth={2.4} />
+          <PlusIcon size={24} strokeWidth={2.4} />
         </button>
       </div>
     </>
