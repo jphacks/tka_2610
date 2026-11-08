@@ -1,6 +1,6 @@
 // 年齢ごとのおへや（Rust: backend/src/ages_api.rs）。ホームの年齢のチップ・積み上げの建物・マップのリストで使う。
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { keys, request } from './client'
 import type { AgeRoom, Ages, AgeStack } from './types'
 
@@ -10,11 +10,12 @@ export function useAges() {
 }
 
 /** その年齢のおへやを積み上げて描くための、おへやごとの配置と飾っている作品。age が null のあいだは取りに行かない */
-export function useAgeStack(age: number | null) {
+export function useAgeStack(age: number | null, retainPrevious = false) {
   return useQuery({
     queryKey: keys.ageStack(age ?? -1),
     queryFn: () => request<AgeStack>(`/api/ages/${age}`),
     enabled: age !== null,
+    placeholderData: retainPrevious ? keepPreviousData : undefined,
   })
 }
 
