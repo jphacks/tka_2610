@@ -2,6 +2,41 @@
 
 .collection-page { padding-top: 10px; }
 
+.collection-filter-panel {
+  margin-bottom: 8px;
+}
+
+.collection-filter-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.collection-filter-panel > summary::-webkit-details-marker { display: none; }
+
+.collection-filter-current {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.collection-filter-arrow { flex: none; transform: rotate(-90deg); }
+.collection-filter-panel[open] .collection-filter-arrow { transform: rotate(90deg); }
+.collection-filter-options { padding: 4px 0 8px; }
+.collection-filter-options .collection-years { margin-top: 12px; }
+.collection-filter-done { display: block; margin: 8px auto 0; font-size: 13px; }
+
 .collection-toolbar {
   display: flex;
   align-items: center;
@@ -54,7 +89,8 @@
 }
 
 .collection-screen button:focus-visible,
-.collection-screen a:focus-visible {
+.collection-screen a:focus-visible,
+.collection-screen summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
