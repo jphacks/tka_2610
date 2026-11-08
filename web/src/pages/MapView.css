@@ -17,9 +17,30 @@
 .recall-photo { padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); transform: rotate(3deg); }
 .recall-photo .thumb { border-radius: 4px; aspect-ratio: 3 / 4; }
 .recall-photo > span { display: block; margin-top: 5px; text-align: center; font-size: 9px; color: var(--ink-2); }
-.recall-hero-caption { min-width: 0; padding: 0; }
+.recall-hero-caption { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 0; }
+.recall-hero-caption > .recall-date { grid-column: 1; grid-row: 1; }
+.recall-hero-caption > .recall-voice { grid-column: 1 / -1; grid-row: 2; margin-top: 0; }
 .recall-date { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.recall-open { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.recall-open {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background .2s var(--ease-out), color .2s var(--ease-out);
+}
+.recall-open svg { width: 18px; height: 18px; transform: translateX(1px); }
+.recall-open:active { background: var(--fill); color: var(--ink); }
+@media (hover: hover) { .recall-open:hover { background: var(--fill); color: var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .recall-open { transition: none; } }
 .recall-selection-note { margin: 8px 2px 14px; font-size: 10px; color: var(--ink-2); }
 .recall-strip { display: flex; gap: 12px; padding: 0 20px 8px; margin-inline: -20px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
 .recall-strip::-webkit-scrollbar { display: none; }
@@ -58,25 +79,11 @@
 @media (max-width: 360px) { .recall-section-head h1, .recall-section-head h2 { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .recall-screen .thumb-card { animation: none; } }
 
-/* ダイジェストの入口。タップしたときだけ再生画面を開く。 */
-.recall-digest { margin-bottom: 24px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 20px; background: color-mix(in srgb, var(--sky) 25%, var(--surface)); }
-.recall-digest > div:first-child { display: flex; align-items: center; gap: 9px; }
-.recall-digest-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); color: var(--accent); }
-.recall-digest h1 { margin: 0; font-size: 18px; }
-.recall-digest > p { margin: 10px 0 14px; font-size: 12px; line-height: 1.7; color: var(--ink-2); }
-.recall-digest-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.recall-digest-buttons button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--accent); }
-
-.recall-slideshow { margin-top: 24px; margin-bottom: 24px; }
-.recall-slideshow > summary { padding: 10px 0; cursor: pointer; font-size: 12px; color: var(--ink-2); }
-.recall-slideshow .recall-digest { margin: 8px 0 0; }
-
 .recall-screen.is-viewing-theater { overflow-y: hidden; background: var(--paper); }
 .recall-screen.is-viewing-theater .navbar { visibility: hidden; }
 .app:has(.recall-screen.is-viewing-theater) .tabbar-wrap,
 .app:has(.recall-screen.is-viewing-theater) .tab-rainbow { visibility: hidden; }
 .recall-screen.is-viewing-theater .recall-page > :not(.theater-embed-slot) { visibility: hidden; }
 
-.recall-hero-trigger { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
 .recall-hero-images { pointer-events: none; }
 .recall-hero-caption .recall-voice { position: relative; z-index: 2; }
