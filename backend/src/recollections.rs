@@ -35,6 +35,12 @@ pub struct RecallCard {
 }
 
 #[derive(Serialize)]
+pub struct RecallVideo {
+    artwork: ArtworkDto,
+    video: MemoryDto,
+}
+
+#[derive(Serialize)]
 pub struct AgeAlbum {
     age: i16,
     label: String,
@@ -49,6 +55,7 @@ pub struct Recollections {
     featured: Option<RecallCard>,
     moments: Vec<RecallCard>,
     voices: Vec<RecallCard>,
+    videos: Vec<RecallVideo>,
     age_albums: Vec<AgeAlbum>,
     selected_age: Option<i16>,
     age_artworks: Vec<ArtworkDto>,
@@ -163,6 +170,22 @@ pub async fn overview(
             voices.push(value);
         }
     }
+    // 作品に残した動画を、新しい作品から最大6件並べる。
+    let video_rows: Vec<_> = rows.iter()
+        .filter(|r| ctx.memories.get(&r.id).is_some_and(|c| c.video > 0))
+        .take(6)
+        .collect();
+    let video_ids: Vec<_> = video_rows.iter().map(|r| r.id).collect();
+    let mut video_memories = memories::of_artworks(&state.pool, &video_ids).await?;
+    let mut videos = Vec::new();
+    for row in video_rows {
+        for video in video_memories.remove(&row.id).unwrap_or_default().into_iter()
+            .filter(|m| m.kind == "video")
+        {
+            if videos.len() == 6 { break; }
+            videos.push(RecallVideo { artwork: ArtworkDto::new(row, &ctx), video });
+        }
+    }
     let mut by_age: BTreeMap<i16, Vec<&ArtworkRow>> = BTreeMap::new();
     for row in &rows {
         by_age
@@ -193,6 +216,7 @@ pub async fn overview(
         featured,
         moments,
         voices,
+        videos,
         age_albums,
         selected_age,
         age_artworks,

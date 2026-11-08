@@ -517,6 +517,7 @@ export interface Recollections {
   featured: RecallCard | null
   moments: RecallCard[]
   voices: RecallCard[]
+  videos: { artwork: Artwork; video: Memory }[]
   age_albums: { age: number; label: string; count: number; cover_url: string }[]
   selected_age: number | null
   age_artworks: Artwork[]

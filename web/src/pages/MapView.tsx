@@ -3,7 +3,7 @@ import { Suspense, useCallback, useEffect, useRef, useState, type SyntheticEvent
 import { useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
 import { DigestPlayer, ErrorBoundary, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
 import { ArtworkViewerScene, StageShell } from '../three'
-import { ChevronRight, GalleryIcon, MicIcon, PlayIcon } from '../icons'
+import { ChevronRight, GalleryIcon, MicIcon, PlayIcon, VideoIcon } from '../icons'
 import { useNav } from '../nav'
 import DigestTheater from './DigestTheater'
 import './MapView.css'
@@ -58,6 +58,7 @@ export default function MapView() {
   const nav = useNav()
   const data = recalls.data
   const featured = data?.featured
+  const videos = data?.videos ?? []
   const playing = useRef<HTMLAudioElement | null>(null)
   useEffect(() => () => { playing.current?.pause() }, [])
   useEffect(() => { if (recalls.isError) playing.current?.pause() }, [recalls.isError])
@@ -102,6 +103,20 @@ export default function MapView() {
               {data.voices.length > 0 ? (
                 <div className="recall-strip recall-voice-strip">{data.voices.map(card => <RecallTile key={card.artwork.id} card={card} voice onPlay={onPlay} />)}</div>
               ) : <div className="recall-voice-empty"><p>声の記録はまだありません</p><span>作品の詳細の「おもいで」から、声を録音して残せます。</span></div>}
+            </section>
+            <section className="recall-section" aria-labelledby="recall-videos-title">
+              <div className="recall-section-head"><h2 id="recall-videos-title"><VideoIcon size={18} />作品にまつわる動画</h2></div>
+              {videos.length > 0 ? (
+                <div className="recall-strip recall-video-strip">
+                  {videos.map(({ artwork, video }) => (
+                    <article className="recall-tile" key={video.id}>
+                      <TLink to={`/artworks/${artwork.id}`} className="recall-video-link" aria-label={`「${artwork.title}」の作品を見る`} onClick={() => playing.current?.pause()}>
+                        <video src={`${video.url}#t=0.1`} poster={video.thumb_url ?? undefined} preload="metadata" muted playsInline tabIndex={-1} aria-hidden="true" />
+                      </TLink>
+                    </article>
+                  ))}
+                </div>
+              ) : <div className="recall-voice-empty"><p>動画の記録はまだありません</p><span>作品の詳細の「おもいで」から、動画を残せます。</span></div>}
             </section>
             <details className="recall-slideshow"><summary>スライドショーで振り返る</summary>
             <section className="recall-digest" aria-labelledby="recall-digest-title">
