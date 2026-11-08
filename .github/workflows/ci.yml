@@ -16,6 +16,11 @@ on:
 permissions:
   contents: read
 
+# shell を書かないと pipefail が付かず、`wrangler deploy | tee` の失敗が成功に見える
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.ref }}
   # PR は新しい push が来たら前の分をやめる。main の公開は途中で止めない
@@ -89,7 +94,14 @@ jobs:
       - name: Worker をビルドする (公開しない)
         if: env.DEPLOY != 'true'
         working-directory: cloudflare
-        run: npx wrangler deploy --dry-run --outdir dist 2>&1 | tee wrangler.log
+        # worker-build が GitHub から wasm-opt を落とすときに、たまに 504 で失敗するので、3 回までやり直す
+        run: |
+          for i in 1 2 3; do
+            if npx wrangler deploy --dry-run --outdir dist 2>&1 | tee wrangler.log; then exit 0; fi
+            echo "::warning::ビルドに失敗しました（$i 回目）"
+            sleep 30
+          done
+          exit 1
 
       - name: memoria-try に公開する
         if: env.DEPLOY == 'true'
@@ -101,7 +113,12 @@ jobs:
             echo "::error::secrets の CLOUDFLARE_API_TOKEN がありません。docs/cloudflare.md の「CI/CD」を見てください"
             exit 1
           fi
-          npx wrangler deploy 2>&1 | tee wrangler.log
+          for i in 1 2 3; do
+            if npx wrangler deploy 2>&1 | tee wrangler.log; then exit 0; fi
+            echo "::warning::公開に失敗しました（$i 回目）"
+            sleep 30
+          done
+          exit 1
 
       - name: Worker の大きさを書き出す
         if: always()
