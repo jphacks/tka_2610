@@ -30,7 +30,7 @@ export default function MuseumView() {
         overlay={
           <>
             <div className="stage-top">
-              <GlassButton label="戻る" onClick={() => nav.back(ageRoom ? `/rooms/${ageRoom.id}` : '/')}>
+              <GlassButton label="戻る" onClick={() => nav.back(ageRoom ? `/rooms/${ageRoom.id}` : '/home')}>
                 <BackIcon size={20} strokeWidth={2.2} />
               </GlassButton>
               <span className="stage-title glass">{ageRoom?.name ?? museum.data?.name ?? 'おへや'}</span>
@@ -84,7 +84,7 @@ export default function MuseumView() {
           { label: '模様替え', icon: <SofaIcon size={19} />, onSelect: () => nav.push(inRoom('/home/edit')) },
           { label: 'マップ', icon: <RainbowIcon size={19} />, onSelect: () => nav.push('/map') },
           { label: '作品一覧', icon: <GalleryIcon size={19} />, onSelect: () => nav.tab('/collection') },
-          { label: 'ホーム', icon: <HomeIcon size={19} />, onSelect: () => nav.tab('/') },
+          { label: 'ホーム', icon: <HomeIcon size={19} />, onSelect: () => nav.tab('/home') },
         ]}
       />
     </Screen>

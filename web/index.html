@@ -12,8 +12,8 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <!-- 3D背景とデータの取得を JS の読み込みと並行して始める -->
-    <link rel="preload" href="/api/ages" as="fetch" crossorigin="anonymous" />
+    <!-- 最初に表示する作品一覧を JS の読み込みと並行して取得する -->
+    <link rel="preload" href="/api/artworks?sort=made" as="fetch" crossorigin="anonymous" />
   </head>
   <body>
     <div id="root"></div>
