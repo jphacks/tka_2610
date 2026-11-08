@@ -23,7 +23,7 @@ export function ArtworkThumb({
   meta?: 'date' | 'age'
   /** 並び順。表示アニメーションを少しずつずらすのに使う */
   index?: number
-  /** 一覧用。作品全体の画像と、飾っている印・おもいでを表示する */
+  /** 一覧用。作品全体の画像と、おもいでを表示する */
   gallery?: boolean
   /** 渡すと、詳細画面へのリンクではなく、押すとこれを呼ぶボタンになる（模様替えの「追加」のシート） */
   onSelect?: () => void
@@ -67,20 +67,17 @@ export function ArtworkThumb({
       </Img>
       {gallery && <p className="artwork-gallery-category">{artwork.category_label}</p>}
       <p className="thumb-title">{artwork.title}</p>
-      <p className="thumb-meta">
+      <p className={`thumb-meta${gallery ? ' artwork-gallery-meta' : ''}`}>
         {showBadge && artwork.displayed && !gallery && <span className="on-view" title="展示中" aria-label="展示中" />}
-        {metaText}
-      </p>
-      {gallery && (
-        <div className="artwork-gallery-foot">
-          {artwork.displayed && <span className="artwork-gallery-display"><span className="on-view" />飾っている</span>}
+        <span>{metaText}</span>
+        {gallery && (artwork.memory_counts.photo > 0 || artwork.memory_counts.video > 0 || artwork.memory_counts.audio > 0) && (
           <span className="artwork-gallery-memories">
             {artwork.memory_counts.photo > 0 && <span aria-label={`おもいでの写真${artwork.memory_counts.photo}件`}><GalleryIcon size={12} />{artwork.memory_counts.photo}</span>}
             {artwork.memory_counts.video > 0 && <span aria-label={`おもいでの動画${artwork.memory_counts.video}件`}><VideoIcon size={12} />{artwork.memory_counts.video}</span>}
             {artwork.memory_counts.audio > 0 && <span aria-label={`おもいでの音声${artwork.memory_counts.audio}件`}><MicIcon size={12} />{artwork.memory_counts.audio}</span>}
           </span>
-        </div>
-      )}
+        )}
+      </p>
     </TLink>
   )
 }
