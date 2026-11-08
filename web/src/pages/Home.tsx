@@ -1,14 +1,14 @@
 // ② ホーム（/）。タブ。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 建物の階か、その下の「1かい」「2かい」のボタンを押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
-// 「おへやを管理」で対象を選んで消す。作品のある階や途中の階は削除できない。
+// 「…」→「おへやを削除」で対象を選ぶ。作品のある階や途中の階は削除できない。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAddRoom, useAgeStack, useAges, useDeleteRoom, type AgeStack } from '../api'
-import { NavBar, Screen, Sheet, StageFallback, TLink, useToast } from '../components'
-import { PlusIcon } from '../icons'
+import { ActionMenu, NavBar, Screen, Sheet, StageFallback, TLink, useToast } from '../components'
+import { ChevronRight, MoreIcon, PlusIcon, SofaIcon, TrashIcon } from '../icons'
 import { useNav } from '../nav'
 import { StackScene, StageShell, warmUp3D } from '../three'
 import './Home.css'
@@ -23,6 +23,8 @@ export default function Home() {
   const [displayedStack, setDisplayedStack] = useState<AgeStack | null>(null)
   const [showLoading, setShowLoading] = useState(false)
   const [managingRooms, setManagingRooms] = useState(false)
+  const [roomAction, setRoomAction] = useState<'edit' | 'delete'>('delete')
+  const [menuOpen, setMenuOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
 
   const data = ages.data
@@ -47,6 +49,7 @@ export default function Home() {
     (stack.isPlaceholderData || !stack.data || displayedStack?.age !== selected.age))
   // 消せるのは、作品を飾っていないいちばん上の階だけ
   const top = rooms[rooms.length - 1]
+  const deletableRooms = top && top.count === 0 ? [top] : []
   const removeTarget = rooms.find(room => room.id === removeId)
   const removable = removeTarget?.id === top?.id && removeTarget?.count === 0 ? removeTarget : null
   const initial = (data?.name ?? 'は').slice(0, 1)
@@ -88,6 +91,12 @@ export default function Home() {
     <Screen tabbar className="home-screen">
       <NavBar
         title={data?.name ?? 'はるのミュージアム'}
+        left={rooms.length > 0 && (
+          <button type="button" className="icon-btn" aria-label="おへやのメニュー" aria-haspopup="menu"
+            aria-expanded={menuOpen} disabled={loading || stack.isError} onClick={() => setMenuOpen(true)}>
+            <MoreIcon size={22} />
+          </button>
+        )}
         right={
           <TLink to="/settings" kind="tab" className="avatar" aria-label="マイページ">
             {initial}
@@ -171,16 +180,16 @@ export default function Home() {
             </button>
           )}
         </div>
-        {rooms.length > 0 && (
-          <button type="button" className="btn btn-plain home-manage" disabled={loading || stack.isError}
-            onClick={() => { setRemoveId(null); setManagingRooms(true) }}>
-            おへやを管理
-          </button>
-        )}
       </div>
 
+      <ActionMenu open={menuOpen} onClose={() => setMenuOpen(false)} items={[
+        { label: '模様替え', icon: <SofaIcon size={18} />,
+          onSelect: () => { setRemoveId(null); setRoomAction('edit'); setManagingRooms(true) } },
+        { label: 'おへやを削除', icon: <TrashIcon size={18} />, destructive: true,
+          onSelect: () => { setRemoveId(null); setRoomAction('delete'); setManagingRooms(true) } },
+      ]} />
       <Sheet open={managingRooms} onClose={() => { if (!deleteRoom.isPending) { setManagingRooms(false); setRemoveId(null) } }}
-        title={removable ? `${removable.name}を消しますか？` : 'おへやを管理'}>
+        title={removable ? `${removable.name}を消しますか？` : roomAction === 'edit' ? '模様替えするおへや' : 'おへやを削除'}>
         {removable ? (
           <>
             <p className="hint home-manage-note">
@@ -193,19 +202,26 @@ export default function Home() {
           </>
         ) : (
           <>
-            <p className="hint home-manage-note">消したいおへやを選んでください。</p>
+            {roomAction === 'edit' && <p className="hint home-manage-note">家具を増やしたり、壁紙や床を変えられます。</p>}
             <div className="home-manage-list">
-              {rooms.map(room => {
-                const reason = room.count > 0 ? '作品を飾っているため消せません'
-                  : room.id !== top?.id ? 'いちばん上の階から消してください' : null
-                return (
-                  <button key={room.id} type="button" className="home-manage-room" disabled={!!reason || deleteRoom.isPending}
-                    onClick={() => setRemoveId(room.id)}>
-                    <span>{room.name}<small>{room.floor + 1}かい</small></span>
-                    <span className={reason ? 'home-manage-reason' : 'home-manage-delete'}>{reason ?? '消す'}</span>
+              {(roomAction === 'edit' ? rooms : deletableRooms).map(room => (
+                  <button key={room.id} type="button" className="home-manage-room" disabled={deleteRoom.isPending}
+                    aria-label={`${room.name}、${room.floor + 1}かい、${roomAction === 'edit' ? '模様替え' : '消す'}`}
+                    onClick={() => {
+                      if (roomAction === 'edit') {
+                        setManagingRooms(false)
+                        nav.push(`/home/edit?room=${encodeURIComponent(room.id)}`)
+                      } else setRemoveId(room.id)
+                    }}>
+                    <span>{room.name}</span>
+                    {roomAction === 'edit' ? <ChevronRight size={18} /> : <span className="home-manage-delete">消す</span>}
                   </button>
-                )
-              })}
+              ))}
+              {roomAction === 'delete' && deletableRooms.length === 0 && (
+                <div className="home-manage-empty">
+                  <p>削除できるおへやはありません</p>
+                </div>
+              )}
             </div>
             <button type="button" className="btn btn-gray home-manage-close" onClick={() => setManagingRooms(false)}>閉じる</button>
           </>

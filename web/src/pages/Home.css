@@ -107,7 +107,7 @@
   text-align: center;
 }
 
-/* 「おへやを足す」「おへやを管理」 */
+/* おへやの追加と階の選択 */
 .home-actions {
   position: relative;
   display: flex;
@@ -128,9 +128,10 @@
   flex: 1;
 }
 
-.home-manage {
-  color: var(--ink-2);
-  font-size: 13px;
+.home-screen .context-menu {
+  left: 20px;
+  right: auto;
+  transform-origin: top left;
 }
 
 .home-manage-note {
@@ -150,8 +151,8 @@
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  min-height: 64px;
-  padding: 12px 4px;
+  min-height: 52px;
+  padding: 10px 4px;
   border-bottom: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
@@ -166,17 +167,10 @@
   cursor: default;
 }
 
-.home-manage-room small {
-  display: block;
-  margin-top: 4px;
-  color: var(--ink-2);
-  font-size: 12px;
-}
-
-.home-manage-reason {
-  max-width: 46%;
-  color: var(--ink-2);
-  font-size: 11px;
+.home-manage-empty {
+  padding: 12px 0;
+  text-align: center;
+  font-size: 14px;
 }
 
 .home-manage-delete {
