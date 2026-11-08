@@ -15,13 +15,67 @@
   gap: 12px;
 }
 
-/* おへやの名前。押しても何もしないので、なぞる操作はその下の 3D に通す。長いときは「…」で切る */
+/* おへやの名前を押すと、年齢・階を選ぶシートを開く。 */
 .room-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.room-title > span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  pointer-events: none;
+}
+
+.room-title > svg {
+  flex: none;
+  transform: rotate(90deg);
+}
+
+.room-picker-list {
+  max-height: min(55dvh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0 16px;
+}
+
+.room-picker-age h4 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+
+.room-picker-floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.room-picker-floor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.room-picker-floor[aria-current] {
+  background: var(--sage);
+}
+
+.room-picker-close {
+  width: 100%;
 }
 
 /* 下段：下部タブは無いので、画面の下から 20px */

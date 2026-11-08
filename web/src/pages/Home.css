@@ -140,7 +140,7 @@
   z-index: 1;
   display: flex;
   overflow-x: auto;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   width: 100%;
 }
@@ -161,6 +161,15 @@
   letter-spacing: 0.04em;
   color: var(--ink);
   cursor: pointer;
+}
+
+/* 収まるときだけ中央寄せ。はみ出す場合は余白が0になり、先頭までスクロールできる。 */
+.home-floor:first-child {
+  margin-inline-start: auto;
+}
+
+.home-floor:last-child {
+  margin-inline-end: auto;
 }
 
 .home-floor small {
