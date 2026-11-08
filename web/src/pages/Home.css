@@ -109,6 +109,7 @@
 
 /* 「おへやを足す」「〇〇を消す」 */
 .home-actions {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -132,16 +133,20 @@
   font-size: 13px;
 }
 
-/* おへやが 2 つ以上のとき：どの階に入るか（上の階が左。建物の 3D の階を押しても入れる） */
+/* 階のボタンは3D枠の下端に重ね、階数で表示領域の高さを変えない。 */
 .home-floors {
+  position: absolute;
+  bottom: calc(100% + 22px);
+  z-index: 1;
   display: flex;
-  flex-wrap: wrap;
+  overflow-x: auto;
   justify-content: center;
   gap: 8px;
   width: 100%;
 }
 
 .home-floor {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -166,12 +171,6 @@
   font-size: 11px;
   text-align: center;
   color: var(--accent);
-}
-
-.home-hint {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--ink-2);
 }
 
 /* 上の名前。押すと名前を変えるシート（えんぴつで、押せることを示す） */

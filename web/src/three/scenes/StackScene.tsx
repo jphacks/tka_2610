@@ -74,14 +74,13 @@ function StackCamera({ stack, scale }: { stack: AgeStack; scale: number }) {
     const target: Vec3 = [tx, (Math.max(1, floors) * FLOOR_PITCH - (FLOOR_PITCH - WALL_TOP)) / 2, tz]
     const distance = fitDistance(points, target, DIRECTION, FOV, size.width / Math.max(1, size.height), MARGIN)
     return { target, distance }
-    // 画面の大きさが変わるたびに測り直すと、見回している途中で距離が変わるので、はじめの大きさで決める
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stack, floors, scale])
+    // 階数によってホームの枠の高さが変わるので、実際の枠に合わせて測り直す。
+  }, [stack, floors, scale, size.width, size.height])
 
   const goal = useMemo<CameraGoal>(() => {
     const target = new THREE.Vector3(...frame.target)
-    return { target, position: target.clone().addScaledVector(unit, frame.distance), key: `stack-${stack.age}-${floors}` }
-  }, [frame, stack.age, floors])
+    return { target, position: target.clone().addScaledVector(unit, frame.distance), key: `stack-${stack.age}-${floors}-${size.width}-${size.height}` }
+  }, [frame, stack.age, floors, size.width, size.height])
 
   return (
     <>
