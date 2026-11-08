@@ -48,6 +48,18 @@ fn is_static_media(path: &str) -> bool {
     path.starts_with("/media/museum/") || (path.starts_with("/media/") && path.contains("-seed."))
 }
 
+/// 静的ファイルの応答を、本体の ReadableStream ごとそのまま返す。
+/// `Fetcher::fetch_request` (http 機能あり) は本体を Rust のストリームに変えてから JS に戻すので、
+/// Content-Length が消えて、大きな GLB をいくつも同時に読むと途中で切れた (本物の Cloudflare で確認)
+async fn static_asset(env: &Env, req: &Request) -> Result<Response> {
+    use worker::wasm_bindgen::JsCast;
+    let assets = env.assets("ASSETS")?;
+    let fetcher: &worker::worker_sys::Fetcher = assets.as_ref().unchecked_ref();
+    let promise = fetcher.fetch(req.inner())?;
+    let res = worker::wasm_bindgen_futures::JsFuture::from(promise).await?;
+    Ok(res.dyn_into::<worker::web_sys::Response>()?.into())
+}
+
 #[event(fetch)]
 async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let path = req.path();
@@ -55,7 +67,7 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         return Response::ok("ok");
     }
     if is_static_media(&path) {
-        return Response::try_from(env.assets("ASSETS")?.fetch_request(req).await?);
+        return static_asset(&env, &req).await;
     }
     // おうちは 1 つなので、Durable Object も 1 つ
     let stub = env.durable_object("MUSEUM")?.id_from_name("main")?.get_stub()?;

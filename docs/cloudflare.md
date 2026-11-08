@@ -13,6 +13,8 @@ Render の代わりに、Cloudflare だけで memoria を動かすための作�
 | 登録した写真・GLB・おもいで（`/media`） | サーバーのディスク（再起動で消える） | Durable Object の SQLite（1 MB ずつに分けて入れる。消えない） |
 
 - 入口の Worker（`src/lib.rs`）は、`/api` と `/media` を Durable Object に渡すだけです。
+  - ただし `/media` のうち、サンプルの作品（ファイル名に `-seed.` が入る）と建物の GLB（`/media/museum/`）は静的ファイルにあるので、Worker が静的ファイルから取って返します（`static_asset`）。
+  - このとき、応答の本体は JS のストリームのまま返します。workers-rs の `Fetcher::fetch_request`（`http` 機能あり）と `Response::try_from` を使うと、本体がいったん Rust のストリームになって Content-Length が消え、本物の Cloudflare では大きな GLB をいくつも同時に読むと途中で切れました（`wrangler dev` では起きない）。おうち・美術館・鑑賞モードで `Invalid typed array length` が出たら、ここを疑ってください。
   - 普通の Worker は、無料プランだと 1 回の処理の CPU が 10 ミリ秒までです。
   - Durable Object は 30 秒まで使えるので、写真の処理（縮小・GLB 作り）も backend と同じ Rust のコードのまま動きます。
 - おうちは 1 つなので、Durable Object も 1 つです（id `main`）。
@@ -53,7 +55,15 @@ npm run dev        # http://localhost:8787 (wrangler dev。Durable Object とそ
 1. `npx wrangler login` で、自分の Cloudflare のアカウントに入ります（ブラウザが開きます）。
 2. `npm run build && npm run deploy` で公開します。
    - `https://memoria-try.<アカウントのサブドメイン>.workers.dev` のような URL が出ます。
+   - アカウントに workers.dev のサブドメインがまだ無いと、wrangler が自動で付けようとして、名前が使われていれば止まります。ダッシュボードの Workers の最初の画面で登録してから、もう一度公開します。
+   - 今のテスト環境：<https://memoria-try.tka-2610.workers.dev>
+   - サブドメインを付けた直後は、証明書ができるまで数分 HTTPS につながりません。
 3. AI のメモの下書きを使うなら、`npx wrangler secret put GEMINI_API_KEY` でキーを入れます。
+
+### 公開したあとの確かめ方
+
+- スクリプトから API を呼ぶときは、`User-Agent` を付けてください。Python の `urllib` の既定の名前（`Python-urllib/…`）は、Cloudflare に機械からのアクセスとして止められます（403、本文は `error code: 1010`）。ブラウザからは関係ありません。
+- `npx wrangler tail memoria-try --format json` で、要求ごとの CPU 時間と結果（`ok`・`exceededCpu`・`exceededMemory` など）が見られます。12MP の写真から作品を作る処理は、Durable Object で CPU 約 0.7 秒でした（上限は 30 秒）。
 
 ## 無料プランの制限と、backend との違い
 
