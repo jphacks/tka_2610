@@ -2,12 +2,12 @@
 
 .tabbar-wrap {
   position: absolute;
-  left: 14px;
-  right: 14px;
+  left: 8px;
+  right: 8px;
   bottom: calc(14px + var(--safe-bottom));
   z-index: 30;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   view-transition-name: tabbar;
   pointer-events: none;
@@ -20,9 +20,10 @@
 .tabbar {
   position: relative;
   flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  height: 62px;
+  height: 70px;
   padding: 4px;
   border-radius: 999px;
   isolation: isolate;
@@ -34,11 +35,11 @@
 .tab-lens {
   position: absolute;
   z-index: -1;
-  top: 2px;
-  bottom: 2px;
+  top: 4px;
+  bottom: 4px;
   left: 4px;
   width: calc((100% - 8px) / 4);
-  border-radius: 50%;
+  border-radius: 999px;
   background: rgba(203, 232, 247, 0.8);
   box-shadow: 0 1px 3px rgba(62, 97, 120, 0.08);
   transform: translateX(calc(var(--active) * 100%));
@@ -57,10 +58,11 @@
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 1px;
+  gap: 6px;
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
   color: var(--ink-2);
   transition: color 0.2s, transform 0.35s var(--spring);
 }
@@ -78,8 +80,8 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--add-button);
   box-shadow: 0 6px 18px rgba(75, 130, 172, 0.3);
