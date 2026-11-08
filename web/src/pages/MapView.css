@@ -5,10 +5,10 @@
 .recall-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
 .recall-section-head h1, .recall-section-head h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 18px; line-height: 1.5; font-weight: 700; }
 .recall-section-head > span { flex: none; font-size: 11px; color: var(--ink-2); }
-.recall-hero { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
+.recall-hero { position: relative; display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
 .recall-hero-images { display: grid; position: relative; padding: 0; }
-.recall-hero-images > a:not(.recall-photo) > .thumb { height: 104px; aspect-ratio: 1; border-radius: 10px; background: var(--paper-2) !important; }
-.recall-hero-images > a:not(.recall-photo) > .thumb img { object-fit: contain; padding: 4px; }
+.recall-hero-images > div:not(.recall-photo) > .thumb { height: 104px; aspect-ratio: 1; border-radius: 10px; background: var(--paper-2) !important; }
+.recall-hero-images > div:not(.recall-photo) > .thumb img { object-fit: contain; padding: 4px; }
 .recall-model { height: 104px; border-radius: 10px; background: var(--paper-2); }
 .recall-model canvas { touch-action: pan-y !important; }
 .recall-hero-images.with-photo { padding-bottom: 12px; }
@@ -76,3 +76,7 @@
 .app:has(.recall-screen.is-viewing-theater) .tabbar-wrap,
 .app:has(.recall-screen.is-viewing-theater) .tab-rainbow { visibility: hidden; }
 .recall-screen.is-viewing-theater .recall-page > :not(.theater-embed-slot) { visibility: hidden; }
+
+.recall-hero-trigger { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.recall-hero-images { pointer-events: none; }
+.recall-hero-caption .recall-voice { position: relative; z-index: 2; }
