@@ -399,7 +399,7 @@ export default function HomeEdit() {
         overlay={
           <>
             <div className="stage-top">
-              <GlassButton label="戻る" onClick={() => nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/')}>
+              <GlassButton label="戻る" onClick={() => nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/home')}>
                 <BackIcon size={20} strokeWidth={2.2} />
               </GlassButton>
               <span className="stage-title glass">模様替え</span>

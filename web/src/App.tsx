@@ -6,7 +6,7 @@
 // 白い画面が挟まらないようにする。重い 3D（three.js）だけは遅延読み込み（three/index.tsx）。
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { queryClient } from './api'
 import { DeviceFrame, TabBar, ToastProvider } from './components'
 import { RouteRendered } from './nav'
@@ -36,8 +36,10 @@ export default function App() {
           <div className="app">
             <ToastProvider>
               <Routes>
+                {/* 起動時は作品一覧。ホームは /home から開く */}
+                <Route path="/" element={<Navigate to="/collection" replace />} />
                 {/* ② ホーム（タブ） */}
-                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
                 {/* ⑧ 作品一覧（タブ）。?category=種類 で絞り込む */}
                 <Route path="/collection" element={<Collection />} />
                 {/* アルバム（push）。作品一覧の上の棚から開く。:id は UUID か favorites（お気に入り） */}
@@ -64,8 +66,8 @@ export default function App() {
                 <Route path="/museum/walk" element={<MuseumWalk />} />
                 {/* ⑫ 模様替え（push。?room=おへやの id）。家具や作品をドラッグで動かす・回す・消す・足す。HomeEdit */}
                 <Route path="/home/edit" element={<HomeEdit />} />
-                {/* どれにも当てはまらない URL はホームを出す */}
-                <Route path="*" element={<Home />} />
+                {/* どれにも当てはまらない URL は作品一覧へ戻す */}
+                <Route path="*" element={<Navigate to="/collection" replace />} />
               </Routes>
               {/* 下部タブ。タブの画面（components/TabBar.tsx の TABS）でだけ表示される */}
               <TabBar />

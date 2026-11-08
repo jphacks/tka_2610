@@ -8,7 +8,7 @@ import { useNav } from '../nav'
 import './TabBar.css'
 
 const TABS = [
-  { to: '/', label: 'ホーム', icon: HomeIcon, match: (p: string) => p === '/' },
+  { to: '/home', label: 'ホーム', icon: HomeIcon, match: (p: string) => p === '/home' || p === '/home/' },
   { to: '/collection', label: '作品一覧', icon: GalleryIcon, match: (p: string) => p.startsWith('/collection') },
   // /map/theater（全画面のシアター）ではタブを出さない
   { to: '/map', label: 'memoria', icon: RainbowIcon, match: (p: string) => p === '/map' || p === '/map/' },

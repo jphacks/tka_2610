@@ -61,7 +61,7 @@ export default function Room() {
 
   const data = museum.data
   const room = data?.room
-  const back = room ? `/?age=${room.age}` : '/'
+  const back = room ? `/home?age=${room.age}` : '/home'
 
   return (
     <Screen className="room-screen">

@@ -143,7 +143,7 @@ export default function MuseumWalk() {
       onClick={() => {
         // 次に開いたときは、はじめの位置から歩き始める
         clearWalkPose()
-        nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/')
+        nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/home')
       }}
     >
       <BackIcon size={20} strokeWidth={2.2} />
