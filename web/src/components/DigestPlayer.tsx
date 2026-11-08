@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useArtworkDigest, type ArtworkDigest, type DigestScope, type DigestSlide } from '../api'
 import { BackIcon, ChevronRight, CloseIcon, GalleryIcon, MicIcon, PauseIcon, PlayIcon } from '../icons'
 import { Segmented } from './Segmented'
+import { ArtworkViewerScene, StageShell } from '../three'
+import { ErrorBoundary } from './ErrorBoundary'
 import './DigestPlayer.css'
 
-function SlideMedia({ slide, onReady, onError, onOpen }: { slide: DigestSlide; onReady: () => void; onError: () => void; onOpen: (id: string) => void }) {
+function SlideModel({ url, onReady }: { url: string; onReady: () => void }) {
+  const [ready, setReady] = useState(false)
+  const loaded = useCallback(() => { setReady(true); onReady() }, [onReady])
+  return <StageShell className="digest-model" ready={ready}><Suspense fallback={null}><ArtworkViewerScene modelUrl={url} onReady={loaded} /></Suspense></StageShell>
+}
+
+function SlideMedia({ slide, onReady, onError, onOpen, threeD }: { slide: DigestSlide; onReady: () => void; onError: () => void; onOpen: (id: string) => void; threeD: boolean }) {
   const settled = useRef(new Set<string>())
   const [failed, setFailed] = useState<string[]>([])
   const sources = slide.kind === 'comparison' ? [slide.first.image_url, slide.last.image_url] : [slide.kind === 'photo' ? slide.photo.url : slide.artwork.image_url]
@@ -27,10 +35,11 @@ function SlideMedia({ slide, onReady, onError, onOpen }: { slide: DigestSlide; o
       </div>
     )
   }
-  return <div className="digest-single">{media(sources[0], slide.kind === 'photo' ? slide.photo.caption || 'おもいでの写真' : slide.artwork.title)}</div>
+  const image = media(sources[0], slide.kind === 'photo' ? slide.photo.caption || 'おもいでの写真' : slide.artwork.title)
+  return <div className="digest-single">{threeD && slide.kind === 'artwork' && slide.artwork.model_url ? <ErrorBoundary fallback={() => image}><SlideModel url={slide.artwork.model_url} onReady={onReady} /></ErrorBoundary> : image}</div>
 }
 
-function Playback({ digest, onOpen }: { digest: ArtworkDigest; onOpen: (id: string) => void }) {
+function Playback({ digest, onOpen, threeD }: { digest: ArtworkDigest; onOpen: (id: string) => void; threeD: boolean }) {
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [ready, setReady] = useState(false)
@@ -119,7 +128,7 @@ function Playback({ digest, onOpen }: { digest: ArtworkDigest; onOpen: (id: stri
       </div>
       <div className="digest-heading"><div><h2>{digest.title}</h2><p>{digest.period_label}</p></div><span className="num">{index + 1} / {digest.slides.length}</span></div>
       <div className="digest-stage" aria-busy={!ready}>
-        <SlideMedia key={index} slide={slide} onReady={onReady} onError={onImageError} onOpen={onOpen} />
+        <SlideMedia key={index} slide={slide} onReady={onReady} onError={onImageError} onOpen={onOpen} threeD={threeD} />
         {!ready && <span className="digest-loading-label">Loading…</span>}
       </div>
       <div className="digest-caption" aria-live="polite">
@@ -145,7 +154,7 @@ function Playback({ digest, onOpen }: { digest: ArtworkDigest; onOpen: (id: stri
   )
 }
 
-export function DigestPlayer({ initialScope, onClose, onOpenArtwork }: { initialScope: DigestScope; onClose: () => void; onOpenArtwork: (id: string) => void }) {
+export function DigestPlayer({ initialScope, onClose, onOpenArtwork, threeD = false }: { initialScope: DigestScope; onClose: () => void; onOpenArtwork: (id: string) => void; threeD?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [scope, setScope] = useState<DigestScope>(initialScope)
   const [drawingsOnly, setDrawingsOnly] = useState(false)
@@ -156,12 +165,12 @@ export function DigestPlayer({ initialScope, onClose, onOpenArtwork }: { initial
     return () => element?.close()
   }, [])
   return (
-    <dialog ref={dialog} className="digest-dialog" aria-label="作品のダイジェスト" onCancel={event => { event.preventDefault(); onClose() }}>
+    <dialog ref={dialog} className={`digest-dialog${threeD ? ' is-immersive' : ''}`} aria-label="作品のダイジェスト" onCancel={event => { event.preventDefault(); onClose() }}>
       <div className="digest-top"><span>作品のダイジェスト</span><button type="button" className="digest-round" aria-label="ダイジェストを閉じる" onClick={onClose}><CloseIcon size={21} /></button></div>
       <div className="digest-options"><Segmented<DigestScope> label="ダイジェストの期間" options={[{ value: 'all', label: 'これまで' }, { value: 'year', label: 'この1年' }]} value={scope} onChange={setScope} /><button type="button" className="digest-drawing-filter" aria-pressed={drawingsOnly} onClick={() => setDrawingsOnly(!drawingsOnly)}>絵画だけ</button></div>
       {query.isPending ? <div className="digest-state" aria-busy="true"><PlayIcon size={30} /><p>Loading…</p></div>
         : query.isError ? <div className="digest-state" role="alert"><p>{query.error.message}</p><button type="button" onClick={() => query.refetch()}>もう一度読み込む</button></div>
-          : query.data?.slides.length ? <Playback key={`${scope}-${drawingsOnly}-${query.dataUpdatedAt}`} digest={query.data} onOpen={onOpenArtwork} />
+          : query.data?.slides.length ? <Playback key={`${scope}-${drawingsOnly}-${query.dataUpdatedAt}`} digest={query.data} onOpen={onOpenArtwork} threeD={threeD} />
             : <div className="digest-state"><GalleryIcon size={32} /><h2>この条件の作品はまだありません</h2><p>期間や「絵画だけ」の選択を変えてお試しください。</p></div>}
     </dialog>
   )

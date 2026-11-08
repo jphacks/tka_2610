@@ -12,7 +12,7 @@ function RecallModel({ card }: { card: RecallCard }) {
   const [ready, setReady] = useState(false)
   const onReady = useCallback(() => setReady(true), [])
   const a = card.artwork
-  const image = <TLink to={`/artworks/${a.id}`}><Img src={a.image_url} tint={a.tint} alt={a.title} eager /></TLink>
+  const image = <div><Img src={a.image_url} tint={a.tint} alt={a.title} eager /></div>
   if (!a.model_url) return image
   return (
     <ErrorBoundary fallback={() => image}>
@@ -52,6 +52,7 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
 }
 
 export default function MapView() {
+  const [todayOpen, setTodayOpen] = useState(false)
   const [theaterExpanded, setTheaterExpanded] = useState(false)
   const [digestScope, setDigestScope] = useState<DigestScope | null>(null)
   const recalls = useRecollections()
@@ -83,21 +84,22 @@ export default function MapView() {
               <section className="recall-section" aria-labelledby="recall-moment-title">
                 <div className="recall-section-head"><h2 id="recall-moment-title">今日の作品</h2><span>{data.moment_title}</span></div>
                 <article className="recall-hero">
+                  <button type="button" className="recall-hero-trigger" aria-label="今日の作品を続けて見る" onClick={() => { playing.current?.pause(); setTodayOpen(true) }} />
                   <div className={`recall-hero-images${featured.photo ? ' with-photo' : ''}`}>
                     <RecallModel key={`${featured.artwork.id}:${featured.artwork.model_url}`} card={featured} />
-                    {featured.photo && <TLink to={`/artworks/${featured.artwork.id}`} className="recall-photo"><Img src={featured.photo.thumb_url ?? featured.photo.url} alt={featured.photo.caption || '作品に残したおもいでの写真'} eager /><span>おもいでの写真</span></TLink>}
+                    {featured.photo && <div className="recall-photo"><Img src={featured.photo.thumb_url ?? featured.photo.url} alt={featured.photo.caption || '作品に残したおもいでの写真'} eager /><span>おもいでの写真</span></div>}
                   </div>
                   <div className="recall-hero-caption">
                     <p className="recall-date">{featured.artwork.date_long}{featured.artwork.age_month_label && <span>{featured.artwork.age_month_label}</span>}</p>
                     {featured.voice && <RecallVoice memory={featured.voice} title={featured.artwork.title} onPlay={onPlay} />}
-                    <TLink to={`/artworks/${featured.artwork.id}`} className="recall-open">作品とおもいでを見る<ChevronRight size={15} /></TLink>
+                    <span className="recall-open">続けて見る<ChevronRight size={15} /></span>
                   </div>
                 </article>
                 <p className="recall-selection-note">{data.moment_note}</p>
                 {data.moments.length > 0 && <div className="recall-strip" aria-label="同じころの作品">{data.moments.map(card => <RecallTile key={card.artwork.id} card={card} onPlay={onPlay} />)}</div>}
               </section>
             )}
-            <DigestTheater embedded onExpandedChange={setTheaterExpanded} suspended={digestScope !== null} onStart={() => playing.current?.pause()} />
+            <DigestTheater embedded onExpandedChange={setTheaterExpanded} suspended={digestScope !== null || todayOpen} onStart={() => playing.current?.pause()} />
             <section className="recall-section" aria-labelledby="recall-voices-title">
               <div className="recall-section-head"><h2 id="recall-voices-title"><MicIcon size={18} />音声が残ってる作品</h2></div>
               {data.voices.length > 0 ? (
@@ -132,6 +134,7 @@ export default function MapView() {
         )}
 
       </div>
+      {todayOpen && <DigestPlayer initialScope="all" threeD onClose={() => setTodayOpen(false)} onOpenArtwork={id => { setTodayOpen(false); nav.push(`/artworks/${id}`) }} />}
       {digestScope && <DigestPlayer initialScope={digestScope} onClose={() => setDigestScope(null)} onOpenArtwork={id => { setDigestScope(null); nav.push(`/artworks/${id}`) }} />}
     </Screen>
   )

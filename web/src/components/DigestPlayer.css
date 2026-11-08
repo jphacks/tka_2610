@@ -56,3 +56,29 @@
 /* PC では、端末の画面（App.css の .device と同じ大きさ・角の丸み）に重ねる */
 @media (min-width: 600px) and (min-height: 700px) { .digest-dialog { width: var(--device-w); height: var(--device-h); border-radius: var(--screen-radius); } }
 @media (prefers-reduced-motion: reduce) { .digest-single, .digest-single .digest-image, .digest-comparison { animation: none; } }
+
+.digest-model { width: 100%; height: 100%; background: var(--paper-2); }
+
+/* 今日の作品：スマホの画面全体を舞台にし、操作だけを上に重ねる。 */
+.digest-dialog.is-immersive { background: var(--paper-2); color: var(--ink); }
+.is-immersive .digest-playback { position: absolute; inset: 0; overflow: hidden; padding: 0; }
+.is-immersive .digest-stage { position: absolute; inset: 0; min-height: 0; margin: 0; border-radius: 0; }
+.is-immersive .digest-single .digest-image { padding: 0; animation: digest-appear .4s var(--ease-out) both; }
+.is-immersive .digest-options, .is-immersive .digest-heading { display: none; }
+.is-immersive .digest-top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; pointer-events: none; }
+.is-immersive .digest-top button { pointer-events: auto; }
+.is-immersive .digest-top > span { padding: 6px 10px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, transparent); opacity: 1; }
+.is-immersive .digest-progress { position: absolute; top: calc(62px + var(--safe-top)); left: 0; right: 0; z-index: 2; margin-block: 0; pointer-events: none; }
+.is-immersive .digest-progress > span { background: var(--line-strong); }
+.is-immersive .digest-progress i { background: var(--ink); }
+.is-immersive .digest-caption { position: absolute; bottom: calc(126px + var(--safe-bottom)); left: 0; right: 0; z-index: 2; padding: 0 16px; text-align: center; pointer-events: none; }
+.is-immersive .digest-caption h3, .is-immersive .digest-caption .digest-date, .is-immersive .digest-caption .digest-memo { display: none; }
+.is-immersive .digest-slide-label { display: inline-block; margin: 0; padding: 5px 10px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, transparent); opacity: 1; }
+.is-immersive .digest-controls { position: absolute; bottom: calc(54px + var(--safe-bottom)); left: 0; right: 0; z-index: 2; padding: 0; pointer-events: none; }
+.is-immersive .digest-controls button { pointer-events: auto; }
+.is-immersive .digest-round, .is-immersive .digest-play { border-color: var(--line); background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink); }
+.is-immersive .digest-actions { position: absolute; bottom: calc(8px + var(--safe-bottom)); left: 0; right: 0; z-index: 2; padding: 0 14px; pointer-events: none; }
+.is-immersive .digest-actions button { padding-inline: 10px; border-radius: 999px; color: var(--ink); background: color-mix(in srgb, var(--surface) 92%, transparent); pointer-events: auto; }
+.is-immersive .digest-voice-note { display: none; }
+.is-immersive .digest-voice-error { position: absolute; top: calc(80px + var(--safe-top)); left: 8px; right: 8px; z-index: 3; padding: 8px; border-radius: 12px; background: var(--surface); }
+@media (prefers-reduced-motion: reduce) { .is-immersive .digest-single .digest-image { animation: none; } }
