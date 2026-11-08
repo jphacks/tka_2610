@@ -159,7 +159,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <p className="home-hint">階を押すと、中に入れます</p>
           </>
         )}
         <div className="home-buttons">
