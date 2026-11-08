@@ -1,4 +1,4 @@
-/* ② ホーム（Home）。年齢のチップ、選んだ年齢のおへやの見出し、積み上げの建物の 3D、「はいる」「おへやを足す」 */
+/* ② ホーム（Home）。年齢のチップ、積み上げの建物の 3D、「おへやを足す」 */
 
 /* 3D が残りの高さを使い、下のボタンがいつも下部タブの上に収まるように縦に並べる */
 .home-screen {
@@ -32,7 +32,7 @@
 /* 年齢のチップ。多いときは横にスクロールする */
 .age-chips {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   padding: 2px 20px 4px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -46,57 +46,25 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 20px;
+  gap: 4px;
+  height: 36px;
+  padding: 0 12px;
   border: 1.5px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface);
   font: inherit;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-2);
   cursor: pointer;
 }
 
-/* 選んでいる年齢：緑の地に、家のしるし */
+/* 選んでいる年齢：緑の背景 */
 .age-chip.selected {
   border-color: transparent;
   background: var(--sage);
   color: var(--ink);
-}
-
-/* 「4さいのおへや 13」 */
-.home-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 14px 20px 4px;
-}
-
-.home-heading-name {
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--ink);
-}
-
-.home-heading-count {
-  min-width: 26px;
-  padding: 1px 8px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-  color: var(--accent);
-}
-
-.home-heading-stored {
-  font-size: 12px;
-  color: var(--ink-3);
 }
 
 /* 積み上げの建物の 3D。画面の残りの高さに合わせて伸び縮みする（小さい画面でも 220px は取り、そのときはページがスクロールする） */
@@ -120,7 +88,7 @@
   text-align: center;
 }
 
-/* 「はいる」「おへやを足す」「〇〇を消す」 */
+/* 「おへやを足す」「〇〇を消す」 */
 .home-actions {
   display: flex;
   flex-direction: column;
@@ -129,16 +97,11 @@
   margin: 14px 20px 4px;
 }
 
-/* 「はいる」と「おへやを足す」は横に並べる */
+/* おへやを追加するボタン */
 .home-buttons {
   display: flex;
   gap: 10px;
   width: 100%;
-}
-
-.home-enter {
-  flex: 1;
-  font-size: 17px;
 }
 
 .home-add {
