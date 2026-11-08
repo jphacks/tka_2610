@@ -1,7 +1,7 @@
 // ② ホーム（/）。タブ。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 建物の階か、その下の「1かい」「2かい」のボタンを押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
-// いちばん上の階に作品を飾っていなければ、「〇〇を消す」で消せる（確かめのシートを出す。作品のある階や途中の階はサーバーが断る）。
+// 「おへやを管理」で対象を選んで消す。作品のある階や途中の階は削除できない。
 // 選んだ年齢は URL の ?age= に入れる（おへやから戻ったときに同じ年齢を出す）。はじめは今の年齢（作品のある年齢）を選ぶ。
 // 年齢は、設定の子どもの誕生日と作品の作成日から Rust が決める（/api/ages）。誕生日が無いときは、設定へ進む案内を出す。
 import { Suspense, useEffect, useState } from 'react'
@@ -22,8 +22,8 @@ export default function Home() {
   const [params, setParams] = useSearchParams()
   const [displayedStack, setDisplayedStack] = useState<AgeStack | null>(null)
   const [showLoading, setShowLoading] = useState(false)
-  // 「〇〇を消す」の確かめのシート
-  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [managingRooms, setManagingRooms] = useState(false)
+  const [removeId, setRemoveId] = useState<string | null>(null)
 
   const data = ages.data
   // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
@@ -47,7 +47,8 @@ export default function Home() {
     (stack.isPlaceholderData || !stack.data || displayedStack?.age !== selected.age))
   // 消せるのは、作品を飾っていないいちばん上の階だけ
   const top = rooms[rooms.length - 1]
-  const removable = top && top.count === 0 ? top : null
+  const removeTarget = rooms.find(room => room.id === removeId)
+  const removable = removeTarget?.id === top?.id && removeTarget?.count === 0 ? removeTarget : null
   const initial = (data?.name ?? 'は').slice(0, 1)
 
   // 建物の GLB を先に読んでおく（どの階も同じ建物）
@@ -75,7 +76,8 @@ export default function Home() {
     if (!removable) return
     deleteRoom.mutate(removable.id, {
       onSuccess: () => {
-        setConfirmRemove(false)
+        setRemoveId(null)
+        setManagingRooms(false)
         toast(`${removable.name}を消しました`)
       },
       onError: (e) => toast(e.message),
@@ -169,25 +171,45 @@ export default function Home() {
             </button>
           )}
         </div>
-        {removable && (
-          <button type="button" className="btn btn-plain home-remove" disabled={loading || stack.isError} onClick={() => setConfirmRemove(true)}>
-            {removable.name}を消す
+        {rooms.length > 0 && (
+          <button type="button" className="btn btn-plain home-manage" disabled={loading || stack.isError}
+            onClick={() => { setRemoveId(null); setManagingRooms(true) }}>
+            おへやを管理
           </button>
         )}
       </div>
 
-      <Sheet open={confirmRemove && !!removable} onClose={() => setConfirmRemove(false)} title={`${removable?.name ?? ''}を消しますか？`}>
-        <p className="hint" style={{ textAlign: 'center', margin: '4px 8px 0' }}>
-          置いてある家具とテーマも消えます。作品は飾っていないので、作品はそのまま残ります。
-        </p>
-        <div className="sheet-body">
-          <button className="btn btn-destructive" disabled={deleteRoom.isPending} onClick={remove}>
-            おへやを消す
-          </button>
-          <button className="btn btn-gray" onClick={() => setConfirmRemove(false)}>
-            キャンセル
-          </button>
-        </div>
+      <Sheet open={managingRooms} onClose={() => { if (!deleteRoom.isPending) { setManagingRooms(false); setRemoveId(null) } }}
+        title={removable ? `${removable.name}を消しますか？` : 'おへやを管理'}>
+        {removable ? (
+          <>
+            <p className="hint home-manage-note">
+              このおへやの家具と内装が消えます。登録した作品やおもいでは消えません。
+            </p>
+            <div className="sheet-body">
+              <button className="btn btn-destructive" disabled={deleteRoom.isPending} onClick={remove}>おへやを消す</button>
+              <button className="btn btn-gray" disabled={deleteRoom.isPending} onClick={() => setRemoveId(null)}>戻る</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="hint home-manage-note">消したいおへやを選んでください。</p>
+            <div className="home-manage-list">
+              {rooms.map(room => {
+                const reason = room.count > 0 ? '作品を飾っているため消せません'
+                  : room.id !== top?.id ? 'いちばん上の階から消してください' : null
+                return (
+                  <button key={room.id} type="button" className="home-manage-room" disabled={!!reason || deleteRoom.isPending}
+                    onClick={() => setRemoveId(room.id)}>
+                    <span>{room.name}<small>{room.floor + 1}かい</small></span>
+                    <span className={reason ? 'home-manage-reason' : 'home-manage-delete'}>{reason ?? '消す'}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <button type="button" className="btn btn-gray home-manage-close" onClick={() => setManagingRooms(false)}>閉じる</button>
+          </>
+        )}
       </Sheet>
     </Screen>
   )
