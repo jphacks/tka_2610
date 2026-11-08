@@ -1,9 +1,9 @@
 // ⑦ memoria（/map）。作品・写真・声を手がかりに振り返る。作品の選択はRust。
-import { Suspense, useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { useRecollections, type Memory, type RecallCard } from '../api'
 import { DigestPlayer, ErrorBoundary, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
 import { ArtworkViewerScene, StageShell } from '../three'
-import { GalleryIcon, MicIcon, PlayIcon, VideoIcon } from '../icons'
+import { BackIcon, GalleryIcon, MicIcon, PlayIcon, VideoIcon } from '../icons'
 import { useNav } from '../nav'
 import DigestTheater from './DigestTheater'
 import './MapView.css'
@@ -51,6 +51,61 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
   )
 }
 
+/** 段をたたんだかを覚える（この端末の localStorage。読めなくても、開いたまま使える） */
+function readFolded(key: string) {
+  try {
+    return localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeFolded(key: string, folded: boolean) {
+  try {
+    localStorage.setItem(key, folded ? '1' : '0')
+  } catch {
+    /* 覚えられなくても、今の画面ではたためる */
+  }
+}
+
+/**
+ * 作品一覧のアルバムの棚と同じように、見出しの横の矢印でたたむ・開く段。
+ * 最初は開いていて、たたんだかはこの端末に覚える。たたむときは、中で鳴っている声を止める。
+ */
+function FoldSection({ id, storageKey, icon, title, count, onFold, children }: {
+  id: string
+  storageKey: string
+  icon: ReactNode
+  title: string
+  count: number
+  onFold: (body: HTMLElement) => void
+  children: ReactNode
+}) {
+  const [folded, setFolded] = useState(() => readFolded(storageKey))
+  const body = useRef<HTMLDivElement>(null)
+  const toggle = () => {
+    if (!folded && body.current) onFold(body.current)
+    setFolded(!folded)
+    writeFolded(storageKey, !folded)
+  }
+  return (
+    <section className={`recall-section recall-fold${folded ? ' is-folded' : ''}`} aria-labelledby={`${id}-title`}>
+      <div className="recall-section-head">
+        <h2 id={`${id}-title`}>
+          <button type="button" className="recall-fold-toggle" aria-expanded={!folded} aria-controls={`${id}-body`} onClick={toggle}>
+            {icon}{title}
+            {count > 0 && <span className="recall-fold-count num" aria-label={`${count}こ`}>{count}</span>}
+            <BackIcon size={16} strokeWidth={2.4} className="recall-fold-arrow" aria-hidden="true" />
+          </button>
+        </h2>
+      </div>
+      <div id={`${id}-body`} ref={body} className="recall-fold-body" aria-hidden={folded} inert={folded}>
+        <div>{children}</div>
+      </div>
+    </section>
+  )
+}
+
 export default function MapView() {
   const [todayOpen, setTodayOpen] = useState(false)
   const [theaterExpanded, setTheaterExpanded] = useState(false)
@@ -65,6 +120,9 @@ export default function MapView() {
   const onPlay = (event: SyntheticEvent<HTMLAudioElement>) => {
     if (playing.current && playing.current !== event.currentTarget) playing.current.pause()
     playing.current = event.currentTarget
+  }
+  const pauseInside = (body: HTMLElement) => {
+    if (playing.current && body.contains(playing.current)) playing.current.pause()
   }
 
   return (
@@ -98,14 +156,12 @@ export default function MapView() {
               </section>
             )}
             <DigestTheater embedded onExpandedChange={setTheaterExpanded} suspended={todayOpen} onStart={() => playing.current?.pause()} />
-            <section className="recall-section" aria-labelledby="recall-voices-title">
-              <div className="recall-section-head"><h2 id="recall-voices-title"><MicIcon size={18} />音声が残ってる作品</h2></div>
+            <FoldSection id="recall-voices" storageKey="memoria.voices-folded" icon={<MicIcon size={18} />} title="音声が残ってる作品" count={data.voices.length} onFold={pauseInside}>
               {data.voices.length > 0 ? (
                 <div className="recall-strip recall-voice-strip">{data.voices.map(card => <RecallTile key={card.artwork.id} card={card} voice onPlay={onPlay} />)}</div>
               ) : <div className="recall-voice-empty"><p>声の記録はまだありません</p><span>作品の詳細の「おもいで」から、声を録音して残せます。</span></div>}
-            </section>
-            <section className="recall-section" aria-labelledby="recall-videos-title">
-              <div className="recall-section-head"><h2 id="recall-videos-title"><VideoIcon size={18} />作品にまつわる動画</h2></div>
+            </FoldSection>
+            <FoldSection id="recall-videos" storageKey="memoria.videos-folded" icon={<VideoIcon size={18} />} title="作品にまつわる動画" count={videos.length} onFold={pauseInside}>
               {videos.length > 0 ? (
                 <div className="recall-strip recall-video-strip">
                   {videos.map(({ artwork, video }) => (
@@ -117,7 +173,7 @@ export default function MapView() {
                   ))}
                 </div>
               ) : <div className="recall-voice-empty"><p>動画の記録はまだありません</p><span>作品の詳細の「おもいで」から、動画を残せます。</span></div>}
-            </section>
+            </FoldSection>
           </>
         )}
 

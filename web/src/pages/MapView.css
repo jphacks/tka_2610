@@ -5,6 +5,19 @@
 .recall-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
 .recall-section-head h1, .recall-section-head h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 18px; line-height: 1.5; font-weight: 700; }
 .recall-section-head > span { flex: none; font-size: 11px; color: var(--ink-2); }
+
+/* 「音声が残ってる作品」「作品にまつわる動画」は、作品一覧のアルバムの棚と同じように見出しの矢印でたたむ・開く */
+.recall-fold-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; margin: -4px 0; padding: 0; font: inherit; color: var(--ink); }
+.recall-fold-count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--fill); font-size: 11px; font-weight: 700; text-align: center; color: var(--ink-2); }
+/* 矢印：開いているときは下向き、たたんでいるときは右向き */
+.recall-fold-arrow { color: var(--ink-2); transform: rotate(-90deg); transition: transform 0.3s var(--spring); }
+.recall-fold.is-folded .recall-fold-arrow { transform: rotate(180deg); }
+.recall-fold.is-folded .recall-section-head { margin-bottom: 0; }
+/* 中身。高さを 0 から中身の高さまで、なめらかにたたむ・開く（横にはみ出す列のため、左右に 20px の逃げを取って切る） */
+.recall-fold-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.35s var(--ease-out), opacity 0.25s; }
+.recall-fold-body > div { min-height: 0; overflow: hidden; margin-inline: -20px; padding-inline: 20px; }
+.recall-fold.is-folded .recall-fold-body { grid-template-rows: 0fr; opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .recall-fold-arrow, .recall-fold-body { transition: none; } }
 .recall-hero { position: relative; display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
 .recall-hero-images { display: grid; position: relative; padding: 0; }
 .recall-hero-images > div:not(.recall-photo) > .thumb { height: 104px; aspect-ratio: 1; border-radius: 10px; background: var(--paper-2) !important; }
