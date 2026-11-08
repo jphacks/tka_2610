@@ -5,20 +5,21 @@
 .recall-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
 .recall-section-head h1, .recall-section-head h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 18px; line-height: 1.5; font-weight: 700; }
 .recall-section-head > span { flex: none; font-size: 11px; color: var(--ink-2); }
-.recall-hero { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
-.recall-hero-images { display: grid; padding: 12px 12px 0; }
-.recall-hero-images > .thumb { aspect-ratio: 4 / 3; border-radius: 12px; background: var(--paper-2) !important; }
-.recall-hero-images > .thumb img { object-fit: contain; padding: 8px; }
-.recall-hero-images.with-photo { grid-template-columns: minmax(0, 1fr) 105px; align-items: end; gap: 10px; }
-.recall-hero-images.with-photo > .thumb { aspect-ratio: 1; }
+.recall-hero { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 5px 22px var(--fill); }
+.recall-hero-images { display: grid; position: relative; padding: 0; }
+.recall-hero-images > a:not(.recall-photo) > .thumb { height: 104px; aspect-ratio: 1; border-radius: 10px; background: var(--paper-2) !important; }
+.recall-hero-images > a:not(.recall-photo) > .thumb img { object-fit: contain; padding: 4px; }
+.recall-model { height: 104px; border-radius: 10px; background: var(--paper-2); }
+.recall-model canvas { touch-action: pan-y !important; }
+.recall-hero-images.with-photo { padding-bottom: 12px; }
+.recall-hero-images .recall-photo { position: absolute; right: -3px; bottom: 0; width: 42px; padding: 3px; }
+.recall-hero-images .recall-photo > span { display: none; }
 .recall-photo { padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); transform: rotate(3deg); }
 .recall-photo .thumb { border-radius: 4px; aspect-ratio: 3 / 4; }
 .recall-photo > span { display: block; margin-top: 5px; text-align: center; font-size: 9px; color: var(--ink-2); }
-.recall-hero-caption { padding: 16px; }
+.recall-hero-caption { min-width: 0; padding: 0; }
 .recall-date { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.recall-hero-caption h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.5; }
-.recall-hero-memo { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.9; }
-.recall-open { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.recall-open { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
 .recall-selection-note { margin: 8px 2px 14px; font-size: 10px; color: var(--ink-2); }
 .recall-strip { display: flex; gap: 12px; padding: 0 20px 8px; margin-inline: -20px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
 .recall-strip::-webkit-scrollbar { display: none; }
@@ -29,8 +30,15 @@
 .recall-tile-caption { padding: 10px; }
 .recall-tile h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; min-height: 39px; margin: 5px 0 0; font-size: 13px; line-height: 1.5; }
 .recall-tile-memo { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 6px 0 0; font-size: 11px; line-height: 1.7; color: var(--ink-2); }
-.recall-voice-strip .recall-tile { flex-basis: 240px; }
-.recall-voice-strip .recall-tile > a > .thumb { aspect-ratio: 16 / 10; }
+.recall-voice-strip .recall-tile { flex-basis: 260px; }
+.recall-voice-strip .recall-tile > a { display: flex; align-items: center; gap: 10px; padding: 8px; }
+.recall-voice-strip .recall-tile > a > .thumb { flex: 0 0 64px; width: 64px; height: 64px; aspect-ratio: 1; margin: 0; }
+.recall-voice-strip .recall-tile-caption { min-width: 0; padding: 0; }
+.recall-voice-strip .recall-tile h3 { min-height: 0; }
+.recall-voice-strip .recall-tile-memo { display: none; }
+.recall-voice-strip .recall-voice { padding: 6px 8px; }
+.recall-voice-strip .recall-voice > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 4px; }
+.recall-voice-strip .recall-voice > span svg { vertical-align: middle; margin-right: 6px; }
 .recall-voice { margin-top: 12px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--sky) 30%, var(--surface)); }
 .recall-voice > span { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .recall-voice audio { display: block; width: 100%; max-width: 100%; height: 36px; }
@@ -44,7 +52,7 @@
 .recall-empty p { margin: 0; font-size: 13px; line-height: 1.9; color: var(--ink-2); }
 .recall-hero-placeholder { height: 360px; margin-bottom: 24px; border-radius: 22px; }
 .recall-screen a:focus-visible, .recall-screen button:focus-visible, .recall-screen summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-@media (max-width: 360px) { .recall-hero-images.with-photo { grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; } .recall-section-head h1, .recall-section-head h2 { font-size: 16px; } }
+@media (max-width: 360px) { .recall-section-head h1, .recall-section-head h2 { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .recall-screen .thumb-card { animation: none; } }
 
 /* ダイジェストの入口。タップしたときだけ再生画面を開く。 */
@@ -56,7 +64,7 @@
 .recall-digest-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .recall-digest-buttons button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--accent); }
 
-.recall-slideshow { margin-bottom: 24px; }
+.recall-slideshow { margin-top: 24px; margin-bottom: 24px; }
 .recall-slideshow > summary { padding: 10px 0; cursor: pointer; font-size: 12px; color: var(--ink-2); }
 .recall-slideshow .recall-digest { margin: 8px 0 0; }
 

@@ -429,9 +429,10 @@ pub async fn theater(
 
     // 期間をえらぶボタンは、種類で絞らない全部の作品から作る
     let all_dates: Vec<NaiveDate> = sqlx::query_scalar(
-        "SELECT made_on FROM artworks WHERE made_on <= $1 ORDER BY made_on ASC",
+        "SELECT made_on FROM artworks WHERE made_on <= $1 AND id <> $2 ORDER BY made_on ASC",
     )
     .bind(today)
+    .bind(crate::recollections::hidden_artwork_id())
     .fetch_all(&state.pool)
     .await?;
     let ctx = DtoContext::load(&state.pool).await?;
@@ -441,11 +442,12 @@ pub async fn theater(
     let from = from.unwrap_or_else(|| all_dates.first().copied().unwrap_or(today));
 
     let rows = sqlx::query_as::<_, ArtworkRow>(&format!(
-        "SELECT {COLUMNS} FROM artworks WHERE made_on >= $1 AND made_on <= $2 AND ($3::text IS NULL OR category = $3) ORDER BY made_on ASC, created_at ASC, id"
+        "SELECT {COLUMNS} FROM artworks WHERE made_on >= $1 AND made_on <= $2 AND ($3::text IS NULL OR category = $3) AND id <> $4 ORDER BY made_on ASC, created_at ASC, id"
     ))
     .bind(from)
     .bind(to)
     .bind(category)
+    .bind(crate::recollections::hidden_artwork_id())
     .fetch_all(&state.pool)
     .await?;
     let (indices, truncated) = in_range(&rows.iter().map(|r| r.made_on).collect::<Vec<_>>(), from, to);
