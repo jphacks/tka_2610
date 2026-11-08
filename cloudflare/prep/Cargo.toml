@@ -1,0 +1,17 @@
+# Cloudflare に置く静的ファイル (public/) と、Worker に埋め込む値 (generated/) を作る。手元の PC で動かす
+[package]
+name = "memoria-prep"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v5"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "std"] }
+sha2 = "0.10"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
+
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,10 @@
+# npm run build (prep) が作るもの
+/public/
+/generated/
+# worker-build が作るもの
+/build/
+/target/
+/prep/target/
+/node_modules/
+/.wrangler/
+.dev.vars

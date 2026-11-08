@@ -1,0 +1,23 @@
+# memoria のテスト環境 (Cloudflare Workers + Durable Objects)。手順は docs/cloudflare.md
+name = "memoria-try"
+main = "build/index.js"
+compatibility_date = "2026-10-01"
+
+[build]
+command = "PATH=$HOME/.cargo/bin:$PATH worker-build --release"
+
+# 画面・家具・建物・サンプルの作品は静的ファイル。/api と /media だけ Worker を通す
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/media/*", "/healthz"]
+
+[[durable_objects.bindings]]
+name = "MUSEUM"
+class_name = "Museum"
+
+# 無料プランで使える SQLite の Durable Object
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Museum"]

@@ -1,0 +1,13 @@
+{
+  "name": "memoria-cloudflare",
+  "private": true,
+  "scripts": {
+    "assets": "cd prep && cargo run --release",
+    "build": "npm --prefix ../web run build && npm run assets",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.158.0"
+  }
+}

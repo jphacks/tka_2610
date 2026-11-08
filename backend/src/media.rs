@@ -1,6 +1,6 @@
 //! アップロード写真の処理 (すべて CPU 処理なので spawn_blocking から呼ぶ)
 //!
-//! 1 回のデコードから以下を並列に作る:
+//! 1 回のデコードから以下を並列に作る (Wasm では順に作る):
 //! - 表示用画像 (長辺 1600px JPEG)
 //! - 一覧用サムネイル (400x400 正方形 JPEG)
 //! - 3D モデル用テクスチャ (長辺 1024px JPEG)
@@ -112,12 +112,16 @@ pub fn process(bytes: &[u8]) -> Result<ProcessedImage, String> {
     let display = fit_within(&original, DISPLAY_MAX);
     drop(original);
 
+    let make_thumb = || {
+        let thumb = display.resize_to_fill(THUMB_SIZE, THUMB_SIZE, FilterType::Triangle);
+        (encode_jpeg(&thumb, 80), tint_of(&thumb))
+    };
+    let make_texture = || encode_jpeg(&fit_within(&display, TEXTURE_MAX), 85);
+
+    #[cfg(not(target_arch = "wasm32"))]
     let (display_jpeg, (thumb_jpeg, tint), texture_jpeg) = std::thread::scope(|scope| {
-        let thumb = scope.spawn(|| {
-            let thumb = display.resize_to_fill(THUMB_SIZE, THUMB_SIZE, FilterType::Triangle);
-            (encode_jpeg(&thumb, 80), tint_of(&thumb))
-        });
-        let texture = scope.spawn(|| encode_jpeg(&fit_within(&display, TEXTURE_MAX), 85));
+        let thumb = scope.spawn(make_thumb);
+        let texture = scope.spawn(make_texture);
         let display_jpeg = encode_jpeg(&display, 86);
         (
             display_jpeg,
@@ -125,6 +129,9 @@ pub fn process(bytes: &[u8]) -> Result<ProcessedImage, String> {
             texture.join().expect("texture thread"),
         )
     });
+    // Cloudflare (cloudflare/。Wasm) にはスレッドが無いので、順に作る
+    #[cfg(target_arch = "wasm32")]
+    let (display_jpeg, (thumb_jpeg, tint), texture_jpeg) = (encode_jpeg(&display, 86), make_thumb(), make_texture());
 
     Ok(ProcessedImage {
         display_width: display.width(),
