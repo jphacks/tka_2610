@@ -107,7 +107,7 @@
   text-align: center;
 }
 
-/* 「おへやを足す」「〇〇を消す」 */
+/* 「おへやを足す」「おへやを管理」 */
 .home-actions {
   position: relative;
   display: flex;
@@ -128,9 +128,65 @@
   flex: 1;
 }
 
-.home-remove {
-  color: var(--red);
+.home-manage {
+  color: var(--ink-2);
   font-size: 13px;
+}
+
+.home-manage-note {
+  margin: 8px 0 14px;
+  text-align: center;
+}
+
+.home-manage-list {
+  max-height: min(45dvh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.home-manage-room {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-manage-room:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.home-manage-room small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.home-manage-reason {
+  max-width: 46%;
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.home-manage-delete {
+  flex: none;
+  color: var(--red);
+}
+
+.home-manage-close {
+  width: 100%;
+  margin-top: 16px;
 }
 
 /* 階のボタンは3D枠の下端に重ね、階数で表示領域の高さを変えない。 */
