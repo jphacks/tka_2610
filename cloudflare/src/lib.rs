@@ -1,8 +1,10 @@
 //! memoria を Cloudflare で動かす (テスト環境)。
 //!
-//! - 入口の Worker (このファイルの fetch): /api と /media を Durable Object (Museum) に渡す。
-//!   画面 (web/dist)・家具と壁紙 (/home-assets)・舞台 (/stage-assets)・建物の GLB とサンプルの作品のファイルは、
-//!   ビルドのときに public/ に入れた静的ファイルで、Worker を通らずに配られる (wrangler.toml の assets)
+//! - 入口の Worker (このファイルの fetch): /api と /media を、その人の家の Durable Object (Museum) に渡す。
+//!   家は開いた人ごとに 1 つ (house.rs。Cookie `memoria_house`)。
+//!   画面の JS・CSS (/assets)・家具と壁紙 (/home-assets)・舞台 (/stage-assets) は静的ファイルで、Worker を通らずに配られる。
+//!   画面の HTML は Worker を通して、家の Cookie を付けてから静的ファイルを返す (wrangler.toml の run_worker_first)。
+//!   建物の GLB とサンプルの作品のファイルも静的ファイル (/media の中なので Worker が取って返す)
 //! - Durable Object (museum.rs): backend と同じ API を axum で動かす。データとファイルはその中の SQLite
 //!
 //! 処理のうち DB に触らないもの (置き方の決まり・年齢・GLB・写真の処理) は backend のファイルをそのまま使う。
@@ -29,6 +31,7 @@ mod db;
 mod digest;
 mod error;
 mod home_api;
+mod house;
 mod memo_draft;
 mod memories;
 mod museum_api;
@@ -69,7 +72,23 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     if is_static_media(&path) {
         return static_asset(&env, &req).await;
     }
-    // おうちは 1 つなので、Durable Object も 1 つ
-    let stub = env.durable_object("MUSEUM")?.id_from_name("main")?.get_stub()?;
-    stub.fetch_with_request(req).await
+    let is_data = path.starts_with("/api/") || path.starts_with("/media/");
+    if !is_data {
+        if let Some(res) = house::switch(&req)? {
+            return Ok(res);
+        }
+    }
+    let house = house::of_request(&req);
+    if path == "/house" {
+        return house::page(&req, &house);
+    }
+    let res = if is_data {
+        // 家ごとに Durable Object が 1 つ
+        let stub = env.durable_object("MUSEUM")?.id_from_name(&house::object_name(&house))?.get_stub()?;
+        stub.fetch_with_request(req).await?
+    } else {
+        // 画面 (index.html。SPA のどのパスでも同じ)
+        static_asset(&env, &req).await?
+    };
+    if house.fresh { house::with_cookie(res, &house.id) } else { Ok(res) }
 }
