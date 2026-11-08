@@ -74,6 +74,13 @@ jobs:
           workspaces: |
             cloudflare
             cloudflare/prep
+      # worker-build は wasm-bindgen・wasm-opt・esbuild を GitHub の Releases から落として ~/.cache/worker-build に置く。
+      # Releases が 504 を返すことがあるので、一度落としたものを使い回す
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/worker-build
+          key: worker-build-0.8.7-${{ runner.os }}-${{ hashFiles('cloudflare/Cargo.lock') }}
+          restore-keys: worker-build-0.8.7-${{ runner.os }}-
       - name: worker-build を入れる
         run: command -v worker-build || cargo install worker-build --version 0.8.7 --locked
       - uses: actions/setup-node@v4
