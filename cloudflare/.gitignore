@@ -8,3 +8,6 @@
 /node_modules/
 /.wrangler/
 .dev.vars
+# CI の wrangler deploy --dry-run が書き出すもの
+/dist/
+wrangler.log

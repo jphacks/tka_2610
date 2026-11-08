@@ -60,6 +60,21 @@ npm run dev        # http://localhost:8787 (wrangler dev。Durable Object とそ
    - サブドメインを付けた直後は、証明書ができるまで数分 HTTPS につながりません。
 3. AI のメモの下書きを使うなら、`npx wrangler secret put GEMINI_API_KEY` でキーを入れます。
 
+### CI/CD（GitHub Actions）
+
+`.github/workflows/ci.yml` が、PR と main への push のたびに動きます。
+
+| いつ | すること |
+|---|---|
+| PR | backend の `cargo test`・web の `npm run build` と `npm run check:placement`・Cloudflare 版のビルド（`wrangler deploy --dry-run`。公開はしない） |
+| main に入ったとき | 上が全部通ったら、memoria-try に公開する |
+| Actions の画面の「Run workflow」（main） | 同じテストのあとに公開する（自動の公開を止めているときに使う） |
+
+- backend を直したときも、Cloudflare 版のビルドが通るかを PR で確かめられます（`home.rs` などを共有しているため）。
+- 実行結果の Summary に、Worker の大きさ（無料プランの上限は gzip で 3 MB）が出ます。
+- 公開には、リポジトリの secrets の `CLOUDFLARE_API_TOKEN` を使います。Cloudflare のダッシュボードの「My Profile → API Tokens」で、テンプレートの「Edit Cloudflare Workers」から作ったトークンです。アカウント ID は `ci.yml` に書いてあります（秘密の値ではない）。
+- **自動の公開を止めるとき**（発表の直前など）：リポジトリの Settings → Secrets and variables → Actions → Variables で、`CLOUDFLARE_AUTO_DEPLOY` を `false` にします。テストとビルドは今までどおり動きます。戻すときは変数を消すか `true` にします。
+
 ### 公開したあとの確かめ方
 
 - スクリプトから API を呼ぶときは、`User-Agent` を付けてください。Python の `urllib` の既定の名前（`Python-urllib/…`）は、Cloudflare に機械からのアクセスとして止められます（403、本文は `error code: 1010`）。ブラウザからは関係ありません。

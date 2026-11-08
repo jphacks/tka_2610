@@ -1,0 +1,112 @@
+# テストと、Cloudflare のテスト環境 (memoria-try) への公開。仕組みは docs/cloudflare.md の「CI/CD」
+# - PR：backend のテスト・web のビルドと置き方の確認・Cloudflare 版のビルド (公開はしない)
+# - main に入ったとき：全部通ったら memoria-try に公開する
+#   リポジトリの変数 CLOUDFLARE_AUTO_DEPLOY を false にすると、自動では公開しない (Actions の画面の「Run workflow」でだけ公開する)
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # PR は新しい push が来たら前の分をやめる。main の公開は途中で止めない
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: backend (cargo test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo test
+        working-directory: backend
+
+  web:
+    name: web (build・check:placement)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - run: npm run check:placement
+        working-directory: web
+
+  cloudflare:
+    name: cloudflare (build・deploy)
+    needs: [backend, web]
+    runs-on: ubuntu-latest
+    env:
+      # Cloudflare のアカウント (kobadai)。秘密の値ではない。トークンは secrets の CLOUDFLARE_API_TOKEN
+      CLOUDFLARE_ACCOUNT_ID: a45380a4740b90cdfcbba7b4667c0a40
+      DEPLOY: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.CLOUDFLARE_AUTO_DEPLOY != 'false')) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            cloudflare
+            cloudflare/prep
+      - name: worker-build を入れる
+        run: command -v worker-build || cargo install worker-build --version 0.8.7 --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            cloudflare/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: cloudflare
+      - name: 画面と静的ファイルを作る (web のビルド・prep)
+        run: npm run build
+        working-directory: cloudflare
+
+      - name: Worker をビルドする (公開しない)
+        if: env.DEPLOY != 'true'
+        working-directory: cloudflare
+        run: npx wrangler deploy --dry-run --outdir dist 2>&1 | tee wrangler.log
+
+      - name: memoria-try に公開する
+        if: env.DEPLOY == 'true'
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::secrets の CLOUDFLARE_API_TOKEN がありません。docs/cloudflare.md の「CI/CD」を見てください"
+            exit 1
+          fi
+          npx wrangler deploy 2>&1 | tee wrangler.log
+
+      - name: Worker の大きさを書き出す
+        if: always()
+        working-directory: cloudflare
+        run: |
+          size=$(grep -o 'Total Upload:.*' wrangler.log 2>/dev/null | tail -1)
+          {
+            echo "### Cloudflare"
+            echo "- Worker の大きさ：${size:-（取れませんでした）}（無料プランの上限は gzip で 3 MB）"
+            if [ "$DEPLOY" = "true" ]; then echo "- 公開先：https://memoria-try.tka-2610.workers.dev"; else echo "- 公開はしていません"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
