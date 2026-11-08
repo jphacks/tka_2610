@@ -1,9 +1,8 @@
-// ⑦ memoria（/map）。作品・写真・声を手がかりに振り返る。作品の選択と年齢の分類はRust。
+// ⑦ memoria（/map）。作品・写真・声を手がかりに振り返る。作品の選択はRust。
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useAges, useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
-import { ArtworkThumb, DigestPlayer, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
-import { ChevronRight, GalleryIcon, MicIcon, RainbowIcon, PlayIcon } from '../icons'
+import { useRecollections, type DigestScope, type Memory, type RecallCard } from '../api'
+import { DigestPlayer, Img, NavBar, Screen, ThumbSkeletons, TLink } from '../components'
+import { ChevronRight, GalleryIcon, MicIcon, PlayIcon } from '../icons'
 import { useNav } from '../nav'
 import DigestTheater from './DigestTheater'
 import './MapView.css'
@@ -35,14 +34,11 @@ function RecallTile({ card, voice = false, onPlay }: { card: RecallCard; voice?:
 }
 
 export default function MapView() {
-  const [params, setParams] = useSearchParams()
   const [theaterExpanded, setTheaterExpanded] = useState(false)
   const [digestScope, setDigestScope] = useState<DigestScope | null>(null)
-  const recalls = useRecollections(params.get('age'))
-  const ages = useAges()
+  const recalls = useRecollections()
   const nav = useNav()
   const data = recalls.data
-  const selectedAge = recalls.isPlaceholderData ? params.get('age') : data?.selected_age
   const featured = data?.featured
   const playing = useRef<HTMLAudioElement | null>(null)
   useEffect(() => () => { playing.current?.pause() }, [])
@@ -57,7 +53,7 @@ export default function MapView() {
       <NavBar title="memoria" />
       <div className="page recall-page">
         {recalls.isPending ? (
-          <div className="recall-loading" aria-busy="true" aria-label="Loading…"><div className="recall-hero-placeholder skeleton" /><div className="recall-age-grid"><ThumbSkeletons count={4} /></div></div>
+          <div className="recall-loading" aria-busy="true" aria-label="Loading…"><div className="recall-hero-placeholder skeleton" /><div className="recall-loading-grid"><ThumbSkeletons count={4} /></div></div>
         ) : recalls.isError ? (
           <div className="recall-empty" role="alert"><h2>思い出を読み込めませんでした</h2><p>{recalls.error.message}</p><button type="button" className="btn btn-outline" onClick={() => recalls.refetch()}>もう一度読み込む</button></div>
         ) : data?.total === 0 ? (
@@ -103,36 +99,9 @@ export default function MapView() {
               ) : <div className="recall-voice-empty"><p>声の記録はまだありません</p><span>作品の詳細の「おもいで」から、声を録音して残せます。</span></div>}
             </section>
 
-            <section className="recall-section" aria-labelledby="recall-ages-title">
-              <div className="recall-section-head"><h2 id="recall-ages-title">年齢で振り返る</h2></div>
-              <div className="recall-age-tabs" role="group" aria-label="振り返る年齢">
-                {data.age_albums.map(album => (
-                  <button type="button" key={album.age} className="recall-age-tab" aria-pressed={String(album.age) === String(selectedAge)} onClick={() => setParams({ age: String(album.age) }, { replace: true })}>
-                    <Img src={album.cover_url} alt="" /><span>{album.label}<small>{album.count}点</small></span>
-                  </button>
-                ))}
-              </div>
-              <div className={`recall-age-grid${recalls.isPlaceholderData ? ' pending' : ''}`} aria-busy={recalls.isFetching}>
-                {data.age_artworks.map((a, index) => <ArtworkThumb key={a.id} artwork={a} meta="age" index={index} />)}
-              </div>
-            </section>
           </>
         )}
 
-        <details className="recall-rooms">
-          <summary><RainbowIcon size={18} /><span>年齢ごとのおへや</span><ChevronRight size={16} /></summary>
-          {ages.isPending ? <p className="note">Loading…</p> : ages.isError ? <div className="recall-voice-empty"><p>おへやを読み込めませんでした</p><button type="button" className="btn btn-outline btn-small" onClick={() => ages.refetch()}>もう一度読み込む</button></div> : (
-            <div className="recall-room-list">
-              {(ages.data?.ages ?? []).map(age => (
-                <section key={age.age} className="recall-room-age"><div className="recall-room-head"><h3>{age.label}</h3><button type="button" className="btn-plain" onClick={() => nav.tab(`/?age=${age.age}`)}>ホームで見る</button></div>
-                  {age.rooms.map(room => <button type="button" key={room.id} className="recall-room" onClick={() => nav.push(`/rooms/${room.id}`)}><span>{room.name}</span><small>{room.count}点</small><ChevronRight size={15} /></button>)}
-                  {age.rooms.length === 0 && <p className="hint">おへやはホームから作れます。</p>}
-                </section>
-              ))}
-              {ages.data?.ages.length === 0 && <p className="hint">おへやはホームから作れます。</p>}
-            </div>
-          )}
-        </details>
       </div>
       {digestScope && <DigestPlayer initialScope={digestScope} onClose={() => setDigestScope(null)} onOpenArtwork={id => { setDigestScope(null); nav.push(`/artworks/${id}`) }} />}
     </Screen>

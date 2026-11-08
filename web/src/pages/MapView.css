@@ -1,4 +1,4 @@
-/* memoria。作品を入口に、同じころの写真・声・年齢のおへやへ戻る。 */
+/* memoria。作品を入口に、同じころの写真・声を振り返る。 */
 /* 上の余白は、作品一覧のアルバムの棚の中身（見出しの下に並ぶアルバム）と同じ高さから始まるように（見出しの段の 36px ぶん下げる） */
 .recall-page { padding-top: 46px; }
 .recall-section + .recall-section { margin-top: 30px; }
@@ -38,27 +38,7 @@
 .recall-voice-empty { padding: 16px; border: 1px dashed var(--line-strong); border-radius: 14px; background: color-mix(in srgb, var(--surface) 75%, transparent); }
 .recall-voice-empty p { margin: 0 0 5px; font-size: 13px; font-weight: 600; }
 .recall-voice-empty > span { font-size: 12px; line-height: 1.8; color: var(--ink-2); }
-.recall-age-tabs { display: flex; gap: 8px; margin: 0 -20px 16px; padding: 0 20px 6px; overflow-x: auto; scrollbar-width: none; }
-.recall-age-tab { display: flex; flex: none; align-items: center; gap: 9px; min-height: 65px; padding: 8px 12px 8px 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: left; }
-.recall-age-tab[aria-pressed='true'] { border-color: var(--accent); background: color-mix(in srgb, var(--sky) 25%, var(--surface)); box-shadow: inset 0 0 0 1px var(--accent); }
-.recall-age-tab .thumb { width: 42px; flex: none; border-radius: 8px; }
-.recall-age-tab > span { font-size: 12px; font-weight: 600; }
-.recall-age-tab small { display: block; margin-top: 2px; font-size: 10px; color: var(--ink-2); font-weight: 400; }
-.recall-age-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; }
-.recall-age-grid.pending { opacity: 0.5; pointer-events: none; }
-.recall-age-grid .thumb { border-radius: 12px; }
-.recall-rooms { margin-top: 32px; border-top: 1px solid var(--line-strong); }
-.recall-rooms > summary { display: flex; align-items: center; gap: 9px; min-height: 56px; list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; }
-.recall-rooms > summary::-webkit-details-marker { display: none; }
-.recall-rooms > summary > span { flex: 1; }
-.recall-rooms[open] > summary > svg:last-child { transform: rotate(90deg); }
-.recall-room-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-.recall-room-head h3 { margin: 0; font-size: 13px; }
-.recall-room-head button { min-height: 40px; font-size: 12px; }
-.recall-room-age + .recall-room-age { margin-top: 16px; }
-.recall-room { display: flex; align-items: center; gap: 8px; min-height: 48px; width: 100%; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface); text-align: left; font-size: 13px; }
-.recall-room > span { flex: 1; }
-.recall-room small { color: var(--ink-2); }
+.recall-loading-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; }
 .recall-empty { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 16px; text-align: center; }
 .recall-empty h2 { margin: 0; font-size: 18px; }
 .recall-empty p { margin: 0; font-size: 13px; line-height: 1.9; color: var(--ink-2); }
