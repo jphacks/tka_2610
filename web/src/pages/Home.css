@@ -76,6 +76,25 @@
   border-radius: 20px;
 }
 
+/* 前のおへやを残したまま、待ち時間だけ読み込みを案内する。 */
+.home-stack-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.home-loading {
+  position: absolute;
+  inset: 0;
+}
+
+.home-loading .stage-fallback {
+  background: color-mix(in srgb, var(--paper) 75%, transparent);
+}
+
+.home-loading .stage-fallback-inner {
+  animation: none;
+}
+
 /* おへやがまだ無い年齢 */
 .home-empty {
   position: absolute;

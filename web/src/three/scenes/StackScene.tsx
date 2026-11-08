@@ -157,6 +157,24 @@ export function StackScene({
   const [version, setVersion] = useState(0)
   const bump = useCallback(() => setVersion((v) => v + 1), [])
   const [lite] = useState(isTouchDevice)
+  const notified = useRef(false)
+  const readyCallback = useRef(onReady)
+  readyCallback.current = onReady
+  useEffect(() => {
+    if (notified.current || !stack.rooms.every(r => loaded.current.has(r.room.id))) return
+    // 建物がそろった直後ではなく、Canvasが描画されてから表示を切り替える。
+    let secondFrame = 0
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        notified.current = true
+        readyCallback.current?.()
+      })
+    })
+    return () => {
+      cancelAnimationFrame(firstFrame)
+      cancelAnimationFrame(secondFrame)
+    }
+  }, [stack, version])
 
   return (
     <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows>
@@ -176,7 +194,6 @@ export function StackScene({
               onReady={() => {
                 loaded.current.add(floor.room.id)
                 bump()
-                if (stack.rooms.every((r) => loaded.current.has(r.room.id))) onReady?.()
               }}
             />
           </group>
