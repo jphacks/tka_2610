@@ -1,14 +1,11 @@
 # テストと、Cloudflare のテスト環境 (memoria-try) への公開。仕組みは docs/cloudflare.md の「CI/CD」
-# - PR：backend のテスト・web のビルドと置き方の確認・Cloudflare 版のビルド (公開はしない)
-# - PR のテストが全部通ったら、その PR を自動でマージして、main の CI を起動する (Draft とフォークの PR は除く)
-# - main に入ったとき：全部通ったら memoria-try に公開する
+# - PR：backend のテスト・web のビルドと置き方の確認・Cloudflare 版のビルド (公開はしない)。結果を見るだけで、マージは止めない
+# - main に入ったとき：テストを待たずに memoria-try に公開する (テストは同時に流れる)
 #   リポジトリの変数 CLOUDFLARE_AUTO_DEPLOY を false にすると、自動では公開しない (Actions の画面の「Run workflow」でだけ公開する)
 name: CI
 
 on:
   pull_request:
-    # ready_for_review：Draft を「Ready for review」にしたときもテストして、通ればマージする
-    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -58,7 +55,7 @@ jobs:
 
   cloudflare:
     name: cloudflare (build・deploy)
-    needs: [backend, web]
+    # テストを待たない (早く本番で試すため)。テストは backend・web のジョブで同時に流れる
     runs-on: ubuntu-latest
     env:
       # Cloudflare のアカウント (kobadai)。秘密の値ではない。トークンは secrets の CLOUDFLARE_API_TOKEN
@@ -146,36 +143,3 @@ jobs:
             echo "- Worker の大きさ：${size:-（取れませんでした）}（無料プランの上限は gzip で 3 MB）"
             if [ "$DEPLOY" = "true" ]; then echo "- 公開先：https://memoria-try.tka-2610.workers.dev"; else echo "- 公開はしていません"; fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-  # テストが全部通った PR をマージする。
-  # GITHUB_TOKEN でマージした push では、ほかのワークフローが起動しない (GitHub の決まり)。
-  # そのため、マージのあとに main の CI を workflow_dispatch で起動して公開する (workflow_dispatch は GITHUB_TOKEN でも起動できる)
-  automerge:
-    name: automerge
-    needs: [backend, web, cloudflare]
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      actions: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      PR: ${{ github.event.pull_request.number }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-    steps:
-      - name: PR をマージする
-        id: merge
-        run: |
-          state=$(gh pr view "$PR" --json state --jq .state)
-          if [ "$state" != "OPEN" ]; then
-            echo "PR #$PR は $state なので、マージしません"
-            exit 0
-          fi
-          # テストした版のまま (あとから push が来ていたらマージしない)
-          gh pr merge "$PR" --merge --match-head-commit "$HEAD_SHA"
-          echo "merged=true" >> "$GITHUB_OUTPUT"
-      - name: main の CI を起動する (公開)
-        if: steps.merge.outputs.merged == 'true' && vars.CLOUDFLARE_AUTO_DEPLOY != 'false'
-        run: gh workflow run ci.yml --ref main
