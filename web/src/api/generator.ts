@@ -5,7 +5,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useInvalidate } from './artworks'
 import { keys, request } from './client'
-import type { GeneratorJob } from './types'
+import type { CaptureSession, GeneratorJob } from './types'
 
 /** 送れる写真の数と、1 枚の上限（Rust: generator.rs の MAX_PHOTOS・MAX_PHOTO_BYTES） */
 export const GENERATOR_LIMITS = { photos: 8, photoBytes: 20 * 1024 * 1024 }
@@ -31,13 +31,38 @@ export function useGeneratorEnabled() {
   })
 }
 
-/** 写真（1〜8 枚）と大きさ（cm、カンマ区切り）を送って、作品の 3D を作り始める。受け付けたら job が返る（202） */
+/** iPhone で撮った写真の一覧（新しい順）。使えないサーバー（404 など）やエラーは空にする（選ぶところを出さないだけ） */
+async function fetchCaptureSessions(): Promise<CaptureSession[]> {
+  try {
+    const response = await fetch('/api/capture/sessions')
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return []
+    const body: unknown = await response.json()
+    return Array.isArray(body) ? (body as CaptureSession[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function useCaptureSessions() {
+  return useQuery({
+    queryKey: ['generator', 'capture-sessions'],
+    queryFn: fetchCaptureSessions,
+    staleTime: 10_000,
+    retry: false,
+  })
+}
+
+/**
+ * 写真（1〜8 枚）か iPhone の撮影（captureSession）と、大きさ（cm、カンマ区切り。撮影を選んだときは空なら撮影の大きさ）を送って、
+ * 作品の 3D を作り始める。受け付けたら job が返る（202）
+ */
 export function useStartGenerate(artworkId: string) {
   return useMutation({
-    mutationFn: ({ photos, sizeCm }: { photos: File[]; sizeCm: string }) => {
+    mutationFn: ({ photos = [], captureSession, sizeCm }: { photos?: File[]; captureSession?: string; sizeCm: string }) => {
       const form = new FormData()
       for (const photo of photos) form.append('photos', photo)
-      form.append('size_cm', sizeCm)
+      if (captureSession) form.append('capture_session', captureSession)
+      if (sizeCm.trim()) form.append('size_cm', sizeCm)
       return request<GeneratorJob>(`/api/artworks/${artworkId}/generate`, { method: 'POST', body: form })
     },
   })

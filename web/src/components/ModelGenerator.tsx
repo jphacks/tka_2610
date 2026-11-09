@@ -1,17 +1,21 @@
 // ⑥ 作品の詳細の「写真から 3D を作る（試験中）」（Rust: backend/src/generator.rs。仕組みは docs/generator.md）。
 // サーバーで使えるとき（GET /api/generator が enabled: true）だけ出す。本番・Cloudflare 版では何も出さない。
 // 写真（1〜8 枚）と大きさ（cm）を送ると、サーバーが generator/ の kt auto で 3D を作り、作品の 3D を差し替える（写真はそのまま）。
+// iPhone の撮影アプリ（capture/）で撮って Mac に送った撮影があれば、「iPhone で撮った写真から」も選べる（撮影を選ぶと、
+// サーバーが写真を 8 枚まで選んでまっすぐにする。大きさは撮影の値が入り、直せる）。一覧が取れない・空なら、この選択は出さない。
 // 作っているあいだは 3 秒ごとに様子を聞き、かかった時間を出す。終わったら作品を取り直す（上の 3D が新しいモデルに変わる）。
 // 作っている job の id はこのタブの sessionStorage に覚え、詳細を開き直しても続きから様子を見る。
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   GENERATOR_LIMITS,
+  useCaptureSessions,
   useGeneratorEnabled,
   useGeneratorJob,
   useRefreshAfterGenerate,
   useStartGenerate,
 } from '../api'
 import { Spinner } from './Loading'
+import { Segmented } from './Segmented'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
 import './ModelGenerator.css'
@@ -52,7 +56,14 @@ function GeneratorPanel({ artworkId }: { artworkId: string }) {
   const start = useStartGenerate(artworkId)
   const refresh = useRefreshAfterGenerate(artworkId)
 
+  const captures = useCaptureSessions()
+  const sessions = captures.data ?? []
+
   const [sheet, setSheet] = useState(false)
+  /** 写真を選ぶ（upload）か、iPhone で撮った写真から（capture） */
+  const [source, setSource] = useState<'upload' | 'capture'>('upload')
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const fromCapture = source === 'capture' && sessions.length > 0
   const [photos, setPhotos] = useState<File[]>([])
   const [size, setSize] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
@@ -105,10 +116,18 @@ function GeneratorPanel({ artworkId }: { artworkId: string }) {
     setPhotos(list)
   }
 
+  const chooseSession = (id: string) => {
+    setSessionId(id)
+    setFormError(null)
+    const chosen = sessions.find((s) => s.session_id === id)
+    // 撮影の大きさを入れておく（直せる）
+    setSize(chosen?.size_cm?.join(', ') ?? '')
+  }
+
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (photos.length === 0) {
-      setFormError('写真を 1 枚以上えらんでください')
+    if (fromCapture ? !sessionId : photos.length === 0) {
+      setFormError(fromCapture ? '撮影をえらんでください' : '写真を 1 枚以上えらんでください')
       return
     }
     if (!size.trim()) {
@@ -117,7 +136,7 @@ function GeneratorPanel({ artworkId }: { artworkId: string }) {
     }
     setFormError(null)
     start.mutate(
-      { photos, sizeCm: size },
+      fromCapture ? { captureSession: sessionId ?? undefined, sizeCm: size } : { photos, sizeCm: size },
       {
         onSuccess: (created) => {
           saveJobId(artworkId, created.job_id)
@@ -159,6 +178,8 @@ function GeneratorPanel({ artworkId }: { artworkId: string }) {
         onClick={() => {
           setFormError(null)
           setSheet(true)
+          // 開くたびに、Mac に届いた撮影を取り直す
+          void captures.refetch()
         }}
       >
         写真をえらんで作る
@@ -166,22 +187,59 @@ function GeneratorPanel({ artworkId }: { artworkId: string }) {
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title="写真から 3D を作る">
         <form className="form model-generator-form" onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="generator-photos">写真</label>
-            <input
-              id="generator-photos"
-              className="model-generator-file"
-              type="file"
-              accept={ACCEPT}
-              multiple
-              onChange={(e) => pick(e.target.files)}
+          {sessions.length > 0 && (
+            <Segmented
+              label="写真の選び方"
+              value={source}
+              onChange={(v) => {
+                setSource(v)
+                setFormError(null)
+              }}
+              options={[
+                { value: 'upload', label: '写真をえらぶ' },
+                { value: 'capture', label: 'iPhone で撮った写真から' },
+              ]}
             />
-            <p className="hint">
-              {photos.length > 0
-                ? `${photos.length} 枚えらびました`
-                : `正面・横・裏など 1〜${GENERATOR_LIMITS.photos} 枚（JPEG・PNG・WebP、1 枚 ${GENERATOR_LIMITS.photoBytes / MB} MB まで）`}
-            </p>
-          </div>
+          )}
+          {fromCapture ? (
+            <div className="field">
+              <span className="label">撮影</span>
+              <div className="model-generator-sessions" role="radiogroup" aria-label="iPhone で撮った写真">
+                {sessions.map((s) => (
+                  <label key={s.session_id} className={`model-generator-session${s.session_id === sessionId ? ' is-selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="generator-session"
+                      checked={s.session_id === sessionId}
+                      onChange={() => chooseSession(s.session_id)}
+                    />
+                    <span className="model-generator-session-title">{s.title || '名前なし'}</span>
+                    <span className="model-generator-session-meta num">
+                      {s.created_label} ・ {s.photo_count} 枚（使える {s.usable_count} 枚）
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="hint">方向のばらけた写真を 8 枚まで選んで使います。</p>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="generator-photos">写真</label>
+              <input
+                id="generator-photos"
+                className="model-generator-file"
+                type="file"
+                accept={ACCEPT}
+                multiple
+                onChange={(e) => pick(e.target.files)}
+              />
+              <p className="hint">
+                {photos.length > 0
+                  ? `${photos.length} 枚えらびました`
+                  : `正面・横・裏など 1〜${GENERATOR_LIMITS.photos} 枚（JPEG・PNG・WebP、1 枚 ${GENERATOR_LIMITS.photoBytes / MB} MB まで）`}
+              </p>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="generator-size">大きさ（cm）</label>
             <input
