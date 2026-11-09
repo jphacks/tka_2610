@@ -899,7 +899,7 @@ pub async fn update_artwork(
         Ok(updated) => {
             remove_files(&state, old_files.into_iter()).await;
             println!("[Artwork] updated \"{}\" in {:?}", updated.title, started.elapsed());
-            let updated = settle_layout(&state, updated, regenerated.model.is_some()).await?;
+            let updated = settle_layout(&state, updated, false).await?;
             let ctx = DtoContext::load(&state.pool).await?;
             Ok(Json(ArtworkDto::new(&updated, &ctx)))
         }
@@ -912,7 +912,8 @@ pub async fn update_artwork(
 
 /// 作品を書き換えたあと、飾っているおへやの配置を合わせる。
 /// 作成日 (や年齢) が変わっておへやの年齢と合わなくなったときと、モデルを差し替えて大きさが変わったとき
-/// (今の場所に収まらなくなったかもしれない) は、reconcile で置き直す (収まらない作品は、同じ年齢のおへやの空いている所へ)
+/// (今の場所に収まらなくなったかもしれない) は、reconcile で置き直す (収まらない作品は、同じ年齢のおへやの空いている所へ)。
+/// 編集 (update_artwork) は今までどおり年齢が変わったときだけ (model_changed = false)。モデルの差し替えで置き直すのは generator.rs の replace_model だけ
 async fn settle_layout(state: &AppState, row: ArtworkRow, model_changed: bool) -> AppResult<ArtworkRow> {
     let Some(room_id) = row.house_room_id else {
         return Ok(row);

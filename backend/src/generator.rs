@@ -5,7 +5,7 @@
 //!   setup.sh が作った `.venv` があるときだけ。それ以外は API が 404 (`GET /api/generator` だけは `{"enabled": false}`)。
 //!   本番 (Render) では設定しない。入れ物には Python も generator/ も無い
 //! - 生成は数分かかるので、受け付けたら 202 で job を返し、裏で動かす。GPU を使うので、同時に動かすのは 1 つだけ (ほかは 409)
-//! - job はメモリにだけ持つ (サーバーを止めると消える)。作業のファイルは MEDIA_DIR/generator/<job id>/ に置き、終わったら消す
+//! - job はメモリにだけ持つ (サーバーを止めると消える)。作業のファイルは OS の一時フォルダの memoria-generator/<job id>/ に置き、終わったら消す
 //!
 //! 仕組みは docs/generator.md。
 
@@ -50,8 +50,12 @@ const DEFAULT_AI_MODEL: &str = "sonnet";
 /// stderr のうち、ログに出す最後の行数
 const LOG_TAIL_LINES: usize = 20;
 
-/// 作業のフォルダ (MEDIA_DIR の下)
-const WORK_DIR: &str = "generator";
+/// 作業のフォルダの名前 (OS の一時フォルダの下。/media で配信されないように、MEDIA_DIR には置かない)
+const WORK_DIR: &str = "memoria-generator";
+
+fn work_root() -> PathBuf {
+    std::env::temp_dir().join(WORK_DIR)
+}
 
 #[cfg(windows)]
 const LAUNCHER: &str = "kt.ps1";
@@ -355,7 +359,7 @@ pub async fn start(
         .reserve(job_id)
         .ok_or_else(|| AppError::conflict("ほかの作品の 3D を作っています。終わってから試してください"))?;
 
-    let work = state.media_dir.join(WORK_DIR).join(job_id.to_string());
+    let work = work_root().join(job_id.to_string());
     let (photos, size) = match read_request(multipart, &work).await {
         Ok(read) => read,
         Err(error) => {
@@ -445,7 +449,7 @@ async fn remove_work(work: &FsPath) {
 /// 前に動かしていたときの作業のフォルダが残っていれば消す (起動時。使うときだけ)
 pub async fn remove_leftovers(state: &AppState) {
     if state.generator.enabled() {
-        remove_work(&state.media_dir.join(WORK_DIR)).await;
+        remove_work(&work_root()).await;
     }
 }
 
