@@ -406,8 +406,8 @@ export default function Collection() {
                   aria-label={oldest ? '古い順に並んでいます。押すと新しい順にします' : '新しい順に並んでいます。押すと古い順にします'}
                   onClick={() => go({ oldest: !oldest })}
                 >
-                  {oldest ? <ArrowUpIcon size={14} /> : <ArrowDownIcon size={14} />}
-                  {oldest ? '古い順' : '新しい順'}
+                  {oldest ? <ArrowUpIcon size={13} /> : <ArrowDownIcon size={13} />}
+                  <span>{oldest ? '古い順' : '新しい順'}</span>
                 </button>
                 <div className="collection-density" role="group" aria-label="作品の表示サイズ">
                   <button type="button" aria-pressed={!compact} onClick={() => go({ compact: false })}>2列</button>

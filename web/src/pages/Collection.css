@@ -39,34 +39,29 @@
 
 .collection-toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: 8px;
   margin: 12px 0;
 }
 
-/* 並び順のボタンと、列の数の切り替え */
+/* 並び順のボタンと、列の数の切り替え。行が狭いときは、こちらではなく範囲の名前の側が詰まる */
 .collection-tools {
   display: flex;
   flex: none;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
-/* 並び順のボタン。高さと枠は、となりの列の数の切り替えと揃える */
+/* 並び順のボタン。範囲の名前と列の数の切り替えの間に収まるよう、小さなチップにする */
 .collection-order {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  /* 「新しい順」と「古い順」で幅が変わって、押したときにボタンが動かないように */
-  min-width: 96px;
-  min-height: 46px;
-  padding: 0 12px;
+  gap: 3px;
+  height: 32px;
+  padding: 0 9px 0 7px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--paper-2);
   color: var(--ink);
   font-size: 12px;
@@ -74,11 +69,17 @@
   white-space: nowrap;
 }
 
+/* 「新しい順」と「古い順」で幅が変わって、押したときにボタンが動かないように */
+.collection-order span {
+  min-width: 4em;
+}
+
 .collection-scope {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 8px;
+  min-width: 0;
 }
 
 .collection-scope h2 {
