@@ -2,6 +2,7 @@ mod age;
 mod ages_api;
 mod albums;
 mod artworks;
+mod capture;
 mod error;
 mod digest;
 mod generator;
@@ -88,7 +89,9 @@ async fn main() {
 
     // 写真から 3D を作る道具 (リポジトリの generator/)。KT_GENERATOR_ENABLED=1 のときだけ使う (本番では設定しない)。
     // 既定はビルドした場所から辿るので、ほかの場所の generator/ を使うときは KT_GENERATOR_DIR で指定する
-    let photo_to_3d = generator::Generator::from_env(&manifest_dir.join("..").join("generator"));
+    // iPhone で撮った写真 (capture/ の受信サーバーが受け取ったもの) の既定の場所は capture/captures (CAPTURE_DATA_DIR で変えられる)
+    let repo_dir = manifest_dir.join("..");
+    let photo_to_3d = generator::Generator::from_env(&repo_dir.join("generator"), &repo_dir.join("capture").join("captures"));
 
     let web_dist = env::var("WEB_DIST")
         .map(PathBuf::from)
@@ -209,6 +212,7 @@ async fn main() {
         // 写真から 3D を作る (試験中。使えないときは /generator が {"enabled": false}、ほかは 404)。写真を何枚も送るので、このルートだけ上限を上げる
         .route("/generator", get(generator::status))
         .route("/generator/jobs/{job_id}", get(generator::job))
+        .route("/capture/sessions", get(capture::sessions))
         .route(
             "/artworks/{id}/generate",
             post(generator::start).layer(DefaultBodyLimit::max(generator::UPLOAD_BODY_LIMIT)),
