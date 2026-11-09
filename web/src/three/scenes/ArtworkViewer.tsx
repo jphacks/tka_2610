@@ -2,8 +2,7 @@
 // 触ると（ドラッグ）そのまま回せる（自動では回さない）。平行移動はしない。
 // 拡大は、3D の上にカーソルがあるときのホイール（カーソルの所へ寄る）と、3D の上での 2 本指のピンチだけ
 // （3D の外ではふつうに画面がスクロール・拡大する）。拡大した所は、引くほど作品の中心へ戻る。
-// タッチでは、縦のスワイプは画面のスクロールに使い、横のドラッグで回す（CSS の touch-action: pan-y。ArtworkDetail.css）。
-// 2 本指のときは画面がスクロールしないように、画面側（ArtworkDetail）で touchmove を止める。
+// タッチでは、3D の上をなぞっても画面はスクロールせず、縦横どちらでも回す（CSS の touch-action: none。ArtworkDetail.css）。
 // カメラは、読み込んだモデルの大きさ（外接球）から、縦横どちらにも収まる距離に置く。
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'

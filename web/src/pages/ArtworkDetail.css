@@ -93,10 +93,12 @@
   transform: scale(1);
 }
 
-/* タッチ：縦のスワイプは画面のスクロールに使い、横のドラッグで回す（OrbitControls が付ける touch-action: none を上書き） */
+/* タッチ：3D の上では、縦横どちらになぞっても画面はスクロールさせず、作品を回す（ピンチも 3D の拡大だけ）。
+   画面のスクロールは、3D の外（作品名・メモなど）をなぞる */
 .detail-viewer,
 .detail-viewer * {
-  touch-action: pan-y !important;
+  /* canvas には three.js が style で touch-action を書くので、!important で上書きする */
+  touch-action: none !important;
 }
 
 .detail-viewer-status,
