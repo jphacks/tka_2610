@@ -42,8 +42,12 @@ import { FittedModel } from '../models'
 import { FLOOR_ART_FIT, HUB, WALL_ART_FIT, artSizeOf, displayScale, roomOrigin, surfaceOf } from './placement'
 import './HomeObjects.css'
 
-/** 作品を置く数の既定値。スマホなど（指で操作する端末）は 6、それ以外は全部 */
-const DEFAULT_MAX_ARTWORKS =
+/**
+ * 鑑賞モード（テクスチャが WALK_ART_TEXTURE）で置く作品の数の上限。スマホなど（指で操作する端末）は 6、それ以外は全部。
+ * おへや・ホーム・模様替え（ROOM_ART_TEXTURE）は、テクスチャを縮めて 1 点 10 MB ほどになったので、上限なしで全部置く
+ * （上限があると、カメラを回すたびに近い 6 点が入れ替わり、作品が出たり消えたりして見える）
+ */
+const WALK_MAX_ARTWORKS =
   typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 6 : Infinity
 /** カメラがこれ以上（m）動いたら、近い作品を選び直す */
 const RESELECT_DISTANCE = 0.5
@@ -187,7 +191,7 @@ export function HomeObjects({
   house,
   onSelect,
   onReady,
-  maxArtworks = DEFAULT_MAX_ARTWORKS,
+  maxArtworks: maxArtworksProp,
   onObjectPointerDown,
   previewTransform,
   memoryBadges = false,
@@ -203,7 +207,7 @@ export function HomeObjects({
   onSelect?: (artworkId: string) => void
   /** 家具や作品の GLB が載った・外れたときと、置いた物の位置・向きが変わったとき（1 回にまとめて呼ぶ） */
   onReady?: () => void
-  /** 置く作品の数の上限（カメラに近い順）。既定はスマホなどで 6、それ以外は全部 */
+  /** 置く作品の数の上限（カメラに近い順）。既定は、鑑賞モードのテクスチャ（WALK_ART_TEXTURE 以上）ならスマホなどで 6、それ以外は全部 */
   maxArtworks?: number
   /** 模様替えモード：家具・作品を押したとき（object id）。渡すと物ごとにポインタの当たり判定をする */
   onObjectPointerDown?: (objectId: string, event: ThreeEvent<PointerEvent>) => void
@@ -252,6 +256,7 @@ export function HomeObjects({
     notify()
   }, [transformsKey, notify])
 
+  const maxArtworks = maxArtworksProp ?? (artTextureSize >= WALK_ART_TEXTURE ? WALK_MAX_ARTWORKS : Infinity)
   const nearest = useNearestArtworks(placed, maxArtworks)
   // ドラッグ中の作品は、親・面・位置・向きを仮の値に差し替えてから家具ごとに分ける（載せ換え中の作品を新しい家具の下に描くため）
   const shown = (nearest ? placed.filter((p) => nearest.has(p.object.id)) : placed).map((p) => withPreview(p, previewTransform))
