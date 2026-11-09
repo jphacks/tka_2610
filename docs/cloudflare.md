@@ -87,6 +87,7 @@ npm run dev        # http://localhost:8787 (wrangler dev。Durable Object とそ
 
 - backend を直したときも、Cloudflare 版のビルドが通るかを PR で確かめられます（`home.rs` などを共有しているため）。
 - 実行結果の Summary に、Worker の大きさ（無料プランの上限は gzip で 3 MB）が出ます。
+- worker-build がビルド中に GitHub の Releases から落とす wasm-bindgen と wasm-opt は、504 で失敗し続けたことがあるので、CI では自分で用意しています（wasm-bindgen は `cargo install wasm-bindgen-cli`、wasm-opt は npm の `binaryen`。`WASM_BINDGEN_BIN`・`WASM_OPT_BIN`）。**`cloudflare/Cargo.toml` の `wasm-bindgen` の版を上げたら、`ci.yml` の `WASM_BINDGEN_VERSION` も合わせてください。** worker-build の版を上げたら、使う wasm-opt の版に `binaryen` を合わせます。
 - 公開には、リポジトリの secrets の `CLOUDFLARE_API_TOKEN` を使います。Cloudflare のダッシュボードの「My Profile → API Tokens」で、テンプレートの「Edit Cloudflare Workers」から作ったトークンです。アカウント ID は `ci.yml` に書いてあります（秘密の値ではない）。
 - **自動マージ**：PR のテスト（`backend`・`web`・`cloudflare`）が全部通ると、`automerge` のジョブがその PR をマージします。
   - **作りかけの PR は Draft で出してください。** Draft はマージしません。「Ready for review」にするとテストが動き、通ればマージされます。
