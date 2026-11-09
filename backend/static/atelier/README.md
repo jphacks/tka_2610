@@ -16,7 +16,7 @@
 | パス | 内容 |
 |---|---|
 | `catalog.json` | 作品の一覧（`assetId`, `titleJa`, `title`, `description`, `memo`, `madeOn`, `category`, `dimensionsMeters`, `model`, `photo`） |
-| `models/<assetId>.glb` | 作品の 3D モデル。テクスチャを 1024px 以下に縮めたもの（下の手順） |
+| `models/<assetId>.glb` | 作品の 3D モデル。テクスチャを 1024px 以下に縮めて、WebP にしたもの（下の手順） |
 | `photos/<assetId>_hero.jpg` | キットの `preview/<assetId>_hero.jpg`（20 点のキットは `_hero.png` を `sips` で JPEG の品質 88 にしたもの）。登録に必要な写真として使う |
 
 ## モデルの縮め方
@@ -31,6 +31,20 @@ npx -y @gltf-transform/cli resize --width 1024 --height 1024 <キットの model
 - 最初の 13 点の合計は 116.4 MB から 58.2 MB になりました。
 - 20 点のキットは、もとから 1024px のテクスチャが多く、189 MB から 127 MB です（作品 1 点に 20 枚以上の画像があるため）。合計は 33 点で 183 MB です。
 - npm で証明書のエラーが出るときは、`NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem` を付けて実行してください（macOS）。
+
+## テクスチャを WebP にする
+
+縮めたあとも 33 点で 191.5 MB あり、作品の多いおへやを開くと読み込みに時間がかかったので、テクスチャを PNG・JPEG から WebP（非可逆、品質 90）にしました。
+
+```sh
+npx -y @gltf-transform/cli@4.5.1 webp --quality 90 <縮めたあとの xx.glb> backend/static/atelier/models/xx.glb
+```
+
+- 33 点の合計は 191.5 MB から 131.9 MB になりました（−31%）。形のデータ（頂点）は変えていないので、作品の寸法と置き方は変わりません（総当たり表も同じ）。
+- 色・法線・質感のテクスチャをすべて非可逆にしています。いちばん大きい作品（31 番）の 3D プレビューで前と並べて見比べ、人の目でも、画面のピクセルの比較でも違いが分からないことを確かめました。
+- GLB には `extensionsRequired: ["EXT_texture_webp"]` が入ります。three.js の GLTFLoader（drei の `useGLTF`）はそのまま読めます。WebP を表示できないブラウザ（iOS 14 より前の Safari など）では、作品が表示されません。
+- **非可逆なので、作り直すときは WebP にしたこのファイルではなく、キットの元の GLB から「縮める → WebP」の順でやり直してください**（WebP をもう一度圧縮すると劣化が重なる）。
+- 残りの大部分は形のデータ（約 78 MB）です。さらに軽くするなら、形のデータの圧縮（meshopt など）を考えます。そのときは Web の読み込み（`useGLTF` の第 3 引数）と、backend の GLB の寸法を測る処理（`glb::measure_glb`）が圧縮した GLB を読めるかを確かめてください。
 
 ## 登録のされ方（`seed.rs`）
 

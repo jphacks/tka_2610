@@ -92,6 +92,27 @@ fn museum_model(source: &Path, public: &Path, name: &str) -> Option<String> {
     Some(format!("/media/museum/{file}"))
 }
 
+/// 静的ファイルのキャッシュ (Workers Static Assets の _headers)。何も書かないと max-age=0 で、開くたびに問い合わせる。
+/// - 中身が変わると名前も変わるもの (画面の JS・CSS、建物の GLB) は 1 年
+/// - 名前が変わらないもの (サンプルの作品・家具・舞台) は 1 日。中身を変えても、1 日たてば新しいものになる
+/// 1 つのファイルに 2 つのルールが当たると値がつながるので、パターンは重ならないようにする
+const HEADERS: &str = "\
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/media/museum/*
+  Cache-Control: public, max-age=31536000, immutable
+/media/models/*
+  Cache-Control: public, max-age=86400
+/media/images/*
+  Cache-Control: public, max-age=86400
+/media/thumbs/*
+  Cache-Control: public, max-age=86400
+/home-assets/*
+  Cache-Control: public, max-age=86400
+/stage-assets/*
+  Cache-Control: public, max-age=86400
+";
+
 fn main() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
     let cloudflare = root.join("cloudflare");
@@ -109,6 +130,7 @@ fn main() {
     println!("[Web] {} files", copy_dir(&web, &public));
     println!("[Home] {} files", copy_dir(&static_dir.join("home"), &public.join("home-assets")));
     println!("[Stage] {} files", copy_dir(&static_dir.join("stage"), &public.join("stage-assets")));
+    write(&public.join("_headers"), HEADERS.as_bytes());
 
     // 建物 (backend の main.rs の prepare_museum_model と同じ名前の付け方。版だけ中身のハッシュにする)
     let museum_model_url = museum_model(&static_dir.join("models/home-empty.glb"), &public, "museum");

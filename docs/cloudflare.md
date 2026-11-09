@@ -44,6 +44,7 @@ Render の代わりに、Cloudflare だけで memoria を動かすための作�
 - `cloudflare/prep/`：静的ファイルを `public/` に集め、Worker に埋め込む値を `generated/` に書く道具（手元で動かす Rust）。
   - サンプルの作品の写真は、backend の seed と同じ処理で縮めます。
 - `public/`・`generated/`・`build/` は作られるものなので、git に入れません。
+- 静的ファイルのキャッシュは、prep が書く `public/_headers` で決めています（`prep/src/main.rs` の `HEADERS`）。中身が変わると名前も変わるもの（画面の JS・CSS、建物の GLB）は 1 年、名前が変わらないもの（サンプルの作品・家具・舞台）は 1 日です。サンプルの作品や家具を差し替えると、前に開いた人には最大 1 日、前のものが見えます。
 
 **backend の API を変えたら、`cloudflare/src/` の同じ名前のファイルも合わせて直してください。** 置き方の決まり（`home.rs`）などの共有のファイルは、直せば両方に入ります。
 
