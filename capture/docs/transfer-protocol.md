@@ -30,7 +30,7 @@
 - sessionId は UUID（`^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$`）。
 - path は `session.json`、`photos/<UUID>.jpg`、`masks/<UUID>.png` だけ。ほかは 400。
 
-## Mac 側のフォルダ（既定は `memoria-capture/captures/`、`--data-dir` で変更）
+## Mac 側のフォルダ（既定は `capture/captures/`、`--data-dir` で変更）
 
 ```
 captures/

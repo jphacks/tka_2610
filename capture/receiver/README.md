@@ -1,11 +1,11 @@
 # 受信サーバー（Mac 側）
 
-iPhone の Memoria Capture から、同じ Wi-Fi で撮影セッションを受け取ります。Python 3.9 以上の標準ライブラリだけで動きます（pip は不要）。外部のクラウドには何も送りません。
+iPhone の Memoria Capture から、同じ Wi-Fi で撮影セッションを受け取ります。コマンドは `capture/` のフォルダで実行します。Python 3.9 以上の標準ライブラリだけで動きます（pip は不要）。外部のクラウドには何も送りません。
 
 ## 起動
 
 ```sh
-python3 receiver/memoria_receiver.py            # serve と同じ。ポート 8765、保存先は captures/
+python3 receiver/memoria_receiver.py            # serve と同じ。ポート 8765、保存先は capture/captures/
 python3 receiver/memoria_receiver.py serve --port 8765 --data-dir ~/memoria-captures
 ```
 
@@ -13,10 +13,12 @@ python3 receiver/memoria_receiver.py serve --port 8765 --data-dir ~/memoria-capt
 |---|---|
 | `--port` | 待ち受けるポート（既定 8765） |
 | `--host` | 待ち受けるアドレス（既定 `0.0.0.0`） |
-| `--data-dir` | 保存先（既定はリポジトリの `captures/`） |
+| `--data-dir` | 保存先（既定は `capture/captures/`。アプリのサーバーもここを読む（`CAPTURE_DATA_DIR`）） |
 | `--no-bonjour` | Bonjour で広告しない |
 | `--reset-code` | ペアリングコードを作り直す |
 | `--fail-put-every N` | **テスト専用。** N 回に 1 回 PUT を 500 で失敗させ、iPhone の再送を確かめる（環境変数 `MEMORIA_FAIL_PUT_EVERY` でも可）。ふだんは使わない |
+
+ポート 8765 は、`generator/` の Katachi の画面（`http://127.0.0.1:8765`）と同じです。Katachi を同じ Mac で動かしているときは `--port 8766` のように別の番号にしてください。
 
 起動すると、ペアリングコード（6 桁）、`http://<IP>:<port>` の URL、保存先、Bonjour の状態を表示します。止めるときは Ctrl-C。
 
@@ -45,8 +47,10 @@ python3 receiver/memoria_receiver.py show <sessionId の先頭>
 
 ```sh
 cd receiver && python3 -m unittest -v
-# リポジトリの一番上からなら
+# capture/ からなら
 python3 -m unittest discover -s receiver/tests -v
+# tka_2610 の一番上からなら
+python3 -m unittest discover -s capture/receiver/tests -v
 ```
 
 サーバーを同じプロセスで空いているポートに立て、一時フォルダに受け取ります（Bonjour は使いません）。`sips` が無い環境では、回転したプレビューのテストだけ飛ばします。

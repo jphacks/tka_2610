@@ -11,3 +11,5 @@ tools/home-rooms/.venv
 **/.DS_Store
 # 写真から 3D を作る道具（generator/）は本番の入れ物に入れない（docs/generator.md）
 generator
+# iPhone の撮影アプリと受信サーバー（capture/）も本番の入れ物に入れない
+capture

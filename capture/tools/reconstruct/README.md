@@ -11,7 +11,7 @@
 ## 使い方
 
 ```sh
-cd tools/reconstruct
+cd capture/tools/reconstruct     # tka_2610 の一番上から
 swift run -c release memoria-reconstruct <セッションのフォルダ | sessionId | sessionId の先頭> [オプション]
 
 # 例：先頭 4 文字で指定して、速いプレビューを作る
@@ -22,7 +22,7 @@ swift run -c release memoria-reconstruct 844B --frames ref-2,none --masks off --
 
 | オプション | 値（既定） | 意味 |
 |---|---|---|
-| `--data-dir` | フォルダ（今のフォルダから上へ探した `captures/`、無ければリポジトリの `captures/`） | 受信フォルダ |
+| `--data-dir` | フォルダ（今のフォルダから上へ探した `captures/`、無ければ `capture/captures/`） | 受信フォルダ |
 | `--detail` | `preview` `reduced` `medium` `full` `raw`（`medium`） | モデルの細かさ。`preview` は数秒、`medium` で十数秒〜（写真の枚数しだい） |
 | `--masks` | `auto` `on` `off`（`auto`） | `auto`：`mask.status` が `confirmed`、または `candidate` で `check.status` が `ok`（`check` が無い前の版も使う）のマスクだけ渡す。`on`：ファイルのあるマスクを全部。`off`：渡さない。マスクを渡さない写真も、写真そのものは使う |
 | `--include` | `all` `good`（`all`） | `good`：方向が確定（`direction.confirmed`）・使えるマスク（`auto` の決まり）・置き換え済みでない写真だけ |
