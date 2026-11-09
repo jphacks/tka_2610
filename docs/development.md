@@ -361,6 +361,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 │   │   ├── media.rs       写真の処理
 │   │   ├── glb.rs         写真から GLB を生成（仮の実装）・GLB の実寸を測る
 │   │   ├── generator.rs   写真から 3D を作る（試験中。generator/ の kt auto を動かす。docs/generator.md）
+│   │   ├── capture.rs     iPhone で撮った写真（capture/ の受信フォルダ）の一覧と、kt に渡す写真の選び方
 │   │   └── testdata/      テストの表（置き方の総当たり表 placement-cases.json・共有の DB の配置）
 │   ├── migrations/        DB マイグレーション（起動時に自動で実行）
 │   └── static/
@@ -379,6 +380,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 │       ├── styles/        2 か所以上で使うスタイル
 │       └── nav.ts         画面遷移のアニメーション
 ├── generator/             写真から 3D を作る Python の道具 kt（試験中。手元の PC だけ。説明は README.md）
+├── capture/               iPhone で作品を撮るアプリと Mac の受信サーバー・3D を作るツール（試験中。説明は README.md）
 ├── tools/
 │   ├── home-rooms/        開発用の建物 GLB（static/models/rooms/）を作る Python のスクリプトと確認のスクリプト（説明は README.md）
 │   └── home-thumbs/       模様替えの「追加 → 家具」に出す家具の画像（static/home/thumbs/）を、家具の GLB から Blender で撮るスクリプト
@@ -559,6 +561,7 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | `KT_GENERATOR_DIR` | リポジトリの `generator/`（ビルドした場所から辿る） | `kt.sh`（Windows は `kt.ps1`）と `.venv` のあるフォルダ |
 | `KT_GENERATOR_TIMEOUT_SECS` | `900` | 1 回の生成の上限（秒） |
 | `KT_GENERATOR_AI_MODEL` | `sonnet` | `kt auto` の `--ai-model` |
+| `CAPTURE_DATA_DIR` | リポジトリの `capture/captures` | iPhone の撮影アプリ（`capture/`）で撮った写真の受信フォルダ（受信サーバーの `--data-dir`）。`KT_GENERATOR_ENABLED=1` のときだけ読む |
 
 ## API
 
@@ -582,7 +585,8 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | PATCH / DELETE | `/api/artworks/:id/memories/:memory_id` | おもいでのひとことを変える（`{ "caption": "…" }`）・消す（ファイルも消える） |
 | POST / DELETE | `/api/artworks/:id/display` | おうちに飾る・飾るのをやめる。POST の本文は任意で `{ "room_id"?, "parent_id"?, "surface"?, "position"?, "rotation_y"? }`（`surface` は `parent_id` と一緒に使う）。`room_id` はおへやの id（前の版の Web が送る `hub` は省いたのと同じ）。`room_id` を省くと、作品の年齢のおへやを 1 階から探して、空いている棚や机に自動で置く（作品の実寸で空きを探す。その年齢のおへやが 1 つも無ければ 1 階を作る）。全部いっぱいなら 409（「4 さいのおへやがいっぱいです。…」）。`room_id` を付けると、そのおへやの家具だけを探し、空きが無ければ 409。作品の年齢と違うおへやは 400。別のおへやに飾っていた作品は、そこから外して移す。`position` を付けて置き場所を決めるときは、`room_id` も要る（無いと 400）。出入口のある部屋では、置いた作品が出入口の前にかかると 400（今の家には出入口が無い） |
 | GET | `/api/generator` | 写真から 3D を作れるか `{"enabled": true\|false}`（試験中。[generator.md](generator.md)） |
-| POST | `/api/artworks/:id/generate` | 写真から 3D を作り始める（multipart。`photos` 1〜8 枚・`size_cm`）。202 で job を返す。使えないときは 404、ほかの作品を作っている途中は 409 |
+| POST | `/api/artworks/:id/generate` | 写真から 3D を作り始める（multipart。`photos` 1〜8 枚か、iPhone の撮影の `capture_session`・`size_cm`）。202 で job を返す。使えないときは 404、ほかの作品を作っている途中は 409 |
+| GET | `/api/capture/sessions` | iPhone で撮った撮影の一覧（試験中。`capture/`。写真から 3D を作るときに選ぶ）。使えないときは 404 |
 | GET | `/api/generator/jobs/:job_id` | 写真から 3D を作る job の様子（`status` は `running`・`done`・`failed`、`error`、`elapsed_secs`）。使えないとき・知らない job は 404 |
 | GET | `/media/*` | 生成した画像・サムネイル・GLB、おもいでのファイル（`memories/`。Range に対応）と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |

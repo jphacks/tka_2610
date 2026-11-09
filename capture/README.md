@@ -36,7 +36,7 @@ iPhone（ios/）── Wi-Fi ──▶ 受信サーバー（receiver/）──�
    python3 receiver/memoria_receiver.py serve --port 8766
    ```
 
-   既定のポート 8765 は、`generator/` の Katachi の画面（`http://127.0.0.1:8765`）と同じです。両方を動かすときは `--port` で別の番号にします。
+   既定のポート 8765 は、`generator/` が使う Katachi Loop Studio の画面（`http://127.0.0.1:8765`）と同じです。両方を動かすときは `--port` で別の番号にします。
 2. iPhone のアプリを Xcode で入れる（`ios/MemoriaCapture.xcodeproj`。署名のチーム `DEVELOPMENT_TEAM` は自分のものに変える）。作品を撮って、送信の画面から Mac へ送る（ペアリングコードは受信サーバーが表示する）。
 3. アプリ（tka_2610）のサーバーを `KT_GENERATOR_ENABLED=1` で起動し、作品の詳細の「写真から 3D を作る」で「iPhone で撮った写真から」を選ぶ。
 
