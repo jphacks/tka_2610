@@ -301,6 +301,8 @@ export interface CatalogAsset {
   name_ja: string
   /** GLB の URL（/home-assets/modules/〇〇.glb） */
   file_url: string
+  /** 追加のシートに出す画像の URL（/home-assets/thumbs/〇〇.webp）。古いサーバーには無い */
+  thumb_url?: string
   category: string
   /** 'floor'（床に置く）か 'wall'（壁に掛ける。原点は背面の底の中心で、背面を壁に付ける。position の y が底面の高さ） */
   placement: 'floor' | 'wall'

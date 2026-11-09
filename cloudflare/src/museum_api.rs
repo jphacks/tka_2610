@@ -201,6 +201,8 @@ pub struct AssetView {
     name: &'static str,
     name_ja: &'static str,
     file_url: String,
+    /// 追加のシートに出す家具の画像 (tools/home-thumbs/render_thumbs.py が GLB から撮る)
+    thumb_url: String,
     category: &'static str,
     /// "floor" (床に置く) か "wall" (壁に掛ける。原点が背面の底の中心で、背面を壁に付ける)
     placement: &'static str,
@@ -341,6 +343,7 @@ pub(crate) static CATALOG_VIEW: LazyLock<CatalogView> = LazyLock::new(|| {
                 name: &a.name,
                 name_ja: &a.name_ja,
                 file_url: format!("{HOME_ASSETS}/modules/{}", a.file_name()),
+                thumb_url: format!("{HOME_ASSETS}/thumbs/{}.webp", a.id),
                 category: &a.category,
                 placement: &a.placement,
                 mount_height: a.mount_height,

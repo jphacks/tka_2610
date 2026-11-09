@@ -151,7 +151,7 @@
   display: grid;
   align-content: start;
   gap: 2px;
-  padding: 12px 14px;
+  padding: 10px 12px 12px;
   border-radius: 14px;
   background: var(--surface);
   box-shadow: inset 0 0 0 0.5px var(--line);
@@ -165,9 +165,27 @@
   letter-spacing: 0.03em;
 }
 
-.edit-furniture-item .size {
-  font-size: 12px;
-  color: var(--ink-2);
+/* 家具の画像（背景は透明なので、淡い台の上に載せる） */
+.edit-furniture-item .pic {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+
+.edit-furniture-item .pic img {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.edit-furniture-item .pic[data-state='loaded'] img {
+  opacity: 1;
 }
 
 /* 天板に作品を置ける家具の印 */
