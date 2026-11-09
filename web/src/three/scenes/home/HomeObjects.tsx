@@ -42,13 +42,6 @@ import { FittedModel } from '../models'
 import { FLOOR_ART_FIT, HUB, WALL_ART_FIT, artSizeOf, displayScale, roomOrigin, surfaceOf } from './placement'
 import './HomeObjects.css'
 
-/**
- * 鑑賞モード（テクスチャが WALK_ART_TEXTURE）で置く作品の数の上限。スマホなど（指で操作する端末）は 6、それ以外は全部。
- * おへや・ホーム・模様替え（ROOM_ART_TEXTURE）は、テクスチャを縮めて 1 点 10 MB ほどになったので、上限なしで全部置く
- * （上限があると、カメラを回すたびに近い 6 点が入れ替わり、作品が出たり消えたりして見える）
- */
-const WALK_MAX_ARTWORKS =
-  typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 6 : Infinity
 /** カメラがこれ以上（m）動いたら、近い作品を選び直す */
 const RESELECT_DISTANCE = 0.5
 
@@ -179,10 +172,13 @@ function FurnitureModel({ url, onMount }: { url: string; onMount: () => void }) 
   return <primitive object={object} />
 }
 
-/** おへやの中の作品のテクスチャの上限（px）。HomeObjects の artTextureSize の既定値 */
+/**
+ * おへやの中の作品のテクスチャの上限（px）。HomeObjects の artTextureSize の既定値。
+ * 縮めると作品 1 点が 10 MB ほどになるので、どの画面（スマホの鑑賞モードも）でも作品を全部置ける。
+ * 以前は、スマホではカメラに近い 6 点だけを置いていたが、カメラを回すと作品が出たり消えたりし、
+ * 鑑賞モードでは歩くたびに入れ替わって、そのたびに当たり判定・影・映り込みを作り直すので、ひどくカクついた
+ */
 const ROOM_ART_TEXTURE = 256
-/** 鑑賞モード（近くで見る）の作品のテクスチャの上限（px） */
-export const WALK_ART_TEXTURE = 512
 
 export function HomeObjects({
   layout,
@@ -191,7 +187,7 @@ export function HomeObjects({
   house,
   onSelect,
   onReady,
-  maxArtworks: maxArtworksProp,
+  maxArtworks = Infinity,
   onObjectPointerDown,
   previewTransform,
   memoryBadges = false,
@@ -207,7 +203,7 @@ export function HomeObjects({
   onSelect?: (artworkId: string) => void
   /** 家具や作品の GLB が載った・外れたときと、置いた物の位置・向きが変わったとき（1 回にまとめて呼ぶ） */
   onReady?: () => void
-  /** 置く作品の数の上限（カメラに近い順）。既定は、鑑賞モードのテクスチャ（WALK_ART_TEXTURE 以上）ならスマホなどで 6、それ以外は全部 */
+  /** 置く作品の数の上限（カメラに近い順）。既定は全部 */
   maxArtworks?: number
   /** 模様替えモード：家具・作品を押したとき（object id）。渡すと物ごとにポインタの当たり判定をする */
   onObjectPointerDown?: (objectId: string, event: ThreeEvent<PointerEvent>) => void
@@ -217,8 +213,7 @@ export function HomeObjects({
   memoryBadges?: boolean
   /**
    * 作品のテクスチャの長い辺の上限（px）。おへやの中では作品は小さく映るので、縮めて GPU のメモリを抑える
-   * （元の 768px のままだと、作品 1 点で 60 MB ほどになり、スマホのブラウザが落ちる。artModels.ts）。
-   * 近くで見る鑑賞モードは大きめにする
+   * （元の 768px のままだと、作品 1 点で 60 MB ほどになり、スマホのブラウザが落ちる。artModels.ts）
    */
   artTextureSize?: number
 }) {
@@ -256,7 +251,6 @@ export function HomeObjects({
     notify()
   }, [transformsKey, notify])
 
-  const maxArtworks = maxArtworksProp ?? (artTextureSize >= WALK_ART_TEXTURE ? WALK_MAX_ARTWORKS : Infinity)
   const nearest = useNearestArtworks(placed, maxArtworks)
   // ドラッグ中の作品は、親・面・位置・向きを仮の値に差し替えてから家具ごとに分ける（載せ換え中の作品を新しい家具の下に描くため）
   const shown = (nearest ? placed.filter((p) => nearest.has(p.object.id)) : placed).map((p) => withPreview(p, previewTransform))

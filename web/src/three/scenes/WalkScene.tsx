@@ -47,7 +47,7 @@ import { PerformanceMonitor } from '@react-three/drei'
 import * as THREE from 'three'
 import type { HouseRoom, Museum, RoomId } from '../../api'
 import { getWalkPose, saveWalkPose } from '../walkPose'
-import { HomeObjects, WALK_ART_TEXTURE } from './home/HomeObjects'
+import { HomeObjects } from './home/HomeObjects'
 import { HouseShells, useShells } from './home/HouseShells'
 import { houseBounds, houseRoomsOf, wallThicknessOf } from './home/house'
 import { ArtworkPicker } from './walk/ArtworkPicker'
@@ -296,7 +296,7 @@ export function WalkScene({
       <group ref={stageRef}>
         {/* 建物（部屋ごと）と家具・作品。当たり判定はこのグループ全体から作る */}
         <HouseShells museum={museum} walk onLoaded={onStageLoaded} />
-        <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onReady={rebuild} artTextureSize={WALK_ART_TEXTURE} />
+        <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onReady={rebuild} />
       </group>
       <Ceilings rooms={rooms} />
       <ArtworkSpotlights slots={museum.slots} player={player} maxLights={lite ? LITE_ARTWORK_LIGHTS : undefined} />
