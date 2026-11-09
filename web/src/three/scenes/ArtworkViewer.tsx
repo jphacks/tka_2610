@@ -32,8 +32,14 @@ export function ArtworkViewerScene({
   onInteract,
   onZoomChange,
   resetKey = 0,
+  paused = false,
 }: {
   modelUrl: string
+  /**
+   * true のあいだは描かない（モデルの読み込みと置き方の計算は進める）。画面の移動のアニメーション中に、
+   * はじめの 1 コマの重い処理（テクスチャを GPU に送る・シェーダーを作る）でメインスレッドを止めないため
+   */
+  paused?: boolean
   /** モデルを置いて、カメラを合わせ終わったとき */
   onReady?: () => void
   /** はじめて触ったとき（説明の文字を消すのに使う） */
@@ -47,6 +53,7 @@ export function ArtworkViewerScene({
   return (
     <Canvas
       dpr={[1, 2]}
+      frameloop={paused ? 'never' : 'always'}
       camera={{ position: [0, 0.8, 4], fov: FOV, near: 0.05, far: 50 }}
       // preserveDrawingBuffer：画面を離れるときの遷移（View Transitions）が、描いた 3D をそのまま写せるように
       // （無いと、写す瞬間にキャンバスが空になって、作品が消えてから画面が動いて見える）

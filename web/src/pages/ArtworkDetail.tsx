@@ -34,7 +34,7 @@ import {
   RainbowIcon,
   ShareIcon,
 } from '../icons'
-import { useNav } from '../nav'
+import { useNav, useNavSettled } from '../nav'
 import { ArtworkViewerScene, isTouchDevice, warmUp3D } from '../three'
 import './ArtworkDetail.css'
 
@@ -55,11 +55,17 @@ export default function ArtworkDetail() {
   const artwork = detail.data?.artwork
   const related = detail.data?.related ?? []
 
-  // 上の 3D：開いたらすぐ置く（画面の移動を待つと、そのぶん 3D が出るのが遅れる。移動のアニメーションは
-  // View Transitions が合成側で動かすので、ここで 3D を作ってもすべりは止まらない）。読めなければ写真を出す。
-  // 戻るときも外さない（外すと、遷移が写す前に 3D が消えてしまう）
+  // 上の 3D：開いたらすぐ置いて、モデルの読み込みを始める（画面の移動を待つと、そのぶん 3D が出るのが遅れる）。
+  // ただし描くのは、画面の移動のアニメーションが終わってから（entered）。はじめの 1 コマ（テクスチャを GPU に送る・
+  // シェーダーを作る・まわりの光と影を描く）はメインスレッドを 100 ms ほど（スマホではもっと）止めるので、
+  // 移動の途中で描くと、すべりがカクッと止まる。本番ではモデルや詳細の API の返事が移動の途中に届くので、特に目立つ。
+  // 読めなければ写真を出す。戻るときも外さない（外すと、遷移が写す前に 3D が消えてしまう）
+  const settled = useNavSettled()
+  const [entered, setEntered] = useState(settled)
+  useEffect(() => { if (settled) setEntered(true) }, [settled])
   const [view, setView] = useState<'3d' | 'photo'>('3d')
-  const [viewerReady, setViewerReady] = useState(false)
+  const [rawViewerReady, setViewerReady] = useState(false)
+  const viewerReady = rawViewerReady && entered
   const [viewerFailed, setViewerFailed] = useState(false)
   const [touched, setTouched] = useState(false)
   useEffect(() => { setViewerReady(false); setViewerFailed(false); setTouched(false) }, [artwork?.model_url])
@@ -210,6 +216,7 @@ export default function ArtworkDetail() {
                 <ArtworkViewerScene
                   key={artwork.model_url}
                   modelUrl={artwork.model_url}
+                  paused={!entered}
                   onReady={onViewerReady}
                   onInteract={onViewerTouch}
                   onZoomChange={setZoomed}
