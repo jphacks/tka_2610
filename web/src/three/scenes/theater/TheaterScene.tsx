@@ -397,7 +397,7 @@ function World(props: TheaterSceneProps & { kit: StageKit }) {
           return (
             <group key={s.artwork.id} ref={bindSlot(i)}>
               <group ref={bindArt(i)}>
-                <ShowcaseArtwork artwork={s.artwork} onReady={props.onModelReady} onSelect={props.onArtwork} />
+                <ShowcaseArtwork artwork={s.artwork} onReady={props.onModelReady} onSelect={props.onArtwork} quietLoading />
               </group>
               {isCurrent && s.media.map((slot, m) => {
                 const dims = standSize(slot.memory, view.portrait ? 0.92 : 1.35)
