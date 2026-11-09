@@ -61,9 +61,11 @@ const yearOf = (key: string) => key.slice(0, 4)
 const SETTLE_MS = 140
 
 /**
- * 月のダイヤル。横にスクロールして、真ん中の枠（.month-lens）に止まった項目を選ぶ（onChange）。押すと、その項目を選ぶ。
+ * 月のダイヤル。横にスクロールして、真ん中の枠（.month-lens）に入った項目を選ぶ（onChange）。止まるのを待たず、ドラッグ中でも
+ * 枠に入ったところで選ぶ。押すと、その項目を選ぶ。
  * 項目は 1 つずつぴたっと止まり（scroll-snap）、真ん中から離れるほど小さく薄く出す（--d に真ん中からの近さを入れる）。
- * value が変わったら（年を変えた・押した・URL で開いた）、その項目を真ん中へすべらせる。そのスクロールでは選び直さない
+ * value が変わったら（年を変えた・押した・URL で開いた）、その項目を真ん中へすべらせる。そのスクロールの途中では選び直さない。
+ * スクロールで選んだ項目は、指の動きとぶつかるので、真ん中へすべらせない
  */
 function MonthScroller({
   items,
@@ -75,8 +77,10 @@ function MonthScroller({
   onChange: (key: string) => void
 }) {
   const track = useRef<HTMLDivElement>(null)
-  // 自分で真ん中へ動かしている間は、止まっても選び直さない
+  // 自分で真ん中へ動かしている間は、通り過ぎる項目も、止まったところも選ばない
   const steering = useRef(false)
+  // スクロールで選んだ項目。value がこれになっても、真ん中へすべらせない（指で動かしている最中なので）
+  const scrolled = useRef<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const first = useRef(true)
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -100,6 +104,12 @@ function MonthScroller({
     const el = track.current
     const child = el?.children[items.findIndex((it) => it.key === value)] as HTMLElement | undefined
     if (!el || !child) return
+    if (value === scrolled.current) {
+      // 1 回だけ飛ばす（このあと年を変えて同じ項目に戻ったときは、すべらせる）
+      scrolled.current = null
+      paint()
+      return
+    }
     const left = child.offsetLeft + child.offsetWidth / 2 - el.clientWidth / 2
     if (Math.abs(el.scrollLeft - left) >= 1) {
       steering.current = true
@@ -110,14 +120,10 @@ function MonthScroller({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 並び（keys）が変わったときだけ
   }, [value, keys, paint])
 
-  /** スクロールが止まった：自分で動かしたのでなければ、真ん中にいちばん近い項目を選ぶ */
-  const settle = () => {
+  /** 真ん中にいちばん近い項目を選ぶ（自分で真ん中へ動かしている間は選ばない） */
+  const pickCenter = () => {
     const el = track.current
-    if (!el) return
-    if (steering.current) {
-      steering.current = false
-      return
-    }
+    if (!el || steering.current) return
     const center = el.scrollLeft + el.clientWidth / 2
     let best = 0
     let bestDistance = Infinity
@@ -128,19 +134,39 @@ function MonthScroller({
     })
     const { items: list, value: current, onChange: change } = latest.current
     const key = list[best]?.key
-    if (key && key !== current) change(key)
+    if (key && key !== current) {
+      scrolled.current = key
+      change(key)
+    }
+  }
+
+  /** スクロールが止まった：自分で動かしていたなら終わり。そうでなければ、念のため真ん中の項目を選び直す */
+  const settle = () => {
+    if (steering.current) {
+      steering.current = false
+      return
+    }
+    pickCenter()
   }
 
   const onScroll = () => {
-    requestAnimationFrame(paint)
+    requestAnimationFrame(() => {
+      paint()
+      pickCenter()
+    })
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(settle, SETTLE_MS)
+  }
+
+  /** 指・マウス・ホイールで動かし始めたら、自分で動かしている途中でも、そこからは指の動きで選ぶ */
+  const takeOver = () => {
+    steering.current = false
   }
 
   return (
     <div className="month-scroller">
       <div className="month-lens" aria-hidden="true" />
-      <div ref={track} className="month-track" role="tablist" aria-label="作った月" onScroll={onScroll}>
+      <div ref={track} className="month-track" role="tablist" aria-label="作った月" onScroll={onScroll} onPointerDown={takeOver} onTouchStart={takeOver} onWheel={takeOver}>
         {items.map((it) => {
           const selected = it.key === value
           return (
@@ -150,7 +176,10 @@ function MonthScroller({
               role="tab"
               aria-selected={selected}
               className={`month-item${selected ? ' selected' : ''}`}
-              onClick={() => onChange(it.key)}
+              onClick={() => {
+                scrolled.current = null
+                onChange(it.key)
+              }}
             >
               <span className="month-item-name num">{it.name}</span>
               <span className="month-item-count num">{it.count}点</span>
