@@ -111,7 +111,8 @@ export interface ArtworkDetail {
 /** 作品一覧の絞り込み条件（GET /api/artworks のクエリ） */
 export interface ListParams {
   category?: Category | 'all'
-  sort?: 'recent' | 'made'
+  /** recent：登録の新しい順・made：作成日の新しい順・made_asc：作成日の古い順 */
+  sort?: 'recent' | 'made' | 'made_asc'
   limit?: number
   /** アルバムの id（UUID か "favorites"）。そのアルバムの作品だけ */
   album?: string

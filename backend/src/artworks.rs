@@ -425,6 +425,8 @@ pub async fn list_artworks(
 
     let order = match query.sort.as_deref() {
         Some("made") => "made_on DESC, created_at DESC",
+        // 作成日の古い順 (作品一覧の「古い順」)
+        Some("made_asc") => "made_on ASC, created_at ASC",
         _ => "created_at DESC",
     };
     let limit = query.limit.unwrap_or(200).clamp(1, 500);
