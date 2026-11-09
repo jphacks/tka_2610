@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useCreateArtwork, useMuseum } from '../api'
 import { ArtworkForm, Busy, NavBar, Screen } from '../components'
 import { useNav } from '../nav'
-import { shellUrlsOf, warmUp3D } from '../three'
+import { shellUrlsOf, warmUp3D, warmUpArtwork } from '../three'
 
 export default function AddArtwork() {
   const nav = useNav()
@@ -35,7 +35,7 @@ export default function AddArtwork() {
           onSubmit={(form) =>
             create.mutate(form, {
               onSuccess: (artwork) => {
-                warmUp3D(null, [artwork.model_url])
+                warmUpArtwork(artwork.model_url)
                 nav.replace(`/artworks/${artwork.id}/preview`, 'fade')
               },
             })

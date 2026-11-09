@@ -87,6 +87,13 @@ export function warmUp3D(modelUrls: string | string[] | null | undefined, extraM
   })
 }
 
+/** 作品の詳細で、作品の GLB（元の大きさのテクスチャ）と 3D のコードを先にダウンロードしておく */
+export function warmUpArtwork(modelUrl: string) {
+  idle(() => {
+    load().then((m) => m.preloadArtwork(modelUrl))
+  })
+}
+
 /** 配置 JSON で使っている家具の GLB の URL（重複なし）。warmUp3D に渡す */
 export function furnitureUrlsOf(museum: Museum): string[] {
   const urls = new Map(museum.catalog.assets.map((a) => [a.id, a.file_url]))
