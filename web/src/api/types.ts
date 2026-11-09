@@ -610,3 +610,14 @@ export interface TheaterData {
   available: { first: string | null; last: string | null; today: string; presets: TheaterPreset[] }
   scenes: TheaterScene[]
 }
+
+/** 写真から 3D を作る（試験中）の job。Rust: generator.rs の JobDto（GET /api/generator/jobs/{job_id}） */
+export interface GeneratorJob {
+  job_id: string
+  artwork_id: string
+  status: 'running' | 'done' | 'failed'
+  /** 失敗したときの短い説明（日本語） */
+  error: string | null
+  /** 始めてからの秒数（終わった job は終わるまでの秒数） */
+  elapsed_secs: number
+}

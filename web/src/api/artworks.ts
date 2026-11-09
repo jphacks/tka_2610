@@ -80,7 +80,7 @@ export function useGenerateMemoFromImage() {
   })
 }
 
-function useInvalidate() {
+export function useInvalidate() {
   const client = useQueryClient()
   return (extra: QueryKey[] = []) => {
     return Promise.all([

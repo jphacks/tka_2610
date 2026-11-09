@@ -9,6 +9,7 @@
 //   artworks.ts  作品の一覧・詳細・登録・編集・削除・お気に入り・飾る
 //   memories.ts  作品のおもいで（写真・動画・声の記録）の追加・ひとこと・削除
 //   albums.ts    アルバム（作品を自分で好きなグループにまとめる）の一覧・作成・名前の変更・削除・作品の出し入れ
+//   generator.ts 写真から 3D を作る（試験中。使えるサーバーのときだけ）
 
 export type {
   AgeRoom,
@@ -29,6 +30,7 @@ export type {
   FloorFinish,
   FloorView,
   FurnitureObject,
+  GeneratorJob,
   HomeCatalog,
   HomeMaterial,
   HomeTheme,
@@ -72,6 +74,8 @@ export {
   useGenerateMemoFromImage,
   useUpdateArtwork,
 } from './artworks'
+
+export { GENERATOR_LIMITS, useGeneratorEnabled, useGeneratorJob, useRefreshAfterGenerate, useStartGenerate } from './generator'
 
 export { FAVORITES_ALBUM, useAlbum, useAlbumArtworks, useAlbums, useCreateAlbum, useDeleteAlbum, useRenameAlbum } from './albums'
 

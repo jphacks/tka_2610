@@ -1,0 +1,40 @@
+/* ---------- 写真から 3D を作る（試験中。作品の詳細） ---------- */
+
+.model-generator {
+  margin-top: 28px;
+}
+
+.model-generator > .hint {
+  margin: 0 2px 14px;
+}
+
+.model-generator > .btn {
+  width: 100%;
+}
+
+.model-generator-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 2px 14px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.model-generator-error {
+  margin: 0 2px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--red);
+}
+
+.model-generator-form {
+  margin-top: 14px;
+  gap: 18px;
+}
+
+.model-generator-file {
+  width: 100%;
+  font-size: 14px;
+  color: var(--ink-2);
+}

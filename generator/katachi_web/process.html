@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Katachi 工程ビューア</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/process.css"><script type="module" src="/process.js"></script></head>
+<body class="process-page">
+<header class="top"><a class="brand" href="/"><span class="logo">K</span><span>Katachi<span class="brand-sub">PROCESS VIEWER</span></span></a><div class="top-right"><span class="badge">READ ONLY</span><a class="quiet-link" href="/">&larr; スタジオに戻る</a></div></header>
+<main class="pv-main">
+<div class="pv-runbar"><label class="label" for="pv-run">表示する実行</label><select id="pv-run"></select><span id="pv-run-meta" class="pv-run-meta"></span></div>
+<div class="pv-layout">
+<aside class="panel pv-steps"><div class="section-title"><span class="step">01</span><h2>工程</h2></div><ol id="pv-step-list" class="pv-step-list"></ol><details class="pv-trace"><summary>実行ログ</summary><div id="pv-events" class="pv-events"></div></details></aside>
+<section class="panel pv-stage-panel">
+<div class="section-title stage-title"><div class="row"><span class="step">02</span><h2 id="pv-step-title">読み込み中…</h2></div><span id="pv-step-group" class="pill">—</span></div>
+<div class="pv-stage"><canvas id="pv-viewer" aria-label="工程の3D表示"></canvas><canvas id="pv-overlay" aria-hidden="true"></canvas><div id="pv-gallery" class="pv-gallery" hidden></div><div id="pv-message" class="stage-message">読み込み中…</div><div id="pv-stage-hint" class="stage-overlay"><span id="pv-step-sub"></span><span>ドラッグで回転 &middot; ホイールで拡大</span></div></div>
+<div class="pv-controls"><div class="segmented"><button id="pv-prev" title="前の工程 (←)">&larr; 前へ</button><button id="pv-play" title="自動再生 (Space)">&#9654; 再生</button><button id="pv-next" title="次の工程 (→)">次へ &rarr;</button></div><input id="pv-slider" type="range" min="0" max="0" value="0" aria-label="工程の位置"><span id="pv-count" class="pv-count">0 / 0</span></div>
+<div id="pv-3d-controls" class="pv-controls pv-3d-controls"><div class="segmented"><button id="pv-wire">ワイヤー</button><button id="pv-spin">回転</button><button id="pv-reset">視点リセット</button></div><div class="segmented"><button data-view="front">正面</button><button data-view="right">側面</button><button data-view="back">背面</button><button data-view="top">上</button></div></div>
+</section>
+<aside class="panel pv-detail"><div class="section-title"><span class="step">03</span><h2>この工程の中身</h2></div><div id="pv-detail"></div></aside>
+</div>
+</main>
+<footer><span>保存済みの実行結果を読むだけのページです。Katachi の処理や結果ファイルは変更しません。</span><span>工程はレシピと保存データから組み直した表示です。生成中の録画ではありません。</span></footer>
+</body>
+</html>
