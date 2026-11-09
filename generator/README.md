@@ -87,7 +87,7 @@ Windows は PowerShell で `.\setup.ps1 [-KatachiPath <フォルダ>]`・`.\setu
 
 同じ面の写真を 2 枚以上渡すと、1 枚目を使い、指やテカりで隠れた所を 2 枚目以降から補います。
 
-そのほか、AI が Katachi のレシピを書くための道具（`kt inspect face|edge|views`・`kt recipe`）と、Katachi の画面に工程ビューアを足す `kt viewer install|status|uninstall` があります（`./kt.sh --help`）。
+そのほか、AI が Katachi のレシピを書くための道具（`kt inspect face|edge|views`・`kt recipe`）と、Katachi の画面に工程ビューアを足す `kt viewer install|status|uninstall` があります（`./kt.sh --help`）。Katachi の画面は `http://127.0.0.1:8765` で、iPhone の撮影アプリの受信サーバー（`capture/receiver`）の既定のポートと同じです。両方を動かすときは、受信サーバーを `--port 8766` のように別の番号で起動してください。
 
 ## 撮影のコツ
 

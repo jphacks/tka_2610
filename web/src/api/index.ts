@@ -26,6 +26,7 @@ export type {
   CatalogAsset,
   CatalogSurface,
   Category,
+  CaptureSession,
   CategoryCount,
   FloorFinish,
   FloorView,
@@ -75,7 +76,7 @@ export {
   useUpdateArtwork,
 } from './artworks'
 
-export { GENERATOR_LIMITS, useGeneratorEnabled, useGeneratorJob, useRefreshAfterGenerate, useStartGenerate } from './generator'
+export { GENERATOR_LIMITS, useCaptureSessions, useGeneratorEnabled, useGeneratorJob, useRefreshAfterGenerate, useStartGenerate } from './generator'
 
 export { FAVORITES_ALBUM, useAlbum, useAlbumArtworks, useAlbums, useCreateAlbum, useDeleteAlbum, useRenameAlbum } from './albums'
 

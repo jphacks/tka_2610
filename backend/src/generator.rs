@@ -27,7 +27,7 @@ use tokio::{fs, io::AsyncWriteExt, process::Command};
 use uuid::Uuid;
 
 use crate::{
-    artworks,
+    artworks, capture,
     error::{AppError, AppResult},
     state::AppState,
 };
@@ -82,11 +82,18 @@ pub struct Config {
     pub timeout: Duration,
     /// kt auto の --ai-model
     pub ai_model: String,
+    /// iPhone で撮った写真の受信フォルダ (capture/receiver の --data-dir。中の sessions/ を読む。capture.rs)
+    pub capture_dir: PathBuf,
 }
 
 /// 環境変数から設定を作る。`Ok(None)` は使わない (KT_GENERATOR_ENABLED が 1 でない)、
-/// `Err` は使うつもりだが準備ができていない (理由)。`default_dir` は KT_GENERATOR_DIR が無いときのフォルダ
-pub fn config_from(var: impl Fn(&str) -> Option<String>, default_dir: &FsPath) -> Result<Option<Config>, String> {
+/// `Err` は使うつもりだが準備ができていない (理由)。`default_dir` は KT_GENERATOR_DIR が無いときのフォルダ、
+/// `default_capture_dir` は CAPTURE_DATA_DIR が無いときの受信フォルダ (無くてもよい。そのときは撮影の一覧が空)
+pub fn config_from(
+    var: impl Fn(&str) -> Option<String>,
+    default_dir: &FsPath,
+    default_capture_dir: &FsPath,
+) -> Result<Option<Config>, String> {
     if var("KT_GENERATOR_ENABLED").as_deref().map(str::trim) != Some("1") {
         return Ok(None);
     }
@@ -115,7 +122,12 @@ pub fn config_from(var: impl Fn(&str) -> Option<String>, default_dir: &FsPath) -
         .map(|m| m.trim().to_string())
         .filter(|m| !m.is_empty())
         .unwrap_or_else(|| DEFAULT_AI_MODEL.to_string());
-    Ok(Some(Config { dir, timeout: Duration::from_secs(timeout), ai_model }))
+    let capture_dir = var("CAPTURE_DATA_DIR")
+        .map(|d| d.trim().to_string())
+        .filter(|d| !d.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_capture_dir.to_path_buf());
+    Ok(Some(Config { dir, timeout: Duration::from_secs(timeout), ai_model, capture_dir }))
 }
 
 // =============================
@@ -179,14 +191,15 @@ impl Generator {
     }
 
     /// 環境変数から作り、使えるかどうかを 1 行ログに出す
-    pub fn from_env(default_dir: &FsPath) -> Self {
-        let config = match config_from(|k| std::env::var(k).ok(), default_dir) {
+    pub fn from_env(default_dir: &FsPath, default_capture_dir: &FsPath) -> Self {
+        let config = match config_from(|k| std::env::var(k).ok(), default_dir, default_capture_dir) {
             Ok(Some(config)) => {
                 println!(
-                    "[Generator] enabled: {} (timeout {} s, ai model {})",
+                    "[Generator] enabled: {} (timeout {} s, ai model {}, iPhone captures {})",
                     config.dir.display(),
                     config.timeout.as_secs(),
-                    config.ai_model
+                    config.ai_model,
+                    config.capture_dir.display()
                 );
                 Some(config)
             }
@@ -204,6 +217,11 @@ impl Generator {
 
     pub fn enabled(&self) -> bool {
         self.config.is_some()
+    }
+
+    /// 使えるときの設定
+    pub fn config(&self) -> Option<&Config> {
+        self.config.as_ref()
     }
 
     fn lock(&self) -> MutexGuard<'_, Jobs> {
@@ -338,7 +356,8 @@ pub async fn job(State(state): State<AppState>, Path(job_id): Path<Uuid>) -> App
     state.generator.job(job_id).map(Json).ok_or_else(|| AppError::not_found("その生成の記録はありません"))
 }
 
-/// POST /api/artworks/{id}/generate (multipart: photos を 1〜8 枚、size_cm)。受け付けたら 202 で job を返す
+/// POST /api/artworks/{id}/generate (multipart: photos を 1〜8 枚か、iPhone の撮影の capture_session と、size_cm
+/// (撮影を選んだときは省ける))。受け付けたら 202 で job を返す
 pub async fn start(
     State(state): State<AppState>,
     Path(artwork_id): Path<Uuid>,
@@ -360,7 +379,7 @@ pub async fn start(
         .ok_or_else(|| AppError::conflict("ほかの作品の 3D を作っています。終わってから試してください"))?;
 
     let work = work_root().join(job_id.to_string());
-    let (photos, size) = match read_request(multipart, &work).await {
+    let (photos, size) = match read_request(multipart, &work, &config.capture_dir).await {
         Ok(read) => read,
         Err(error) => {
             remove_work(&work).await;
@@ -388,13 +407,22 @@ pub async fn start(
 }
 
 /// 写真を work/photos/ に書き、寸法を読む
-async fn read_request(mut multipart: Multipart, work: &FsPath) -> AppResult<(Vec<PathBuf>, Vec<f64>)> {
+/// 写真を work/photos/ に書き、寸法を読む。`capture_session` (iPhone で撮った撮影の id) があれば、送られた写真の代わりに
+/// その撮影から選んだ写真をまっすぐにして使い、寸法を省いたときは撮影の大きさを使う (capture.rs)
+async fn read_request(mut multipart: Multipart, work: &FsPath, capture_dir: &FsPath) -> AppResult<(Vec<PathBuf>, Vec<f64>)> {
     let photo_dir = work.join("photos");
     fs::create_dir_all(&photo_dir).await?;
     let mut photos = Vec::new();
     let mut size = None;
+    let mut capture_session = None;
     while let Some(mut field) = multipart.next_field().await? {
         match field.name().unwrap_or("") {
+            "capture_session" => {
+                let text = field.text().await?;
+                if !text.trim().is_empty() {
+                    capture_session = Some(capture::parse_session_id(&text).map_err(AppError::bad_request)?);
+                }
+            }
             "photos" => {
                 if photos.len() >= MAX_PHOTOS {
                     return Err(AppError::bad_request(format!("写真は {MAX_PHOTOS} 枚までです")));
@@ -406,6 +434,16 @@ async fn read_request(mut multipart: Multipart, work: &FsPath) -> AppResult<(Vec
             "size_cm" => size = Some(parse_size_cm(&field.text().await?).map_err(AppError::bad_request)?),
             _ => {}
         }
+    }
+    if let Some(session_id) = capture_session {
+        if !photos.is_empty() {
+            return Err(AppError::bad_request("写真を送るか、iPhone の撮影を選ぶか、どちらか 1 つにしてください"));
+        }
+        let (photos, session_size) = capture::prepare_photos(capture_dir, &session_id, MAX_PHOTOS, &photo_dir).await?;
+        let size = size
+            .or(session_size)
+            .ok_or_else(|| AppError::bad_request("この撮影には大きさがありません。大きさ (cm) を入れてください"))?;
+        return Ok((photos, size));
     }
     if photos.is_empty() {
         return Err(AppError::bad_request("写真を 1 枚以上選んでください"));
@@ -561,6 +599,10 @@ mod tests {
         move |k| map.get(k).cloned()
     }
 
+    fn no_capture() -> PathBuf {
+        std::env::temp_dir().join("memoria-generator-test-no-captures")
+    }
+
     fn temp_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("memoria-generator-test-{name}-{}", Uuid::new_v4().simple()));
         std::fs::create_dir_all(&dir).unwrap();
@@ -598,12 +640,12 @@ mod tests {
     #[test]
     fn config_is_off_by_default() {
         let dir = ready_dir();
-        assert_eq!(config_from(vars(&[]), &dir), Ok(None));
-        assert_eq!(config_from(vars(&[("KT_GENERATOR_ENABLED", "0")]), &dir), Ok(None));
-        assert_eq!(config_from(vars(&[("KT_GENERATOR_ENABLED", "true")]), &dir), Ok(None));
+        assert_eq!(config_from(vars(&[]), &dir, &no_capture()), Ok(None));
+        assert_eq!(config_from(vars(&[("KT_GENERATOR_ENABLED", "0")]), &dir, &no_capture()), Ok(None));
+        assert_eq!(config_from(vars(&[("KT_GENERATOR_ENABLED", "true")]), &dir, &no_capture()), Ok(None));
         // フォルダを指定しても、ENABLED が無ければ使わない
         let dir_str = dir.to_string_lossy().to_string();
-        assert_eq!(config_from(vars(&[("KT_GENERATOR_DIR", &dir_str)]), &dir), Ok(None));
+        assert_eq!(config_from(vars(&[("KT_GENERATOR_DIR", &dir_str)]), &dir, &no_capture()), Ok(None));
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -611,19 +653,20 @@ mod tests {
     fn config_needs_launcher_and_venv() {
         let missing = std::env::temp_dir().join(format!("memoria-generator-missing-{}", Uuid::new_v4().simple()));
         let on = [("KT_GENERATOR_ENABLED", "1")];
-        assert!(config_from(vars(&on), &missing).is_err());
+        assert!(config_from(vars(&on), &missing, &no_capture()).is_err());
 
         let empty = temp_dir("empty");
-        assert!(config_from(vars(&on), &empty).unwrap_err().contains(LAUNCHER));
+        assert!(config_from(vars(&on), &empty, &no_capture()).unwrap_err().contains(LAUNCHER));
         std::fs::write(empty.join(LAUNCHER), "").unwrap();
-        assert!(config_from(vars(&on), &empty).unwrap_err().contains(".venv"));
+        assert!(config_from(vars(&on), &empty, &no_capture()).unwrap_err().contains(".venv"));
         std::fs::remove_dir_all(empty).unwrap();
 
         let dir = ready_dir();
-        let config = config_from(vars(&on), &dir).unwrap().unwrap();
+        let config = config_from(vars(&on), &dir, &no_capture()).unwrap().unwrap();
         assert_eq!(config.dir, dir);
         assert_eq!(config.timeout, Duration::from_secs(DEFAULT_TIMEOUT_SECS));
         assert_eq!(config.ai_model, "sonnet");
+        assert_eq!(config.capture_dir, no_capture());
 
         // KT_GENERATOR_DIR が既定のフォルダより優先される
         let dir_str = dir.to_string_lossy().to_string();
@@ -633,14 +676,17 @@ mod tests {
                 ("KT_GENERATOR_DIR", &dir_str),
                 ("KT_GENERATOR_TIMEOUT_SECS", "60"),
                 ("KT_GENERATOR_AI_MODEL", "opus"),
+                ("CAPTURE_DATA_DIR", "/tmp/captures"),
             ]),
             &missing,
+            &no_capture(),
         )
         .unwrap()
         .unwrap();
         assert_eq!(config.dir, dir);
         assert_eq!(config.timeout, Duration::from_secs(60));
         assert_eq!(config.ai_model, "opus");
+        assert_eq!(config.capture_dir, PathBuf::from("/tmp/captures"));
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -704,6 +750,8 @@ mod tests {
         assert!(!status(State(state.clone())).await.enabled);
 
         let error = job(State(state.clone()), Path(Uuid::new_v4())).await.unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
+        let error = capture::sessions(State(state.clone())).await.unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
 
         let body = "--x\r\nContent-Disposition: form-data; name=\"size_cm\"\r\n\r\n10\r\n--x--\r\n";

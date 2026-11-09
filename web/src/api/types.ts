@@ -621,3 +621,18 @@ export interface GeneratorJob {
   /** 始めてからの秒数（終わった job は終わるまでの秒数） */
   elapsed_secs: number
 }
+
+/** iPhone で撮った写真（capture/ の受信サーバーが受け取った撮影）。Rust: capture.rs の SessionSummary（GET /api/capture/sessions） */
+export interface CaptureSession {
+  session_id: string
+  /** 作品名（空のこともある） */
+  title: string
+  created_at: string | null
+  /** 例: "2026年11月9日 11:53" */
+  created_label: string
+  photo_count: number
+  /** 方向の確定した、置き換え済みでない写真の数（3D を作るときはここから 8 枚まで選ぶ） */
+  usable_count: number
+  /** 作品の大きさ（cm。[高さ, 直径]）。分からなければ null */
+  size_cm: number[] | null
+}
