@@ -63,6 +63,12 @@ jobs:
     env:
       # Cloudflare のアカウント (kobadai)。秘密の値ではない。トークンは secrets の CLOUDFLARE_API_TOKEN
       CLOUDFLARE_ACCOUNT_ID: a45380a4740b90cdfcbba7b4667c0a40
+      # worker-build は wasm-bindgen と wasm-opt を GitHub の Releases から落とすが、504 で何度も失敗したので自分で用意する。
+      # wasm-bindgen は crates.io から (版は cloudflare/Cargo.toml の wasm-bindgen と同じにする)、
+      # wasm-opt は npm の binaryen から (cloudflare/package.json。worker-build 0.8.7 が使う版 132 と同じ)
+      WASM_BINDGEN_VERSION: 0.2.130
+      WASM_BINDGEN_BIN: wasm-bindgen
+      WASM_OPT_BIN: ${{ github.workspace }}/cloudflare/node_modules/.bin/wasm-opt
       DEPLOY: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.CLOUDFLARE_AUTO_DEPLOY != 'false')) }}
     steps:
       - uses: actions/checkout@v4
@@ -74,15 +80,18 @@ jobs:
           workspaces: |
             cloudflare
             cloudflare/prep
-      # worker-build は wasm-bindgen・wasm-opt・esbuild を GitHub の Releases から落として ~/.cache/worker-build に置く。
-      # Releases が 504 を返すことがあるので、一度落としたものを使い回す
+      # worker-build が落とす残りの道具 (esbuild。npm から) を使い回す
       - uses: actions/cache@v4
         with:
           path: ~/.cache/worker-build
           key: worker-build-0.8.7-${{ runner.os }}-${{ hashFiles('cloudflare/Cargo.lock') }}
           restore-keys: worker-build-0.8.7-${{ runner.os }}-
-      - name: worker-build を入れる
-        run: command -v worker-build || cargo install worker-build --version 0.8.7 --locked
+      - name: worker-build と wasm-bindgen を入れる
+        run: |
+          command -v worker-build || cargo install worker-build --version 0.8.7 --locked
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$WASM_BINDGEN_VERSION"; then
+            cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked --force
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
