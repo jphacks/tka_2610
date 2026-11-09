@@ -397,6 +397,8 @@ pub struct SessionSummary {
     pub session_id: String,
     pub title: String,
     pub created_at: Option<String>,
+    /// 撮った日時 (例: "2026年11月9日 11:53"。撮った場所の時刻)。分からなければ空
+    pub created_label: String,
     /// 写真の数
     pub photo_count: usize,
     /// 方位の確定した、置き換え済みでない写真の数 (3D を作るときはここから選ぶ)
@@ -411,6 +413,12 @@ impl SessionSummary {
             session_id: session.session_id.to_ascii_uppercase(),
             title: session.title.clone().unwrap_or_default(),
             created_at: session.created_at.clone(),
+            created_label: session
+                .created_at
+                .as_deref()
+                .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
+                .map(|t| t.format("%Y年%-m月%-d日 %H:%M").to_string())
+                .unwrap_or_default(),
             photo_count: session.photos.len(),
             usable_count: usable_photos(session).len(),
             size_cm: size_cm(session),
@@ -655,6 +663,7 @@ mod tests {
         let ids: Vec<&str> = list.iter().map(|s| s.session_id.as_str()).collect();
         assert_eq!(ids, vec![new, old]);
         assert_eq!(list[0].size_cm, Some(vec![10.0, 10.0]));
+        assert_eq!(list[1].created_label, "2026年11月9日 10:00");
         assert!(list_sessions(&dir.join("missing")).is_empty());
         std::fs::remove_dir_all(dir).unwrap();
     }
