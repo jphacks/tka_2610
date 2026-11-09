@@ -9,12 +9,13 @@
 //   2026-10   … その月の作品だけを並べる
 // その種類の作品が無い年・月が URL にあれば、すべてにする（以前の ?month=all も、すべて）。
 // 並びのすぐ上に、いま見ている範囲と点数を 1 行で出す（「工作・2026年 10月　2点」）。作品名の下には作ったときの年齢（「5さい 4か月」）。
+// その行の「新しい順」ボタンを押すと「古い順」になる（?order=old。作成日の古い順をサーバーから受け取る）。年と月の並びも同じ向きになる。
 // 月と年齢の文字は Rust が作る（month_key・month_label・age_month_label）。誕生日が無ければ年齢の代わりに日付。
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAlbums, useArtworks, useCreateAlbum, type Artwork, type Category } from '../api'
 import { AlbumNameSheet, ArtworkThumb, NavBar, Screen, Segmented, ThumbSkeletons, TLink } from '../components'
-import { BackIcon, GalleryIcon, HeartIcon, PlusIcon } from '../icons'
+import { ArrowDownIcon, ArrowUpIcon, BackIcon, GalleryIcon, HeartIcon, PlusIcon } from '../icons'
 import { useNav } from '../nav'
 import { AlbumDrag, NEW_ALBUM, type DragState } from './AlbumDrag'
 import './Collection.css'
@@ -37,7 +38,7 @@ interface Month {
   items: Artwork[]
 }
 
-/** 作成日の新しい順の作品を、作った月が変わるところで区切る */
+/** 作成日の順（新しい順か古い順）の作品を、作った月が変わるところで区切る */
 function byMonth(items: Artwork[]): Month[] {
   const months: Month[] = []
   for (const artwork of items) {
@@ -274,15 +275,18 @@ export default function Collection() {
   const nav = useNav()
   const category: Tab = TABS.find((tab) => tab.value === params.get('category'))?.value ?? 'all'
   const compact = params.get('view') === 'compact'
+  // 古い順（?order=old）。省くと新しい順
+  const oldest = params.get('order') === 'old'
   const gridClass = `collection-grid${compact ? ' compact' : ''}`
-  const list = useArtworks({ category, sort: 'made' })
+  // 200 点を超えても古い作品から見られるよう、並べ替えはサーバーで行う
+  const list = useArtworks({ category, sort: oldest ? 'made_asc' : 'made' })
   // 作品を持ち上げている間のようす（棚を貼りつけ、指の下のアルバムをふくらませる）
   const [drag, setDrag] = useState<DragState | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const items = list.data?.items ?? []
   const months = byMonth(items)
-  // 作品のある年（"2026"）。新しい順
+  // 作品のある年（"2026"）。作品と同じ向き（新しい順か古い順）
   const years = [...new Set(months.map((m) => yearOf(m.key)))]
 
   // 見る範囲。URL の年・月に、この種類の作品が無ければ「すべて」
@@ -299,11 +303,19 @@ export default function Collection() {
   const scopeLabel = category === 'all' ? scope : `${categoryLabel}・${scope}`
 
 
-  /** URL の種類（category）と範囲（month）を変える。履歴は増やさない。range が null なら「すべて」 */
-  const go = (next: { category?: Tab; range?: string | null; compact?: boolean }) => {
+  /** URL の種類（category）・範囲（month）・列の数（view）・並び順（order）を変える。履歴は増やさない。range が null なら「すべて」 */
+  const go = (next: { category?: Tab; range?: string | null; compact?: boolean; oldest?: boolean }) => {
     const c = next.category ?? category
     const r = next.range === undefined ? params.get('month') : next.range
-    setParams({ ...(c !== 'all' ? { category: c } : {}), ...(r ? { month: r } : {}), ...((next.compact ?? compact) ? { view: 'compact' } : {}) }, { replace: true })
+    setParams(
+      {
+        ...(c !== 'all' ? { category: c } : {}),
+        ...(r ? { month: r } : {}),
+        ...((next.compact ?? compact) ? { view: 'compact' } : {}),
+        ...((next.oldest ?? oldest) ? { order: 'old' } : {}),
+      },
+      { replace: true },
+    )
   }
 
   return (
@@ -386,15 +398,27 @@ export default function Collection() {
                 <h2>{scopeLabel}</h2>
                 <span className="num">{shownCount}点</span>
               </div>
-              <div className="collection-density" role="group" aria-label="作品の表示サイズ">
-                <button type="button" aria-pressed={!compact} onClick={() => go({ compact: false })}>2列</button>
-                <button type="button" aria-pressed={compact} onClick={() => go({ compact: true })}>3列</button>
+              <div className="collection-tools">
+                {/* 押すたびに新しい順と古い順が入れ替わる。文字はいまの並び順 */}
+                <button
+                  type="button"
+                  className="collection-order"
+                  aria-label={oldest ? '古い順に並んでいます。押すと新しい順にします' : '新しい順に並んでいます。押すと古い順にします'}
+                  onClick={() => go({ oldest: !oldest })}
+                >
+                  {oldest ? <ArrowUpIcon size={13} /> : <ArrowDownIcon size={13} />}
+                  <span>{oldest ? '古い順' : '新しい順'}</span>
+                </button>
+                <div className="collection-density" role="group" aria-label="作品の表示サイズ">
+                  <button type="button" aria-pressed={!compact} onClick={() => go({ compact: false })}>2列</button>
+                  <button type="button" aria-pressed={compact} onClick={() => go({ compact: true })}>3列</button>
+                </div>
               </div>
             </div>
 
             {month || !year ? (
               // すべて・1 か月：見出し無しで並べる
-              <div key={`${category}-${month?.key ?? 'all'}`} className={gridClass}>
+              <div key={`${category}-${month?.key ?? 'all'}-${oldest ? 'old' : 'new'}`} className={gridClass}>
                 {(month ? month.items : items).map((a, i) => (
                   <ArtworkThumb key={a.id} artwork={a} index={i} showBadge meta="age" gallery />
                 ))}
@@ -404,7 +428,7 @@ export default function Collection() {
               monthsOfYear.map((m, i) => {
                 const before = monthsOfYear.slice(0, i).reduce((n, s) => n + s.items.length, 0)
                 return (
-                  <section key={`${category}-${m.key}`} className="collection-month">
+                  <section key={`${category}-${m.key}-${oldest ? 'old' : 'new'}`} className="collection-month">
                     <h2 className="collection-month-label">
                       <span className="num">{splitLabel(m.label)[1]}</span>
                       <small className="num">{m.items.length}点</small>
