@@ -339,6 +339,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 
 生成処理は `backend/src/glb.rs` にまとまっています。前の額縁（自前で組み立てた木の額縁）の作品は、起動時に今の額縁で作り直します（ログは `[Artwork] frames: upgraded 〇, skipped 〇`。写真か GLB の無い作品は飛ばす）。
 登録時に `.glb` ファイルを渡すと、生成したモデルの代わりにそのファイルを飾ります（Web の登録画面の「3Dモデル(.glb)を持っている場合」）。
+手元の PC では、作品の詳細から写真を何枚かと大きさを送り、`generator/` の `kt auto` で作った 3D に差し替えることもできます（試験中。`KT_GENERATOR_ENABLED=1` のときだけ。[generator.md](generator.md)）。
 生成したモデルも渡した GLB も、登録のときに大きさを測り、その実寸をもとに置きます（上の「作品の大きさ」）。渡した GLB とサンプルの作品 33 点は実寸のモデルとして扱い、置き場所より小さくてもふつうは拡大しません。ただし、置き場所に対して小さすぎる物（実物の大きさで作ったペットボトルなど）は、置き場所に収まる最大の大きさの 6 割（`CUSTOM_MIN_FILL`）まで拡大します。
 
 ## ディレクトリ構成
@@ -359,6 +360,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 │   │   ├── museum.rs      作品の種類の名前
 │   │   ├── media.rs       写真の処理
 │   │   ├── glb.rs         写真から GLB を生成（仮の実装）・GLB の実寸を測る
+│   │   ├── generator.rs   写真から 3D を作る（試験中。generator/ の kt auto を動かす。docs/generator.md）
 │   │   └── testdata/      テストの表（置き方の総当たり表 placement-cases.json・共有の DB の配置）
 │   ├── migrations/        DB マイグレーション（起動時に自動で実行）
 │   └── static/
@@ -376,6 +378,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 │       ├── three/         3D 表示（入口は index.tsx。家具と作品を置くのは scenes/home/）
 │       ├── styles/        2 か所以上で使うスタイル
 │       └── nav.ts         画面遷移のアニメーション
+├── generator/             写真から 3D を作る Python の道具 kt（試験中。手元の PC だけ。説明は README.md）
 ├── tools/
 │   ├── home-rooms/        開発用の建物 GLB（static/models/rooms/）を作る Python のスクリプトと確認のスクリプト（説明は README.md）
 │   └── home-thumbs/       模様替えの「追加 → 家具」に出す家具の画像（static/home/thumbs/）を、家具の GLB から Blender で撮るスクリプト
@@ -552,6 +555,10 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | `MUSEUM_MODEL_PATH` | `backend/static/models/home-empty.glb` | リビングだけの家の建物の GLB（部屋ごとの GLB にする前の 8 × 8 m のもの）。`/api/museum` の `model_url` で返す。前の版の Web のために残していて、今の Web は `house` があれば使わない |
 | `WALK_MODEL_PATH` | なし | 鑑賞モードだけで使う別の GLB。指定したときだけ、リビングの建物の代わりに使う。博物館のころの高画質版 `museum-walk.glb` は消した（git の履歴にだけある） |
 | `WEB_DIST` | `web/dist` | 配信する Web アプリのビルド結果 |
+| `KT_GENERATOR_ENABLED` | なし | `1` のときだけ、写真から 3D を作る（試験中。[generator.md](generator.md)）。本番（Render）には入れない |
+| `KT_GENERATOR_DIR` | リポジトリの `generator/`（ビルドした場所から辿る） | `kt.sh`（Windows は `kt.ps1`）と `.venv` のあるフォルダ |
+| `KT_GENERATOR_TIMEOUT_SECS` | `900` | 1 回の生成の上限（秒） |
+| `KT_GENERATOR_AI_MODEL` | `sonnet` | `kt auto` の `--ai-model` |
 
 ## API
 
@@ -574,6 +581,9 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | POST | `/api/artworks/:id/memories` | おもいでを 1 つ足す（multipart。`file` は必須、任意で `caption`（80 文字まで）・`duration_ms`・`width`・`height`（Web が測った長さと大きさ））。種類は Content-Type と拡張子で決める：写真（JPEG・PNG・WebP・GIF。長辺 1600px と 400px の正方形の JPEG に縮める）・動画（MP4・MOV・WebM。そのまま）・声（M4A・AAC・MP3・WebM・OGG・WAV。そのまま）。上限は写真と声 20 MB・動画 100 MB（超えると 413）、1 作品 30 個（超えると 409）。このルートだけ送信の上限が 110 MB（ほかの `/api` は 40 MB） |
 | PATCH / DELETE | `/api/artworks/:id/memories/:memory_id` | おもいでのひとことを変える（`{ "caption": "…" }`）・消す（ファイルも消える） |
 | POST / DELETE | `/api/artworks/:id/display` | おうちに飾る・飾るのをやめる。POST の本文は任意で `{ "room_id"?, "parent_id"?, "surface"?, "position"?, "rotation_y"? }`（`surface` は `parent_id` と一緒に使う）。`room_id` はおへやの id（前の版の Web が送る `hub` は省いたのと同じ）。`room_id` を省くと、作品の年齢のおへやを 1 階から探して、空いている棚や机に自動で置く（作品の実寸で空きを探す。その年齢のおへやが 1 つも無ければ 1 階を作る）。全部いっぱいなら 409（「4 さいのおへやがいっぱいです。…」）。`room_id` を付けると、そのおへやの家具だけを探し、空きが無ければ 409。作品の年齢と違うおへやは 400。別のおへやに飾っていた作品は、そこから外して移す。`position` を付けて置き場所を決めるときは、`room_id` も要る（無いと 400）。出入口のある部屋では、置いた作品が出入口の前にかかると 400（今の家には出入口が無い） |
+| GET | `/api/generator` | 写真から 3D を作れるか `{"enabled": true\|false}`（試験中。[generator.md](generator.md)） |
+| POST | `/api/artworks/:id/generate` | 写真から 3D を作り始める（multipart。`photos` 1〜8 枚・`size_cm`）。202 で job を返す。使えないときは 404、ほかの作品を作っている途中は 409 |
+| GET | `/api/generator/jobs/:job_id` | 写真から 3D を作る job の様子（`status` は `running`・`done`・`failed`、`error`、`elapsed_secs`）。使えないとき・知らない job は 404 |
 | GET | `/media/*` | 生成した画像・サムネイル・GLB、おもいでのファイル（`memories/`。Range に対応）と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |
 | GET | `/api/recollections/theater` | 期間をえらんで振り返るシアターの時間割（`?from=`・`?to=`・`?category=drawing`。上の「期間をえらんで振り返るシアター」） |

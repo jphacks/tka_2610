@@ -10,6 +10,7 @@
   2. サーバー（Rust）をビルドする
   3. 動かす入れ物に、サーバーの実行ファイル・`backend/static`（家具・建物・サンプルの作品）・Web のビルド結果だけを入れる
 - 入れ物の中では、`STATIC_DIR`・`WEB_DIST`・`MEDIA_DIR`・`PORT` を Dockerfile が決めています。管理画面で入れるのは `DATABASE_URL` だけです（`PORT` は Render が上書きする）。
+- 写真から 3D を作る道具（`generator/`）は入れ物に入れません（`.dockerignore`）。管理画面に `KT_GENERATOR_ENABLED` を入れないでください（[generator.md](generator.md)）。
 - 設定は `render.yaml`（Render の Blueprint）にあります。
   - 無料プラン、シンガポール（日本にいちばん近い場所）
   - 死活確認は `/healthz`
