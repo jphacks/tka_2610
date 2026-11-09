@@ -1,6 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use sqlx::PgPool;
+
+use crate::generator::Generator;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -13,6 +15,8 @@ pub struct AppState {
     pub walk_model_url: Option<String>,
     /// 家の建物の GLB の配信URL (部屋の id → URL)。ファイルが無い部屋は入らない (API では null)
     pub room_model_urls: HashMap<&'static str, String>,
+    /// 写真から 3D を作る (試験中。KT_GENERATOR_ENABLED=1 のときだけ使える)。生成の job はここにだけ持つ
+    pub generator: Arc<Generator>,
 }
 
 /// メディアの種類ごとのサブディレクトリ

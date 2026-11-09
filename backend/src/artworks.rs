@@ -896,24 +896,85 @@ pub async fn update_artwork(
     .await;
 
     match updated {
-        Ok(mut updated) => {
+        Ok(updated) => {
             remove_files(&state, old_files.into_iter()).await;
             println!("[Artwork] updated \"{}\" in {:?}", updated.title, started.elapsed());
-            // 作成日 (や年齢) が変わって、飾っているおへやの年齢と合わなくなったら、正しい年齢のおへやへ置き直す
-            if let Some(room_id) = updated.house_room_id {
-                let birthday = museum_api::child_birthday(&state.pool).await?;
-                let room = home_api::find_room(&state.pool, room_id).await?;
-                if room.age != age::artwork_age(birthday, updated.made_on, updated.age) {
-                    home_api::reconcile(&state).await?;
-                    updated = fetch_row(&state.pool, id).await?;
-                }
-            }
+            let updated = settle_layout(&state, updated, regenerated.model.is_some()).await?;
             let ctx = DtoContext::load(&state.pool).await?;
             Ok(Json(ArtworkDto::new(&updated, &ctx)))
         }
         Err(error) => {
             remove_files(&state, new_files.iter().map(|(k, n, _)| (*k, n.clone()))).await;
             Err(error.into())
+        }
+    }
+}
+
+/// 作品を書き換えたあと、飾っているおへやの配置を合わせる。
+/// 作成日 (や年齢) が変わっておへやの年齢と合わなくなったときと、モデルを差し替えて大きさが変わったとき
+/// (今の場所に収まらなくなったかもしれない) は、reconcile で置き直す (収まらない作品は、同じ年齢のおへやの空いている所へ)
+async fn settle_layout(state: &AppState, row: ArtworkRow, model_changed: bool) -> AppResult<ArtworkRow> {
+    let Some(room_id) = row.house_room_id else {
+        return Ok(row);
+    };
+    let birthday = museum_api::child_birthday(&state.pool).await?;
+    let room = home_api::find_room(&state.pool, room_id).await?;
+    if model_changed || room.age != age::artwork_age(birthday, row.made_on, row.age) {
+        home_api::reconcile(state).await?;
+        return fetch_row(&state.pool, row.id).await;
+    }
+    Ok(row)
+}
+
+/// 作品の 3D モデルを、外で作った GLB に差し替える (編集で GLB をアップロードしたときと同じく model_kind = custom。
+/// 写真から 3D を作る generator.rs が使う)。写真とサムネイルはそのまま。寸法は GLB から測り直し、
+/// 新しい名前のファイルを書いてから行を書き換え、古い GLB を消す。そのあと配置を合わせる (settle_layout)
+pub(crate) async fn replace_model(state: &AppState, id: Uuid, model: Vec<u8>, label: &str) -> AppResult<ArtworkRow> {
+    glb::validate_glb(&model).map_err(AppError::bad_request)?;
+    let label = label.to_string();
+    let (model, size) = tokio::task::spawn_blocking(move || {
+        let size = measure_model(&model, &label);
+        (model, size)
+    })
+    .await?;
+    let [model_width, model_height, model_depth] = size.map_or([None; 3], |s| s.map(Some));
+
+    let model_file = format!("{id}-{}.glb", file_tag());
+    write_files(state, &[(MediaKind::Model, model_file.clone(), model.as_slice())]).await?;
+
+    let updated: AppResult<(ArtworkRow, String)> = async {
+        let mut tx = state.pool.begin().await?;
+        let old_file =
+            sqlx::query_scalar::<_, String>("SELECT model_file FROM artworks WHERE id = $1 FOR UPDATE")
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await?;
+        let row = sqlx::query_as::<_, ArtworkRow>(&format!(
+            "UPDATE artworks SET model_file = $2, model_kind = 'custom', \
+                model_width = $3, model_height = $4, model_depth = $5, updated_at = NOW() \
+             WHERE id = $1 RETURNING {COLUMNS}"
+        ))
+        .bind(id)
+        .bind(&model_file)
+        .bind(model_width)
+        .bind(model_height)
+        .bind(model_depth)
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok((row, old_file))
+    }
+    .await;
+
+    match updated {
+        Ok((row, old_file)) => {
+            remove_files(state, std::iter::once((MediaKind::Model, old_file))).await;
+            println!("[Artwork] replaced the model of \"{}\" ({} KB)", row.title, model.len() / 1024);
+            settle_layout(state, row, true).await
+        }
+        Err(error) => {
+            remove_files(state, std::iter::once((MediaKind::Model, model_file))).await;
+            Err(error)
         }
     }
 }
