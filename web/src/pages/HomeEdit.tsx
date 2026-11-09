@@ -95,7 +95,17 @@ const FLOOR_LABEL: Record<FloorFinish, string> = {
   nero_marble: '黒大理石',
 }
 
-const meters = (n: number) => n.toFixed(2)
+/** 追加のシートの家具の画像（tools/home-thumbs/render_thumbs.py が GLB から撮った透過の WebP）。読めなければ枠だけ残す */
+function FurnitureThumb({ src }: { src: string }) {
+  const [state, setState] = useState<'loading' | 'loaded' | 'error'>('loading')
+  return (
+    <span className="pic" data-state={state}>
+      {state !== 'error' && (
+        <img src={src} alt="" loading="lazy" decoding="async" onLoad={() => setState('loaded')} onError={() => setState('error')} />
+      )}
+    </span>
+  )
+}
 
 export default function HomeEdit() {
   const [params] = useSearchParams()
@@ -508,10 +518,8 @@ export default function HomeEdit() {
               <div className="edit-furniture">
                 {(catalog?.assets ?? []).map((asset) => (
                   <button key={asset.id} type="button" className="edit-furniture-item pressable" onClick={() => addFurnitureOf(asset)}>
+                    {asset.thumb_url && <FurnitureThumb src={asset.thumb_url} />}
                     <span className="name">{asset.name_ja}</span>
-                    <span className="size num">
-                      {meters(asset.dimensions_meters[0])} × {meters(asset.dimensions_meters[2])} m
-                    </span>
                     {isWallAsset(asset) && <span className="tag">壁に掛ける</span>}
                     {asset.support && <span className="tag">作品を置ける</span>}
                   </button>
