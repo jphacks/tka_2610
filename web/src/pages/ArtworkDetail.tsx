@@ -35,7 +35,7 @@ import {
   ShareIcon,
 } from '../icons'
 import { useNav, useNavSettled } from '../nav'
-import { ArtworkViewerScene, isTouchDevice, warmUp3D } from '../three'
+import { ArtworkViewerScene, isTouchDevice, warmUpArtwork } from '../three'
 import './ArtworkDetail.css'
 
 export default function ArtworkDetail() {
@@ -92,7 +92,7 @@ export default function ArtworkDetail() {
 
   useEffect(() => {
     if (artwork?.model_url) {
-      warmUp3D(null, [artwork.model_url])
+      warmUpArtwork(artwork.model_url)
     }
   }, [artwork?.model_url])
 

@@ -7,12 +7,18 @@ import { useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Side } from '../../api'
+import { loadArtModel, useArtModel } from './artModels'
 import { applyCutaway } from './home/cutaway'
 import { applyTheme, preloadTheme, type FaceRoomFinishes, type HomeFinish, type HomeMaterials } from './home/theme'
 
-/** GLB を先にダウンロード・解析しておく（three/index.tsx の warmUp3D から呼ぶ） */
+/** GLB を先にダウンロード・解析しておく（three/index.tsx の warmUp3D から呼ぶ。家の建物と家具） */
 export function preloadModel(url: string) {
   useGLTF.preload(url, false, false)
+}
+
+/** 作品の GLB を先に読んでおく（作品の詳細。元の大きさのテクスチャ。artModels.ts） */
+export function preloadArtwork(url: string) {
+  void loadArtModel(url).catch(() => {})
 }
 
 const NO_HIDE: string[] = []
@@ -133,6 +139,8 @@ export function MuseumModel({
  * （3D プレビューと、実寸が分からない作品）。
  * noUpscale のときは縮めるだけで拡大しない（実寸で作った工作の GLB を、本物より大きく見せないため。scale を渡したときは使わない）。
  * shadows のときは影を落とし・受ける（家の中に置くとき）。
+ * maxTexture を渡すと、テクスチャをその大きさ（px）まで縮めて読む（おへやの中など、作品が小さく映る画面。artModels.ts）。
+ * GLB は artModels.ts が読み、どの画面も使わなくなったらメモリを返す。
  */
 export function FittedModel({
   url,
@@ -140,10 +148,13 @@ export function FittedModel({
   scale: fixedScale,
   noUpscale = false,
   shadows = false,
+  maxTexture = 0,
   onMount,
 }: {
   url: string
   fit: [number, number, number]
+  /** テクスチャの長い辺の上限（px）。0 は元のまま */
+  maxTexture?: number
   /** 拡縮率。渡すと fit と noUpscale は使わない */
   scale?: number
   noUpscale?: boolean
@@ -151,7 +162,7 @@ export function FittedModel({
   /** 読み込んで置いたとき・外したときに呼ぶ（HomeObjects が、歩く画面の影の描き直しに使う） */
   onMount?: () => void
 }) {
-  const { scene } = useGLTF(url, false, false)
+  const scene = useArtModel(url, maxTexture)
   const [fx, fy, fz] = fit
 
   const object = useMemo(() => {

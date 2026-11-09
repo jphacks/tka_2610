@@ -175,6 +175,11 @@ function FurnitureModel({ url, onMount }: { url: string; onMount: () => void }) 
   return <primitive object={object} />
 }
 
+/** おへやの中の作品のテクスチャの上限（px）。HomeObjects の artTextureSize の既定値 */
+const ROOM_ART_TEXTURE = 256
+/** 鑑賞モード（近くで見る）の作品のテクスチャの上限（px） */
+export const WALK_ART_TEXTURE = 512
+
 export function HomeObjects({
   layout,
   catalog,
@@ -186,6 +191,7 @@ export function HomeObjects({
   onObjectPointerDown,
   previewTransform,
   memoryBadges = false,
+  artTextureSize = ROOM_ART_TEXTURE,
 }: {
   layout: Layout
   catalog: HomeCatalog
@@ -205,6 +211,12 @@ export function HomeObjects({
   previewTransform?: PreviewTransform | null
   /** おもいでのある作品の上に印を出す（おへや） */
   memoryBadges?: boolean
+  /**
+   * 作品のテクスチャの長い辺の上限（px）。おへやの中では作品は小さく映るので、縮めて GPU のメモリを抑える
+   * （元の 768px のままだと、作品 1 点で 60 MB ほどになり、スマホのブラウザが落ちる。artModels.ts）。
+   * 近くで見る鑑賞モードは大きめにする
+   */
+  artTextureSize?: number
 }) {
   const notify = useBatchedCallback(onReady)
   const assets = useMemo(() => new Map(catalog.assets.map((a) => [a.id, a])), [catalog])
@@ -316,6 +328,7 @@ export function HomeObjects({
             scale={scale}
             noUpscale={slot.artwork.model_kind === 'custom'}
             shadows
+            maxTexture={artTextureSize}
             onMount={notify}
           />
         </Suspense>
