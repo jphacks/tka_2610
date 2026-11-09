@@ -5,7 +5,7 @@
 
 
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   useArtwork,
@@ -76,17 +76,6 @@ export default function ArtworkDetail() {
   const [resetKey, setResetKey] = useState(0)
   const resetZoom = useCallback(() => setResetKey((k) => k + 1), [])
   const [touchUi] = useState(isTouchDevice)
-  // 3D の上で 2 本指のときは、画面のスクロールを止めて、ピンチを 3D の拡大に使う
-  // （touch-action: pan-y のままだと、2 本指を縦に動かしたときに画面がスクロールしてピンチが途切れる）
-  const viewerBox = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = viewerBox.current
-    if (!el) return
-    const stop = (e: TouchEvent) => { if (e.touches.length >= 2) e.preventDefault() }
-    el.addEventListener('touchstart', stop, { passive: false })
-    el.addEventListener('touchmove', stop, { passive: false })
-    return () => { el.removeEventListener('touchstart', stop); el.removeEventListener('touchmove', stop) }
-  })
   const show3d = !!artwork?.model_url && !viewerFailed && view === '3d'
   const showing3d = show3d && viewerReady
 
@@ -205,7 +194,6 @@ export default function ArtworkDetail() {
         {/* 触って回せる 3D（読み込めたらふわっと出す） */}
         {artwork && show3d && (
           <div
-            ref={viewerBox}
             className={`detail-viewer${viewerReady ? ' is-ready' : ''}`}
             aria-label={`${artwork.title}の3D。ドラッグで回せます。${touchUi ? '2本指で' : 'ホイールで'}拡大できます`}
             role="img"
