@@ -81,21 +81,16 @@ npm run dev        # http://localhost:8787 (wrangler dev。Durable Object とそ
 
 | いつ | すること |
 |---|---|
-| PR | backend の `cargo test`・web の `npm run build` と `npm run check:placement`・Cloudflare 版のビルド（`wrangler deploy --dry-run`。公開はしない） |
-| main に入ったとき | 上が全部通ったら、memoria-try に公開する |
-| PR のテストが全部通ったとき | その PR を自動でマージして、main の CI を起動する（下の「自動マージ」） |
-| Actions の画面の「Run workflow」（main） | 同じテストのあとに公開する（自動の公開を止めているときに使う） |
+| PR | backend の `cargo test`・web の `npm run build` と `npm run check:placement`・Cloudflare 版のビルド（`wrangler deploy --dry-run`。公開はしない）。**結果を見るだけで、マージは止めない**（main は保護していない） |
+| main に入ったとき | **テストを待たずに** memoria-try に公開する（テストは同時に流れる） |
+| Actions の画面の「Run workflow」（main） | 公開する（自動の公開を止めているときに使う） |
 
 - backend を直したときも、Cloudflare 版のビルドが通るかを PR で確かめられます（`home.rs` などを共有しているため）。
 - 実行結果の Summary に、Worker の大きさ（無料プランの上限は gzip で 3 MB）が出ます。
 - worker-build がビルド中に GitHub の Releases から落とす wasm-bindgen と wasm-opt は、504 で失敗し続けたことがあるので、CI では自分で用意しています（wasm-bindgen は `cargo install wasm-bindgen-cli`、wasm-opt は npm の `binaryen`。`WASM_BINDGEN_BIN`・`WASM_OPT_BIN`）。**`cloudflare/Cargo.toml` の `wasm-bindgen` の版を上げたら、`ci.yml` の `WASM_BINDGEN_VERSION` も合わせてください。** worker-build の版を上げたら、使う wasm-opt の版に `binaryen` を合わせます。
 - 公開には、リポジトリの secrets の `CLOUDFLARE_API_TOKEN` を使います。Cloudflare のダッシュボードの「My Profile → API Tokens」で、テンプレートの「Edit Cloudflare Workers」から作ったトークンです。アカウント ID は `ci.yml` に書いてあります（秘密の値ではない）。
-- **自動マージ**：PR のテスト（`backend`・`web`・`cloudflare`）が全部通ると、`automerge` のジョブがその PR をマージします。
-  - **作りかけの PR は Draft で出してください。** Draft はマージしません。「Ready for review」にするとテストが動き、通ればマージされます。
-  - テストのあとに新しい push があった PR はマージしません（新しい版のテストが通ってからマージする）。フォークからの PR もマージしません。
-  - GitHub の決まりで、`GITHUB_TOKEN` がマージした push ではワークフローが起動しません。そのため、マージのあとに main の CI を workflow_dispatch で起動して公開しています。
-  - main は保護していて、3 つのテストが通らない PR はマージできません。管理者以外は main に直接 push できません。
-- **自動の公開を止めるとき**（発表の直前など）：リポジトリの Settings → Secrets and variables → Actions → Variables で、`CLOUDFLARE_AUTO_DEPLOY` を `false` にします。テストとビルドと自動マージは今までどおり動きます（マージだけして、公開はしない）。戻すときは変数を消すか `true` にします。
+- マージは人が押します（以前は、テストが通った PR を自動でマージしていましたが、待ち時間が長いのでやめました）。**テストが落ちている PR もマージでき、そのまま公開されます。** マージの前に PR のチェックの結果を見てください。
+- **自動の公開を止めるとき**（発表の直前など）：リポジトリの Settings → Secrets and variables → Actions → Variables で、`CLOUDFLARE_AUTO_DEPLOY` を `false` にします。テストとビルドは今までどおり動きます。戻すときは変数を消すか `true` にします。
 
 ### 公開したあとの確かめ方
 

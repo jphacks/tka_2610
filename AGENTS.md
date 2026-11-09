@@ -55,7 +55,7 @@ Web の模様替え（`/home/edit?room=<id>`）は `web/src/pages/HomeEdit.tsx`�
 - Web のビルド確認: `cd web && npm run build`
 - 置き方の判定が Rust と同じかの確認: `cd web && npm run check:placement`（置き方の決まりを変えたときは必須。下の「守ること」）
 - 壁紙と床材の当て方の確認: `cd web && npm run check:theme`（`theme.ts`・`catalog.json` の `themes`・`materials`・建物の GLB を変えたとき。材質の作り・上下の継ぎ目・連続して切り替えたときの競合を見る。GLB のある部屋だけを調べ、今は `× 1 部屋（hub）` と出る。隣の部屋の GLB があれば共有する壁の表と裏も見る。ブラウザは使わない）
-- PR では GitHub Actions（`.github/workflows/ci.yml`）が `cargo test`・web のビルドと `check:placement`・Cloudflare 版のビルドを流し、全部通るとその PR を自動でマージして、Cloudflare のテスト環境に公開します（**作りかけの PR は Draft で出す**）（[docs/cloudflare.md](docs/cloudflare.md) の「CI/CD」）。backend の共有のファイル（`home.rs`・`glb.rs`・`media.rs` など）を変えたら、Cloudflare 版のビルドが通るかも見てください
+- PR では GitHub Actions（`.github/workflows/ci.yml`）が `cargo test`・web のビルドと `check:placement`・Cloudflare 版のビルドを流します（結果を見るだけで、マージは止めない）。main に入ると、テストを待たずに Cloudflare のテスト環境に公開します（**マージの前に PR のチェックの結果を見る**）（[docs/cloudflare.md](docs/cloudflare.md) の「CI/CD」）。backend の共有のファイル（`home.rs`・`glb.rs`・`media.rs` など）を変えたら、Cloudflare 版のビルドが通るかも見てください
 - 建物の GLB の作りの確認: `python3 tools/home-rooms/check_rooms.py [GLB のフォルダ]`（開発用の GLB を作り直したとき・本番の GLB に置き換えるとき。今は hub だけを調べ、出入口・床のつながり・開いた側・共有の壁の検査は隣の部屋が無いので飛ばす。`ALL CHECKS PASSED` で OK）
 
 Web の構成（画面・共通部品・3D・スタイル）と、変更するときの決まりは [docs/frontend.md](docs/frontend.md) にあります。
