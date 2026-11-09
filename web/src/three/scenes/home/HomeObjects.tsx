@@ -413,17 +413,22 @@ function MemoryBadge({ counts, height, onClick }: { counts: MemoryCounts | undef
 }
 
 
-/** ミニチュア鑑賞用。作品の描画はここに集約し、既存の家の配置・材質は変更しない。 */
-export function ShowcaseArtwork({ artwork, onReady, onSelect }: {
+/**
+ * ミニチュア鑑賞・シアター用。作品の描画はここに集約し、既存の家の配置・材質は変更しない。
+ * quietLoading：読み込み中は写真のカードを出さない（シアター。シークした先の作品が写真で流れて見えないように。
+ * 時計は作品が届くまで待つので、読み込めた 3D から出る）。読めなかった・12 秒で間に合わなかったときは、写真で出す
+ */
+export function ShowcaseArtwork({ artwork, onReady, onSelect, quietLoading = false }: {
   artwork: Artwork
   onReady: (id: string, fallback: boolean) => void
   onSelect: (id: string) => void
+  quietLoading?: boolean
 }) {
   const notify = useCallback(() => onReady(artwork.id, false), [artwork.id, onReady])
   return (
     <group name={`SHOWCASE_${artwork.id}`} onClick={event => { event.stopPropagation(); onSelect(artwork.id) }}>
       <ErrorBoundary key={artwork.model_url} fallback={() => <ShowcaseFallback artwork={artwork} failed onReady={onReady} onSelect={onSelect} />}>
-        <Suspense fallback={<ShowcaseFallback artwork={artwork} onReady={onReady} onSelect={onSelect} />}>
+        <Suspense fallback={<ShowcaseFallback artwork={artwork} quiet={quietLoading} onReady={onReady} onSelect={onSelect} />}>
           <FittedModel url={artwork.model_url} fit={[2.8, 2.8, 2.8]} shadows onMount={notify} />
         </Suspense>
       </ErrorBoundary>
@@ -431,14 +436,18 @@ export function ShowcaseArtwork({ artwork, onReady, onSelect }: {
   )
 }
 
-function ShowcaseFallback({ artwork, failed = false, onReady, onSelect }: {
-  artwork: Artwork; failed?: boolean; onReady: (id: string, fallback: boolean) => void; onSelect: (id: string) => void
+const SHOWCASE_LOAD_TIMEOUT_MS = 12000
+
+function ShowcaseFallback({ artwork, failed = false, quiet = false, onReady, onSelect }: {
+  artwork: Artwork; failed?: boolean; quiet?: boolean; onReady: (id: string, fallback: boolean) => void; onSelect: (id: string) => void
 }) {
+  const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
     // 取得が遅い場合も鑑賞を止め続けず、写真で振り返れるようにする。
-    const timer = window.setTimeout(() => onReady(artwork.id, true), failed ? 0 : 12000)
+    const timer = window.setTimeout(() => { setTimedOut(true); onReady(artwork.id, true) }, failed ? 0 : SHOWCASE_LOAD_TIMEOUT_MS)
     return () => window.clearTimeout(timer)
   }, [artwork.id, failed, onReady])
+  if (quiet && !failed && !timedOut) return null
   return (
     <Html position={[0, 0.65, 0]} center zIndexRange={[3, 0]}>
       <button type="button" className="miniature-art-fallback" aria-label={`${artwork.title}の詳細を見る`} onClick={() => onSelect(artwork.id)}>
