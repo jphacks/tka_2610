@@ -5,7 +5,7 @@
 // タッチでは、縦のスワイプは画面のスクロールに使い、横のドラッグで回す（CSS の touch-action: pan-y。ArtworkDetail.css）。
 // 2 本指のときは画面がスクロールしないように、画面側（ArtworkDetail）で touchmove を止める。
 // カメラは、読み込んだモデルの大きさ（外接球）から、縦横どちらにも収まる距離に置く。
-import { Suspense, useEffect, useLayoutEffect, useRef, type MutableRefObject, type ReactNode } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, Lightformer, OrbitControls } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -18,6 +18,10 @@ const FOV = 32
 /** いちばん寄ったとき・いちばん引いたときの距離（はじめの距離に対する割合） */
 const ZOOM_IN = 0.3
 const ZOOM_OUT = 1.35
+/** はじめて描く前に、テクスチャを GPU に送るのに 1 コマで使ってよい時間（ms）。これを超えたら次のコマへ回す */
+const UPLOAD_BUDGET_MS = 6
+/** シェーダーの用意（compileAsync）を待つ上限（ms）。返ってこなくても描き始める */
+const COMPILE_WAIT_MS = 1500
 
 /** 置いたモデルの大きさとはじめのカメラの距離（Framed が決め、ZoomKeeper が使う） */
 interface Fit {
@@ -36,11 +40,11 @@ export function ArtworkViewerScene({
 }: {
   modelUrl: string
   /**
-   * true のあいだは描かない（モデルの読み込みと置き方の計算は進める）。画面の移動のアニメーション中に、
-   * はじめの 1 コマの重い処理（テクスチャを GPU に送る・シェーダーを作る）でメインスレッドを止めないため
+   * true のあいだは描かない（モデルの読み込み・置き方の計算・シェーダーの用意は進める）。画面の移動のアニメーション中に、
+   * はじめの 1 コマの重い処理（テクスチャを GPU に送る）でメインスレッドを止めないため（Warmup）
    */
   paused?: boolean
-  /** モデルを置いて、カメラを合わせ終わったとき */
+  /** モデルを置いて、カメラを合わせ、GPU の用意ができて描き始めたとき */
   onReady?: () => void
   /** はじめて触ったとき（説明の文字を消すのに使う） */
   onInteract?: () => void
@@ -50,10 +54,16 @@ export function ArtworkViewerScene({
   resetKey?: number
 }) {
   const fit = useRef<Fit | null>(null)
+  // 置き終わった（framed）・GPU の用意ができた（warm）の両方がそろってから描き始め、onReady で知らせる
+  const [framed, setFramed] = useState(false)
+  const [warm, setWarm] = useState(false)
+  const onFramed = useRef(() => setFramed(true)).current
+  const onWarm = useRef(() => setWarm(true)).current
+  useEffect(() => { if (framed && warm) onReady?.() }, [framed, warm, onReady])
   return (
     <Canvas
       dpr={[1, 2]}
-      frameloop={paused ? 'never' : 'always'}
+      frameloop={paused || !warm ? 'never' : 'always'}
       camera={{ position: [0, 0.8, 4], fov: FOV, near: 0.05, far: 50 }}
       // preserveDrawingBuffer：画面を離れるときの遷移（View Transitions）が、描いた 3D をそのまま写せるように
       // （無いと、写す瞬間にキャンバスが空になって、作品が消えてから画面が動いて見える）
@@ -66,9 +76,10 @@ export function ArtworkViewerScene({
     >
       <ViewerLights />
       <Suspense fallback={null}>
-        <Framed fit={fit} onReady={onReady}>
+        <Framed fit={fit} onReady={onFramed}>
           <FittedModel url={modelUrl} fit={[1.4, 1.4, 1.4]} />
         </Framed>
+        <Warmup paused={paused} onWarm={onWarm} />
         {/* 足もとのやわらかい影（モデルの底は y = 0） */}
         {/* モデルは動かない（回るのはカメラ）ので、影は 1 回だけ描けばよい */}
         <ContactShadows frames={1} position={[0, 0.001, 0]} scale={3} blur={2.6} far={1.6} opacity={0.32} resolution={512} color="#5b4630" />
@@ -77,6 +88,56 @@ export function ArtworkViewerScene({
       <ZoomKeeper fit={fit} resetKey={resetKey} onZoomChange={onZoomChange} />
     </Canvas>
   )
+}
+
+/**
+ * はじめの 1 コマを軽くする。作品の GLB はテクスチャが多く（1 作品で 20〜30 枚）、材質のシェーダーも重いので、
+ * そのまま描くと、はじめの 1 コマでメインスレッドが 100 ms ほど（スマホではもっと）止まる（本番で測った値）。
+ * - シェーダー：モデルを置いたらすぐ compileAsync で作り始める（KHR_parallel_shader_compile があれば、
+ *   GPU のドライバーが裏で作るので、メインスレッドは止まらない。画面の移動の途中でもよい）
+ * - テクスチャ：paused が解けたら、1 コマ UPLOAD_BUDGET_MS ずつ GPU に送る（initTexture）
+ * 両方が終わったら onWarm。それまで Canvas は描かない（frameloop never）
+ */
+function Warmup({ paused, onWarm }: { paused: boolean; onWarm: () => void }) {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  const compiled = useRef<Promise<unknown> | null>(null)
+  useLayoutEffect(() => {
+    const timeout = new Promise((resolve) => window.setTimeout(resolve, COMPILE_WAIT_MS))
+    compiled.current = Promise.race([gl.compileAsync(scene, camera).catch(() => {}), timeout])
+  }, [gl, scene, camera])
+  useEffect(() => {
+    if (paused) return
+    let alive = true
+    let frame = 0
+    const textures = sceneTextures(scene)
+    const step = () => {
+      if (!alive) return
+      const start = performance.now()
+      while (textures.length > 0 && performance.now() - start < UPLOAD_BUDGET_MS) gl.initTexture(textures.shift()!)
+      if (textures.length > 0) frame = requestAnimationFrame(step)
+      else void compiled.current?.then(() => { if (alive) onWarm() })
+    }
+    frame = requestAnimationFrame(step)
+    return () => { alive = false; cancelAnimationFrame(frame) }
+  }, [paused, gl, scene, onWarm])
+  return null
+}
+
+/** 場面の材質が使っているテクスチャ（画像から読んだものだけ。描画先のテクスチャは除く） */
+function sceneTextures(scene: THREE.Scene): THREE.Texture[] {
+  const found = new Set<THREE.Texture>()
+  scene.traverse((object) => {
+    const material = (object as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
+    if (!material) return
+    for (const m of Array.isArray(material) ? material : [material]) {
+      for (const value of Object.values(m)) {
+        if (value instanceof THREE.Texture && !(value as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture && value.image) found.add(value)
+      }
+    }
+  })
+  return [...found]
 }
 
 function ViewerLights() {
