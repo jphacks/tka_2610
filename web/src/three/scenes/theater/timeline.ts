@@ -33,6 +33,26 @@ export function sceneIndexAt(scenes: TheaterScene[], t: number): number {
 /** 場面の終わり（次の場面が始まる時刻） */
 export const sceneEnd = (scene: TheaterScene) => scene.arrive_ms + scene.hold_ms
 
+/**
+ * 「次の作品」「前の作品」で飛ぶ先の時刻。着地点はいつも作品が着いた時刻 arrive_ms（シークバーの目盛りと同じ位置）。
+ * 場面の始まり start_ms ではまだ前の作品が画面にいて、そこから流れてやっと着くので、作品の前には飛ばない。
+ * 場面の番号（sceneIndexAt は start_ms で変わる）ではなく、作品が着いたか・去ったかで決める。
+ *   次（delta > 0）：まだ着いていない（arrive_ms > t）最初の作品。滞在中なら次の作品、流れている途中なら向かっている作品
+ *     （作品を見ないまま通り過ぎない）。着いた瞬間（読み込みを待って時計が arrive_ms で止まっているときも）にもう一度押すと、その次。
+ *     最後の作品が着いたあとは null。
+ *   前（delta < 0）：滞在を終えた（arrive_ms + hold_ms <= t）最後の作品。滞在中・流れている途中なら 1 つ前の作品、最後の余韻なら最後の作品。
+ *     無ければ（最初の作品の滞在中）最初の作品の頭。最初の作品が着く前（はじめ）は、戻る先が無いので null（先へ進めない）。
+ *   作品が無ければ null。
+ */
+export function jumpTimeAt(data: TheaterData, t: number, delta: number): number | null {
+  const scenes = data.scenes
+  if (scenes.length === 0 || delta === 0) return null
+  if (delta > 0) return scenes.find((scene) => scene.arrive_ms > t)?.arrive_ms ?? null
+  if (t < scenes[0].arrive_ms) return null
+  for (let i = scenes.length - 1; i >= 0; i--) if (sceneEnd(scenes[i]) <= t) return scenes[i].arrive_ms
+  return scenes[0].arrive_ms
+}
+
 export interface TheaterFrame {
   index: number
   phase: TheaterPhase

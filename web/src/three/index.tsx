@@ -44,6 +44,7 @@ export {
   clockLabel,
   durationLabel,
   frameAt,
+  jumpTimeAt,
   memoLineAt,
   sceneEnd,
   sceneIndexAt,
