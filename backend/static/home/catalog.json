@@ -3,17 +3,6 @@
   "_note": "MemoryMuseum_Home キットの asset-catalog.json / home-themes.json / materials.json から抜粋。テクスチャのパスは /home-assets/textures/ からの相対",
   "assets": [
     {
-      "id": "home_sofa",
-      "name": "Sage / two-seat sofa",
-      "nameJa": "2人掛けソファ",
-      "category": "furniture",
-      "placement": "floor",
-      "dimensionsMeters": [2.36, 0.985, 0.9],
-      "bounds": [[-1.1618, 0.0, -0.4479], [1.1795, 0.9786, 0.4475]],
-      "topAnchor": null,
-      "layer": null
-    },
-    {
       "id": "home_coffee_table",
       "name": "Oak / coffee table",
       "nameJa": "ローテーブル",
@@ -88,39 +77,6 @@
       "bounds": [[-0.26, 0.0, -0.26], [0.26, 0.52, 0.26]],
       "topAnchor": null,
       "surfaces": [{ "id": "top", "anchor": [0, 0.52, 0], "size": [0.3, 0.3] }],
-      "layer": null
-    },
-    {
-      "id": "home_rug",
-      "name": "Cream / woven rug",
-      "nameJa": "ラグ",
-      "category": "furniture",
-      "placement": "floor",
-      "dimensionsMeters": [3, 0.023, 2.26],
-      "bounds": [[-1.5, 0.0, -1.13], [1.5, 0.023, 1.13]],
-      "topAnchor": null,
-      "layer": "floor_decor"
-    },
-    {
-      "id": "home_floor_lamp",
-      "name": "Cream / floor lamp",
-      "nameJa": "フロアライト",
-      "category": "furniture",
-      "placement": "floor",
-      "dimensionsMeters": [0.72, 1.62, 0.72],
-      "bounds": [[-0.36, 0.0, -0.36], [0.36, 1.62, 0.36]],
-      "topAnchor": null,
-      "layer": null
-    },
-    {
-      "id": "plant",
-      "name": "Botanical / terracotta",
-      "nameJa": "観葉植物",
-      "category": "furniture",
-      "placement": "floor",
-      "dimensionsMeters": [1.0, 1.65, 1.0],
-      "bounds": [[-0.2833, 0.0, -0.2658], [0.3109, 1.5705, 0.2815]],
-      "topAnchor": null,
       "layer": null
     },
     {

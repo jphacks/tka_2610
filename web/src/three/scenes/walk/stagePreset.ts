@@ -166,7 +166,7 @@ const DOWNLIGHTS: SpotLightSpec[] = roomDownlights(ROOM_LIGHTS, [{ origin: [0, 0
 
 /** 家の設定 */
 export const HOME_STAGE: StagePreset = {
-  // 南側（工作机の手前）から、部屋の中央（ソファの方）を向いて立つ
+  // 南側（工作机の手前）から、部屋の中央（ローテーブルの方）を向いて立つ
   spawn: [0, 0.12, 3.0],
   lookAt: [0, 0, 0],
   player: {
@@ -192,9 +192,9 @@ export const HOME_STAGE: StagePreset = {
   roomLights: ROOM_LIGHTS,
   emissive: [],
   collisionIgnore: {
-    // 作品（HomeObjects の ARTWORK_）と天井には当たらない。ラグは上を歩く
+    // 作品（HomeObjects の ARTWORK_）と天井には当たらない。上を歩ける敷物の家具を足したら、その id を contains に入れる
     prefixes: ['ARTWORK_', 'Ceiling'],
-    contains: ['home_rug'],
+    contains: [],
   },
   legacyUnityColors: false,
 }

@@ -411,9 +411,14 @@ pub async fn put_layout(
 ) -> AppResult<Json<SavedLayout>> {
     let body: PutBody = serde_json::from_slice(&body)
         .map_err(|e| AppError::bad_request(format!("送信データを読み取れません: {e}")))?;
-    // 形の間違いはここで返す。位置 (作品の実寸を使う) は save_layout で検証する
+    // 形の間違いはここで返す。位置 (作品の実寸を使う) は save_layout で検証する。
+    // やめた家具 (前の画面を開いたままのタブが送ってくる) は、400 にせず外して保存する
+    let retired = home::raw_retired_furniture(&body.layout);
     let layout = home::parse_layout(body.layout).map_err(AppError::bad_request)?;
     let room = resolve_room(&state.pool, query.room).await?;
+    if !retired.is_empty() {
+        println!("[Home] {} の保存で、やめた家具 {} 個 ({}) を外しました", room.name(), retired.len(), retired.join(", "));
+    }
 
     let mut tx = state.pool.begin().await?;
     // 保存されている配置は上書きする。比べるのは、出入口の前を見る「新しく置いた物・動かした物」を決めるためだけ。
@@ -436,7 +441,7 @@ pub async fn put_layout(
 
 /// おへやの用意。house_rooms が空なら (このマイグレーションを入れて初めての起動)、今までの配置 (home_layout) の家具とテーマで、
 /// 飾っている作品のある年齢と今の年齢の 1 階を作る (作品はこのあとの reconcile で置き直す)。
-/// そのあと、どのおへやの配置も今の版に上げ、読めない作品があれば外して保存し直す。家具や部屋がおかしくて直せないおへやは初期配置に戻す
+/// そのあと、どのおへやの配置も今の版に上げ、読めない作品・やめた家具があれば外して保存し直す。家具や部屋がおかしくて直せないおへやは初期配置に戻す
 pub async fn ensure_rooms(state: &AppState) -> AppResult<()> {
     let birthday = museum_api::child_birthday(&state.pool).await?;
     if all_rooms(&state.pool).await?.is_empty() {
@@ -479,6 +484,8 @@ pub async fn ensure_rooms(state: &AppState) -> AppResult<()> {
         .fetch_one(&mut *tx)
         .await?;
         let json_version = home::raw_schema_version(&raw);
+        // やめた家具は読むときに外れるので、DB からも消すために保存し直す (版は変えない)
+        let retired = home::raw_retired_furniture(&raw);
         let sizes = raw_sizes(&mut *tx, &raw).await?;
         let (layout, repaired) = match check_saved(raw.clone(), &sizes) {
             Ok(layout) => (layout, false),
@@ -494,7 +501,10 @@ pub async fn ensure_rooms(state: &AppState) -> AppResult<()> {
             },
         };
         let old = json_version.is_some_and(|v| v < u64::from(home::SCHEMA_VERSION));
-        if repaired || old || column_version != SCHEMA_VERSION {
+        if !retired.is_empty() {
+            println!("[Home] {} のやめた家具 {} 個 ({}) を外します", room.name(), retired.len(), retired.join(", "));
+        }
+        if repaired || old || !retired.is_empty() || column_version != SCHEMA_VERSION {
             // artworks.slot_id はそのままにしておき、このあとの reconcile で置き直す
             sqlx::query("UPDATE house_rooms SET layout = $2, schema_version = $3, updated_at = NOW() WHERE id = $1")
                 .bind(room.id)

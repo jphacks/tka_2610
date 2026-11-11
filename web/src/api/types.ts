@@ -313,7 +313,7 @@ export interface CatalogAsset {
   dimensions_meters: Vec3
   /** 天板の中心（家のキットの値）。作品を載せる面は surfaces */
   top_anchor: Vec3 | null
-  /** 'floor_decor'（ラグ）はほかの家具と重ねて置ける・上を歩ける */
+  /** 'floor_decor'（敷物。前のラグがこれだった。今の catalog には無い）はほかの家具と重ねて置ける */
   layer: 'floor_decor' | null
   /** 作品を載せられるか（面が 1 つ以上ある） */
   support: boolean
