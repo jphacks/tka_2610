@@ -13,22 +13,6 @@
   "objects": [
     {
       "kind": "furniture",
-      "id": "home-001",
-      "assetId": "home_rug",
-      "roomId": "hub",
-      "position": [0.05, 0, -0.6],
-      "rotationY": 0
-    },
-    {
-      "kind": "furniture",
-      "id": "home-002",
-      "assetId": "home_sofa",
-      "roomId": "hub",
-      "position": [0, 0, -2.45],
-      "rotationY": 0
-    },
-    {
-      "kind": "furniture",
       "id": "home-003",
       "assetId": "home_coffee_table",
       "roomId": "hub",
@@ -50,22 +34,6 @@
       "roomId": "hub",
       "position": [4.6, 0, 2.4],
       "rotationY": -1.5707963267948966
-    },
-    {
-      "kind": "furniture",
-      "id": "home-006",
-      "assetId": "home_floor_lamp",
-      "roomId": "hub",
-      "position": [4.3, 0, -4.3],
-      "rotationY": 0
-    },
-    {
-      "kind": "furniture",
-      "id": "home-007",
-      "assetId": "plant",
-      "roomId": "hub",
-      "position": [-4.3, 0, -4.3],
-      "rotationY": 0
     },
     {
       "kind": "furniture",
