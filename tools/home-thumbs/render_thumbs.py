@@ -4,7 +4,7 @@
 
 backend/static/home/modules/<id>.glb を 1 つずつ読み、斜め前の少し上から正投影で撮って、
 backend/static/home/thumbs/<id>.webp (背景は透明) に書く。家具の GLB を差し替えたら作り直す。
-引数で家具の id を渡すと、その家具だけを作り直す (`-- home_sofa plant`)。
+引数で家具の id を渡すと、その家具だけを作り直す (`-- home_stool bench_oak`)。
 """
 
 import math
