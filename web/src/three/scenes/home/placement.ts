@@ -576,7 +576,7 @@ export function canPlace(layout: Layout, catalog: HomeCatalog, candidate: Layout
   if (doorZones(house, roomId).some((zone) => rectOverlap(zone, placed.rect))) {
     return fail(`${name(candidate)} は${where ? ` ${where} の` : ''}出入口の前には置けません`)
   }
-  // ラグはほかの物と重なってよい（Rust: rug_may_overlap）
+  // 敷物（floor_decor。前のラグ）はほかの物と重なってよい（Rust: check_placement の decor。今の catalog には敷物が無いので、テストも無い）
   if (placed.decor) return OK
   // 物どうしは、同じ部屋の中でだけ、足元と高さの範囲の両方が重なったら置けない。別の部屋の同じ部屋の中の位置は重ならない
   // （Rust: rejects_furniture_overlap、rooms_do_not_collide_across_rooms、wall_furniture_overlaps_by_height）
@@ -603,7 +603,7 @@ function checkOnTop(
   const parent = others.find((o): o is FurnitureObject => o.kind === 'furniture' && o.id === parentId)
   if (!parent) return fail(`${name(candidate)} の置き場所「${parentId}」がありません (作品は家具の上にだけ置けます)`)
   const support = assetOf(catalog, parent.assetId)
-  // 面の無い家具（ソファなど）には載せない（Rust: artwork_requires_support_parent）
+  // 面の無い家具には載せない（今の catalog には無い。Rust: artwork_requires_support_parent）
   if (!support?.support) return fail(`${name(parent)} の上には作品を置けません`)
   const surface = surfaceOf(support, candidate.surface)
   // 家具に無い面には置けない（Rust: artwork_surface_defaults_to_the_top）
