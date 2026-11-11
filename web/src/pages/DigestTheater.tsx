@@ -13,7 +13,7 @@ import { useTheater, type TheaterData } from '../api'
 import { ErrorBoundary, GlassButton, MemoryViewer } from '../components'
 import { BackIcon, CalendarIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
 import { useNav } from '../nav'
-import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, scaleTheater } from '../three'
+import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, jumpTimeAt, scaleTheater } from '../three'
 import { audioDuration, loadMusic, loadSettings, saveMusic, saveSettings, type TheaterMusic, type TheaterSettings } from './theaterMusic'
 import { useTheaterPlayback } from './theaterPlayback'
 import './DigestTheater.css'
@@ -516,12 +516,18 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
     if (view.ended) { seek(0); setPlaying(true); return }
     setPlaying(!playing)
   }
+  // 前後の作品へ飛ぶ：作品が着いた時刻（arrive_ms）へ。飛ぶ先は jumpTimeAt（timeline.ts）が決める。
+  // いまの位置は view（React の state。フレームごとにしか変わらない）ではなく時計そのものを読む（続けて押しても、前の押した分から数える）
   const jump = (delta: number) => {
     if (!shown) return
-    const target = Math.min(shown.scenes.length - 1, Math.max(0, view.index + delta))
-    const s = shown.scenes[target]
-    seek(delta < 0 && target === view.index ? s.arrive_ms : s.start_ms)
+    const target = jumpTimeAt(shown, clock.current ?? 0, delta)
+    if (target !== null) seek(target)
   }
+  // jumpTimeAt が null のときだけ押せなくする（view の段階で読む。シークバーの time は 0.25 秒ごとに丸めてあるので使わない）。
+  // 「次の作品」は、最後の作品が着いたあと（滞在中・最後の余韻）だけ押せない（最後の作品へ流れている途中は押すと、その前に着く）。
+  // 「前の作品」は、最初の作品が着く前（はじめ）だけ押せない
+  const canNext = !!shown && !(view.index + 1 >= shown.scenes.length && (view.phase === 'hold' || view.phase === 'outro'))
+  const canPrev = !(view.index === 0 && view.phase === 'intro')
   // 作品を押した所（画面の座標）。詳細は、ここから丸く広がって開く（nav.zoom）
   const tapPoint = useRef<{ x: number; y: number } | null>(null)
   const captureRef = useRef<(() => Promise<ImageBitmap | null>) | null>(null)
@@ -718,11 +724,11 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
         {started && shown && scene && !setupOpen && (
           <div className="theater-bottom theater-hud">
             <div className="theater-controls glass" data-liquid="clear">
-              <button type="button" className="theater-icon-btn" aria-label="前の作品" disabled={view.index === 0 && view.phase !== 'hold'} onClick={() => jump(-1)}><BackIcon size={18} /></button>
+              <button type="button" className="theater-icon-btn" aria-label="前の作品" disabled={!canPrev} onClick={() => jump(-1)}><BackIcon size={18} /></button>
               <button type="button" className="theater-play" data-liquid="tint" aria-label={view.ended ? 'もう一度' : playing ? '一時停止' : '再生'} onClick={toggle}>
                 {playing ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
               </button>
-              <button type="button" className="theater-icon-btn" aria-label="次の作品" disabled={view.index + 1 >= shown.scenes.length} onClick={() => jump(1)}><ChevronRight size={18} /></button>
+              <button type="button" className="theater-icon-btn" aria-label="次の作品" disabled={!canNext} onClick={() => jump(1)}><ChevronRight size={18} /></button>
               <div className="theater-seek">
                 <input
                   type="range"

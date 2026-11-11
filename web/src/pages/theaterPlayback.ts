@@ -3,6 +3,7 @@
 // 時計（clock、ミリ秒）は 1 本だけ。requestAnimationFrame で進め、3D（TheaterScene）は毎フレームそれを読む。
 // BGM・動画・声は、時計から「いまどこを流しているべきか」を求め、0.3 秒よりずれたら合わせ直す。
 // だから、止める・シークする・前後の作品へ飛ぶ、のどれをしても音と映像がずれない。
+// 前後の作品へ飛ぶのも、作品が着いた時刻（arrive_ms。timeline.ts の jumpTimeAt が決める）へのシークで、ここに別の仕組みは無い。
 // 作品の 3D を読み込み中のあいだは、作品が着いた時刻で時計を止めて待つ（読めなければ 12 秒で写真に替わる）。
 // 動画の音や声が鳴っているあいだは、BGM を小さくする（ダッキング）。最後の余韻では BGM を小さくして終わる。
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
