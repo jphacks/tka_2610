@@ -420,7 +420,7 @@
   color: var(--ink-2);
 }
 
-/* 期間の列：左に「これまで」と年齢のチップ（1 行。はみ出す分は横にすべらせる）、右端に「日付をえらぶ」の丸いボタン（いつも見える）。
+/* 期間の列：左に「これまで」「ダイジェスト」「年齢」のチップ（1 行。はみ出す分は横にすべらせる）、右端に「日付をえらぶ」の丸いボタン（いつも見える）。
    チップの列は左だけポスターの余白（--poster-pad）の外まで広げ、すべらせたチップが画面の左の端まで流れて消えるようにする。
    端は、その向こうにまだチップがある側だけぼかして、続きがあると分かるようにする（.more-left / .more-right。DigestTheater.tsx）。
    scroll-snap は付けない（読み込み後にチップが前へ足されると、ブラウザが前に合わせていたチップへ寄せ直して、行の終わりまで流れてしまう） */
@@ -515,6 +515,57 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* 「年齢」のボタン：年齢のチップを 1 つにまとめる。押すと上に年齢のメニュー（AgeMenu）が開く */
+.theater-poster-periods .theater-poster-age {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+}
+.theater-poster-age svg {
+  transform: rotate(90deg);
+  transition: transform 0.25s var(--ease-out);
+}
+.theater-poster-age[aria-expanded='true'] svg { transform: rotate(-90deg); }
+
+/* 年齢のメニュー。アプリ全体（.app）の上に重ねて、「年齢」のボタンのすぐ上に出す（位置は AgeMenu が style で決める） */
+.theater-age-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+}
+.theater-age-menu {
+  position: absolute;
+  z-index: 61;
+  display: grid;
+  min-width: 112px;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 18px;
+  transform-origin: bottom left;
+  animation: theater-age-in 0.22s var(--ease-out) both;
+}
+.theater-age-menu button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--ink);
+}
+.theater-age-menu button[aria-checked='true'] {
+  background: var(--accent);
+  color: var(--surface);
+}
+@keyframes theater-age-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
 }
 
 /* ダイジェストのとき：作品の数の下の「ほかの作品にする」（えらび直す。小さな文字のボタン） */

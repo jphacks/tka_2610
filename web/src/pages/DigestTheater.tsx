@@ -296,6 +296,59 @@ function SetupPanel({
 }
 
 /**
+ * ポスターの「年齢」ボタンから開く、年齢をえらぶメニュー。ボタンのすぐ上に出す。
+ * 枠の中のポスター（memoria の画面の低い枠）でも切れないように、アプリ全体（.app）の上に重ねる
+ */
+function AgeMenu({ anchor, presets, active, onPick, onClose }: {
+  anchor: HTMLElement
+  presets: { key: string; label: string; from: string; to: string }[]
+  active: string | undefined
+  onPick: (from: string, to: string) => void
+  onClose: () => void
+}) {
+  const app = anchor.closest('.app')
+  const menu = useRef<HTMLDivElement>(null)
+  const [place, setPlace] = useState<CSSProperties | null>(null)
+  useLayoutEffect(() => {
+    if (!app) return
+    const a = app.getBoundingClientRect()
+    const b = anchor.getBoundingClientRect()
+    // 右にはみ出すときは、ボタンの右端にそろえる
+    const width = menu.current?.offsetWidth ?? 120
+    const left = Math.max(8, Math.min(b.left - a.left, a.width - width - 8))
+    setPlace({ left, bottom: a.bottom - b.top + 6, maxHeight: Math.max(120, b.top - a.top - 16) })
+  }, [anchor, app])
+  useEffect(() => {
+    const items = menu.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"]')
+    const checked = menu.current?.querySelector<HTMLElement>('[aria-checked="true"]')
+    ;(checked ?? items?.[0])?.focus({ preventScroll: true })
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  if (!app) return null
+  return createPortal(
+    <>
+      <div className="theater-age-scrim" onClick={onClose} />
+      <div ref={menu} className="theater-age-menu glass" role="menu" aria-label="年齢をえらぶ" style={place ?? { visibility: 'hidden' }}>
+        {presets.map((p) => (
+          <button
+            type="button"
+            key={p.key}
+            role="menuitemradio"
+            aria-checked={active === p.key}
+            onClick={() => { onClose(); onPick(p.from, p.to) }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </>,
+    app,
+  )
+}
+
+/**
  * はじめの画面（再生する前）。設定を並べず、映画のポスターのように「何を・どれだけ見るか」と大きな再生ボタンだけを出す。
  * 後ろでは 3D の大地がゆっくりゆれている（TheaterScene の attract）。日付・速さ・音楽は「設定」のシートで変える
  */
@@ -329,6 +382,12 @@ function TheaterPoster({
   const currentTo = to ?? data?.to ?? ''
   const presets = data?.available.presets ?? []
   const activePreset = digest ? 'digest' : presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
+  // 「これまで」のほかは年齢ごと。年齢は 1 つのボタン（「年齢」・えらんでいるときはその年齢）にまとめ、押すとメニューを開く
+  const allPreset = presets[0]
+  const agePresets = presets.slice(1)
+  const activeAge = agePresets.find((p) => p.key === activePreset)
+  const [ageAnchor, setAgeAnchor] = useState<HTMLElement | null>(null)
+  const closeAgeMenu = useCallback(() => setAgeAnchor(null), [])
   const empty = !!data && data.artwork_count === 0
   // えらんでいるチップが列の外（右のぼかしの向こう）にあれば、見える所まで横にすべらせる
   const chips = useRef<HTMLDivElement>(null)
@@ -384,13 +443,26 @@ function TheaterPoster({
           aria-label="よく使う期間"
           onScroll={updateMore}
         >
-          {presets.map((p, i) => (
-            <Fragment key={p.key}>
-              <button type="button" aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
-              {i === 0 && <button type="button" aria-pressed={digest} onClick={onDigest}>{DIGEST_LABEL}</button>}
-            </Fragment>
-          ))}
+          {allPreset && (
+            <>
+              <button type="button" aria-pressed={activePreset === allPreset.key} onClick={() => onRange(allPreset.from, allPreset.to)}>{allPreset.label}</button>
+              <button type="button" aria-pressed={digest} onClick={onDigest}>{DIGEST_LABEL}</button>
+            </>
+          )}
+          {agePresets.length > 0 && (
+            <button
+              type="button"
+              className="theater-poster-age"
+              aria-pressed={!!activeAge}
+              aria-haspopup="menu"
+              aria-expanded={!!ageAnchor}
+              onClick={(e) => setAgeAnchor(ageAnchor ? null : e.currentTarget)}
+            >
+              {activeAge?.label ?? '年齢'}<ChevronRight size={14} />
+            </button>
+          )}
         </div>
+        {ageAnchor && <AgeMenu anchor={ageAnchor} presets={agePresets} active={activeAge?.key} onPick={onRange} onClose={closeAgeMenu} />}
         <button
           type="button"
           className="theater-poster-date"
