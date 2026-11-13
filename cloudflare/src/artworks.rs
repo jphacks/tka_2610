@@ -565,9 +565,40 @@ pub async fn create_artwork(
         )
     })?;
     worker::console_log!("[Artwork] created \"{}\" ({}, {} KB model)", row.title, row.model_kind, model.len() / 1024);
-    // 登録したばかりの作品は飾っていない
+    // 登録した作品は、作ったときの年齢のおへやに飾る (空きが無ければ家具を足して)。作品の行とファイルとは別のトランザクションで書くので、
+    // 飾れなくても (いっぱい・保存の失敗) 登録は成功にして、飾っていない作品として返す (配置は何も変わらない)
+    let row = match db.tx(|| display_new_artwork(db, &row)) {
+        Ok(Some((displayed, room_name))) => {
+            worker::console_log!(
+                "[Display] \"{}\" -> {} ({}。登録したので飾りました)",
+                displayed.title,
+                displayed.slot_id.as_deref().unwrap_or("-"),
+                room_name
+            );
+            displayed
+        }
+        Ok(None) => {
+            worker::console_log!("[Display] \"{}\" はおへやがいっぱいで飾れませんでした (登録はしました)", row.title);
+            row
+        }
+        Err(error) => {
+            worker::console_error!("[Display] \"{}\" を飾れませんでした (登録はしました): {}", row.title, error.message);
+            row
+        }
+    };
     let ctx = DtoContext::load(db)?;
     Ok((StatusCode::CREATED, Json(ArtworkDto::new(&row, &ctx))))
+}
+
+/// 登録したばかりの作品を、作ったときの年齢のおへやに飾る (home_api::place_in_age。空きが無ければ家具を足す。トランザクションの中で呼ぶ)。
+/// 飾れたら飾ったあとの行とおへやの名前、どこにも置けなければ None
+fn display_new_artwork(db: &Db, row: &ArtworkRow) -> AppResult<Option<(ArtworkRow, String)>> {
+    let birthday = museum_api::child_birthday(db)?;
+    let age = age::artwork_age(birthday, row.made_on, row.age);
+    let Some(saved) = home_api::place_in_age(db, row.id, row.art_size().as_ref(), age)? else {
+        return Ok(None);
+    };
+    Ok(Some((fetch_row(db, row.id)?, saved.room.name)))
 }
 
 // =============================
@@ -806,11 +837,12 @@ pub async fn set_favorite(
 // =============================
 
 /// POST /api/artworks/{id}/display の本文 (任意)。
-/// position を省くと空いている場所に自動で置く (room_id があればそのおへやだけ、無ければその作品の年齢のおへやを下の階から)
+/// position を省くと空いている場所に自動で置く (room_id があればそのおへやだけ、無ければその作品の年齢のおへやを下の階から)。
+/// 空いている所が無ければ家具を足して置く (parent_id を指定したときは足さない)
 #[derive(Deserialize, Default)]
 pub struct DisplayBody {
-    /// 飾るおへや (house_rooms.id)。作品の年齢と違うおへやは 400。自動で置くときはこのおへやの家具だけを探す
-    /// (空きが無ければ 409。ほかのおへやには置かない)。position・parent_id を指定するときは要る (省くと今飾っているおへや)。
+    /// 飾るおへや (house_rooms.id)。作品の年齢と違うおへやは 400。自動で置くときはこのおへやだけを探す
+    /// (空きが無ければこのおへやに家具を足して置き、家具を足す場所も無ければ 409。ほかのおへやには置かない)。position・parent_id を指定するときは要る (省くと今飾っているおへや)。
     /// "hub" など家の部屋の id (前の版の Web) は、省いたのと同じに扱う
     pub room_id: Option<String>,
     /// 載せる家具の object id。省くと床 (position があるとき) か自動
@@ -892,9 +924,12 @@ fn display_in(db: &Db, id: Uuid, target: Option<Uuid>, request: DisplayBody) -> 
     }
 
     let saved = match room {
-        // おへやを省いたとき: その年齢のおへやを下の階から探す (おへやが無ければ 1 階を作る)
+        // おへやを省いたとき: その年齢のおへやを下の階から探す (おへやが無ければ 1 階を作る)。
+        // どのおへやにも空きが無ければ、家具を足して置けるおへやを下の階から探す
         None => home_api::place_in_age(db, id, row.art_size().as_ref(), age)?.ok_or_else(|| {
-            AppError::conflict(format!("{age} さいのおへやがいっぱいです。「おへやを足す」でおへやを増やしてください"))
+            AppError::conflict(format!(
+                "{age} さいのおへやは、家具を足す場所も無いほどいっぱいです。「おへやを足す」でおへやを増やしてください"
+            ))
         })?,
         Some(room) => {
             let mut layout = home_api::lock_layout(db, room.id)?;
@@ -917,6 +952,8 @@ fn display_in(db: &Db, id: Uuid, target: Option<Uuid>, request: DisplayBody) -> 
             let current = layout.artwork_for(id).cloned();
             layout.remove_artwork(id);
             let object_id = current.map(|c| c.id).or(moving_id).unwrap_or_else(|| home::new_object_id("art"));
+            // 空きが無くて足した家具 (自動で置くときだけ)
+            let mut added = None;
             let object = match request.position {
                 Some(position) => ArtworkObject {
                     id: object_id,
@@ -931,23 +968,42 @@ fn display_in(db: &Db, id: Uuid, target: Option<Uuid>, request: DisplayBody) -> 
                 },
                 None => {
                     // 載っている作品は実寸、置く作品も実寸で空きを探す
-                    let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
-                    let sizes = sizes_of(&load_sizes(db, &ids)?);
-                    // 写真の額縁は、家具を指定していなければ壁に掛ける (壁がいっぱいなら家具の上)
-                    let placed = home::pick_place(&layout, &sizes, id, row.art_size().as_ref(), request.parent_id.as_deref());
-                    let Some(LayoutObject::Artwork(object)) = placed else {
-                        return Err(AppError::conflict(format!(
-                            "{} に飾る場所がいっぱいです。模様替えで棚や机を足してください",
-                            room.name()
-                        )));
+                    let sizes = home_api::layout_sizes(db, &layout)?;
+                    let size = row.art_size();
+                    let objects = match request.parent_id.as_deref() {
+                        // 家具を指定したときは、その家具から空きを探す (家具は足さない)。
+                        // 物の数の上限に達したおへやは、空きがあっても保存できないので探さない
+                        Some(parent_id) if home::has_room_for(&layout, 1) => {
+                            home::pick_place(&layout, &sizes, id, size.as_ref(), Some(parent_id)).map(|o| vec![o])
+                        }
+                        Some(_) => None,
+                        // 写真の額縁は先に壁に掛ける (壁がいっぱいなら家具の上)。空きが無ければ、
+                        // このおへやに家具を 1 つ足してその上に置く (ほかのおへやには置かない)
+                        None => home::place_or_furnish(&layout, &sizes, id, size.as_ref()),
                     };
+                    let Some(mut objects) = objects else {
+                        return Err(AppError::conflict(if request.parent_id.is_some() {
+                            format!("{} に飾る場所がいっぱいです。模様替えで棚や机を足してください", room.name())
+                        } else {
+                            format!("{} は、家具を足す場所も無いほどいっぱいです。「おへやを足す」でおへやを増やしてください", room.name())
+                        }));
+                    };
+                    // 最後が作品、その前が足した家具 (あれば)
+                    let Some(LayoutObject::Artwork(object)) = objects.pop() else {
+                        return Err(AppError::internal("自動で置いた物が作品ではありません"));
+                    };
+                    added = objects.pop();
                     ArtworkObject { id: object_id, ..object }
                 }
             };
-            let slot_id = object.id.clone();
+            // 置けない位置 (はみ出し・重なり・出入口の前) はここで 400 になる。出入口の前を見るのは、いま置いた作品と足した家具だけ
+            let mut moved = HashSet::from([object.id.clone()]);
+            if let Some(furniture) = added {
+                worker::console_log!("[Home] {} に{}を足して飾ります (空いている所が無かったため)", room.name(), home_api::furniture_name(&furniture));
+                moved.insert(furniture.id().to_string());
+                layout.objects.push(furniture);
+            }
             layout.objects.push(LayoutObject::Artwork(object));
-            // 置けない位置 (はみ出し・重なり・出入口の前) はここで 400 になる。出入口の前を見るのは、いま置いた作品だけ
-            let moved = HashSet::from([slot_id]);
             home_api::save_layout(db, room, layout, DoorPolicy::OnlyMoved(&moved))?
         }
     };

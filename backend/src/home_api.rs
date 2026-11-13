@@ -344,8 +344,9 @@ async fn check_ages(tx: &mut Transaction<'_, Postgres>, room: RoomRow, ids: &[Uu
 }
 
 /// 作品を、その年齢のおへやの空いている所に飾る (下の階から探す)。その年齢のおへやが 1 つも無ければ 1 階を作る。
-/// どのおへやもいっぱいなら None。作品がいまほかのおへやにあれば、先に外しておくこと
-pub async fn place_in_age(
+/// どのおへやもいっぱいなら None。家具は足さない (起動時のサンプルの登録 seed が使う。利用者が飾るときは place_in_age)。
+/// 作品がいまほかのおへやにあれば、先に外しておくこと
+async fn place_in_free_spot(
     tx: &mut Transaction<'_, Postgres>,
     artwork_id: Uuid,
     size: Option<&ArtSize>,
@@ -371,15 +372,83 @@ pub async fn place_in_age(
     Ok(None)
 }
 
-/// place_in_age と同じ。ただし、その年齢のどのおへやもいっぱいなら、いちばん上に初期配置の家具でおへやを足して置く
-/// (MAX_FLOORS まで)。起動時のサンプルの登録 (seed) だけが使う。利用者が飾るときは足さずに 409 にする
+/// 作品を、その年齢のおへやに飾る (利用者が飾るとき・作品を登録したとき)。その年齢のおへやが 1 つも無ければ 1 階を作る。
+///
+/// 1. 下の階から、今ある家具や壁の空いている所 (home::pick_place)
+/// 2. どのおへやにも空きが無ければ、下の階から、家具を 1 つ足してその上に置けるおへや (home::place_on_new_furniture)。
+///    おへやの数は増やさず、1 つのおへやに家具を足して詰める
+///
+/// どちらもできなければ None (階は足さない。利用者が「おへやを足す」で足す)。作品がいまほかのおへやにあれば、先に外しておくこと
+pub async fn place_in_age(
+    tx: &mut Transaction<'_, Postgres>,
+    artwork_id: Uuid,
+    size: Option<&ArtSize>,
+    age: i16,
+) -> AppResult<Option<SavedLayout>> {
+    let mut rooms = rooms_of_age(&mut **tx, age).await?;
+    if rooms.is_empty() {
+        rooms.push(create_room(&mut **tx, age, &home::default_layout()).await?);
+    }
+    // 1. 今ある空き
+    for &room in &rooms {
+        let mut layout = lock_layout(tx, room.id).await?;
+        if layout.artwork_for(artwork_id).is_some() {
+            return Ok(Some(SavedLayout { room: room.info(), layout, updated_at: Utc::now() }));
+        }
+        // 物の数の上限に達したおへやは、空きがあっても保存できない (400 になる) ので飛ばす
+        if !home::has_room_for(&layout, 1) {
+            continue;
+        }
+        let sizes = layout_sizes(tx, &layout).await?;
+        if let Some(object) = home::pick_place(&layout, &sizes, artwork_id, size, None) {
+            layout.objects.push(object);
+            // 家具の上か壁に置くので、出入口の前は見ない
+            return Ok(Some(save_layout(tx, room, layout, DoorPolicy::Ignore).await?));
+        }
+    }
+    // 2. 家具を足す
+    for room in rooms {
+        let mut layout = lock_layout(tx, room.id).await?;
+        let sizes = layout_sizes(tx, &layout).await?;
+        let Some((furniture, artwork)) = home::place_on_new_furniture(&layout, &sizes, artwork_id, size) else {
+            continue;
+        };
+        let name = furniture_name(&furniture);
+        // 足した家具と作品は新しく置いた物なので、出入口の前も見る (place_on_new_furniture も同じ決まりで探している)
+        let moved = HashSet::from([furniture.id().to_string(), artwork.id().to_string()]);
+        layout.objects.push(furniture);
+        layout.objects.push(artwork);
+        let saved = save_layout(tx, room, layout, DoorPolicy::OnlyMoved(&moved)).await?;
+        println!("[Home] {} に{}を足して飾りました (空いている所が無かったため)", room.name(), name);
+        return Ok(Some(saved));
+    }
+    Ok(None)
+}
+
+/// 配置に置いてある作品の実寸
+pub async fn layout_sizes(tx: &mut Transaction<'_, Postgres>, layout: &Layout) -> AppResult<Sizes> {
+    let ids: Vec<Uuid> = layout.artworks().map(|a| a.artwork_id).collect();
+    Ok(sizes_of(&load_sizes(&mut **tx, &ids).await?))
+}
+
+/// ログに出す家具の名前 (例: "サイドボード")
+pub fn furniture_name(object: &LayoutObject) -> String {
+    match object {
+        LayoutObject::Furniture(f) => home::asset(&f.asset_id).map_or(f.asset_id.clone(), |a| a.name_ja.clone()),
+        LayoutObject::Artwork(_) => String::new(),
+    }
+}
+
+/// place_in_free_spot と同じ。ただし、その年齢のどのおへやもいっぱいなら、いちばん上に初期配置の家具でおへやを足して置く
+/// (MAX_FLOORS まで)。起動時のサンプルの登録 (seed) だけが使う。家具は足さない (デモの家を今までと同じにするため)。
+/// 利用者が飾るときは place_in_age (階は足さずに家具を足す)
 pub async fn place_in_age_adding_floors(
     tx: &mut Transaction<'_, Postgres>,
     artwork_id: Uuid,
     size: Option<&ArtSize>,
     age: i16,
 ) -> AppResult<Option<SavedLayout>> {
-    if let Some(saved) = place_in_age(tx, artwork_id, size, age).await? {
+    if let Some(saved) = place_in_free_spot(tx, artwork_id, size, age).await? {
         return Ok(Some(saved));
     }
     // 空のおへやにも入らない作品のために、使われないおへやを作らない
@@ -391,7 +460,7 @@ pub async fn place_in_age_adding_floors(
     }
     let room = create_room(&mut **tx, age, &empty).await?;
     println!("[Home] {} を足しました (サンプルの作品を飾るため)", room.name());
-    place_in_age(tx, artwork_id, size, age).await
+    place_in_free_spot(tx, artwork_id, size, age).await
 }
 
 // =============================

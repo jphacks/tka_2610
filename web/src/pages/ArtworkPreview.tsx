@@ -1,5 +1,6 @@
 // ④ 3D プレビュー（/artworks/:id/preview）。モーダルで下から開く。
-// 家の真ん中の台座の上で作品が回る。「おうちに飾る」で空いている棚や机に飾り、⑤ おうちの中へ進む。
+// 家の真ん中の台座の上で作品が回る。登録した作品はふつう、もうおへやに飾ってある（サーバーが登録のときに飾る）ので、
+// ボタンは「〇〇で見る」で ⑤ おうちの中へ進む。飾れなかった作品（おへやがいっぱい）は「おうちに飾る」で飾り直せる。
 import { Suspense, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useArtwork, useDisplay, useMuseum } from '../api'

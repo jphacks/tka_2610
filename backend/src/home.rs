@@ -1551,6 +1551,419 @@ fn pick_wall_spot(layout: &Layout, sizes: &Sizes, artwork_id: Uuid, frame: &ArtS
     None
 }
 
+// =============================
+// 家具を足して飾る (おへやに空きが無いとき)
+// =============================
+
+/// 家具を足して飾るときに、足す家具とほかの物 (家具・床の作品・壁の物) の間に空ける距離 (m。足元と高さの両方)。
+/// ぴったり付けると 2 つの家具が 1 つにつながって見え、模様替えでどちらをつまんだのか分かりにくいので、10 cm 空ける
+const FURNISH_GAP: f64 = 0.1;
+/// 足す床の家具の正面 (部屋の内側に置く家具は 4 方) に空ける通り道の幅 (m)。
+/// 鑑賞モードの歩く人の太さ (web の stagePreset.ts の HOME_STAGE.player.radius 0.26 m の 2 倍) より広くして、
+/// 家具の前に立って作品を見られるようにする。今ある床の家具の正面も、同じ幅だけふさがない
+const FURNISH_AISLE: f64 = 0.7;
+/// 鑑賞モードのはじめに立つ位置のまわりと、その前 (リビングの中心から見た範囲)。ここには家具を足さない。
+/// はじめの位置は web の stagePreset.ts の HOME_STAGE.spawn (0, 3.0) で、部屋の中央 (0, 0) を向く (docs/walk.md)。
+/// その ±0.9 m と前に 1.4 m 空けて、立った所が家具に埋まらず、はじめに見る目の前が家具でふさがらないようにする
+const WALK_START_CLEAR: Rect = Rect { min_x: -0.9, max_x: 0.9, min_z: 1.6, max_z: 3.9 };
+/// 壁ぎわ・壁に沿って家具の位置を探す刻み (m)
+const FURNISH_STEP: f64 = 0.05;
+/// 部屋の内側で家具の位置の候補を並べる刻み (m)。候補はこの格子の点を全部使い、試す順だけを乱数で決める。
+/// 0.05 m だと候補が多すぎる (1 回の登録で数万回の判定) ので粗くする
+const FURNISH_GRID: f64 = 0.25;
+/// 壁の家具を掛ける高さを探す刻み (m。模様替えの「上へ」「下へ」(placement.ts の MOUNT_STEP) と同じ 10 cm)
+const FURNISH_MOUNT_STEP: f64 = 0.1;
+/// 足す壁の家具の上端 (面に飾る作品の枠の上まで) の上限 (m)。家のキットの壁の高さ。
+/// 壁は 4.2 m あるが、天井の近くに作品が並ぶと見上げないと見えないので、ここまでにする
+const FURNISH_WALL_TOP: f64 = 3.2;
+/// 作品がその家具に合うかの下限 (割合)。家具の面に置いたときの作品の大きさ (display_scale) が、
+/// ふつうの天板の枠 (幅・奥行き ART_FIT_MAX・高さ ART_FIT_HEIGHT) に置いたときのこれ以上になる面だけを使う。
+/// 工作を奥行きの浅いピクチャーレッジ (0.128 m) や本棚の低い段に載せて、小さく縮めてしまう組み合わせを選ばない
+const FURNISH_MIN_FILL: f64 = 0.75;
+
+/// 壁ぎわに、背を壁に向けて (正面を部屋の内側へ) 置く家具の順。置き場所の多いサイドボード (3 つ) と本棚 (5 つ) で壁を埋め、
+/// 残ったすき間に飾り棚と台座を入れる
+const FURNISH_ALONG_WALL: [&str; 5] = ["home_console", "home_bookshelf", "home_display_shelf", "plinth_ivory", "plinth_slim"];
+/// 壁ぎわが埋まったら、部屋の内側に置く家具。前の組から順に使い、組の中の順は乱数で入れ替える (同じ家具ばかり並ばないように)。
+/// 低い台 (置き場所 6 つ) → ローテーブル (2 つ) → 置き場所 1 つの台座・スツール (この組だけ入れ替える)。
+/// 置き場所の多い低い物から使うのは、はじめの眺めと壁の作品をふさがず、物の数の上限 (MAX_OBJECTS) までに飾れる作品が多いため
+/// (低い台とローテーブルを入れ替えると、ローテーブルが床を取って低い台が入らず、初期配置に足し続けたときの作品が 91 → 88 点に減った)。
+/// 同じ家具が続いても、位置と向きは乱数でばらける
+const FURNISH_INTERIOR: [&[&str]; 3] = [&["plinth_low"], &["home_coffee_table"], &["plinth_ivory", "plinth_slim", "home_stool"]];
+/// 部屋の内側に置く家具の向きの候補。正面 (作品の向き) が入口の側 (+Z)・東・西。北 (入口に背を向ける) は使わない
+const FURNISH_INTERIOR_TURNS: [f64; 3] = [0.0, FRAC_PI_2, -FRAC_PI_2];
+/// 床がふさがってから掛ける壁の家具の順 (家具ごとの高さ mount_height から上へ。床の家具の上にも掛ける)
+const FURNISH_ON_WALL: [&str; 3] = ["wall_floating_shelf_french_oak", "wall_picture_ledge_french_oak", "wall_cabinet_french_oak"];
+/// 家具を足すときに、どの段で置いたか (テストで見る)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FurnishStage {
+    /// 壁ぎわ (背を壁に向ける)
+    AlongWall,
+    /// 部屋の内側 (ばらけた位置)
+    Interior,
+    /// 壁に掛ける家具
+    OnWall,
+}
+
+/// 小さな疑似乱数 (SplitMix64)。部屋の内側に足す家具の位置をばらけさせるのに使う。
+/// 種 (作品の id) が同じなら同じ列になるので、同じ入力からは同じ場所を選ぶ (テストが安定する)。crate を足さず wasm (cloudflare) でも動く
+struct FurnishRng(u64);
+
+impl FurnishRng {
+    fn new(seed: Uuid) -> Self {
+        let v = seed.as_u128();
+        FurnishRng(v as u64 ^ (v >> 64) as u64)
+    }
+
+    fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    /// 並びをかき混ぜる (Fisher–Yates)
+    fn shuffle<T>(&mut self, items: &mut [T]) {
+        for i in (1..items.len()).rev() {
+            let j = (self.next() % (i as u64 + 1)) as usize;
+            items.swap(i, j);
+        }
+    }
+}
+
+/// −limit〜limit の、FURNISH_GRID の倍数 (小さい順)
+fn grid_points(limit: f64) -> impl Iterator<Item = f64> {
+    let (lo, hi) = ((-limit / FURNISH_GRID - 1e-9).ceil() as i64, (limit / FURNISH_GRID + 1e-9).floor() as i64);
+    (lo..=hi).map(|k| round_mm(k as f64 * FURNISH_GRID))
+}
+
+/// 壁と、その壁に背を付けた家具の向き (正面が部屋の内側)。北・西・東・南の順 (額縁を掛ける pick_wall_spot と同じ)
+const WALL_FACES: [(Side, f64); 4] = [(Side::North, 0.0), (Side::West, FRAC_PI_2), (Side::East, -FRAC_PI_2), (Side::South, PI)];
+
+/// 家具を足すときに見る、部屋の中で場所を取っている物 1 つ (check_placement と同じ足元と高さの範囲)
+struct Occupied {
+    room: &'static str,
+    rect: Rect,
+    span: (f64, f64),
+    /// 床に置いた物 (床の家具・床の作品)。通り道をふさぐかを見る
+    floor: bool,
+    /// 床の家具の正面の通り道 (正面の向きに FURNISH_AISLE)
+    front: Option<Rect>,
+    /// 壁に掛けた作品の前 (壁から部屋の中へ WALL_ART_VIEW) と、作品の下端の高さ
+    view: Option<(Rect, f64)>,
+}
+
+/// 配置の中で場所を取っている物 (ラグ・家具の上の作品は入れない)
+fn occupied(layout: &Layout, sizes: &Sizes) -> Vec<Occupied> {
+    layout
+        .objects
+        .iter()
+        .filter_map(|obj| {
+            let room = layout.room_of(obj)?.id;
+            Some(match obj {
+                LayoutObject::Furniture(f) => {
+                    let a = asset(&f.asset_id).filter(|a| !a.is_floor_decor())?;
+                    let base = if a.is_wall() { f.position[1] } else { 0.0 };
+                    let [w, _, d] = a.dimensions_meters;
+                    let front = (!a.is_wall()).then(|| front_zone(f.position[0], f.position[2], w, d, f.rotation_y));
+                    Occupied { room, rect: furniture_rect(f, a), span: (base, base + a.reach()), floor: !a.is_wall(), front, view: None }
+                }
+                LayoutObject::Artwork(a) if a.on_wall() => {
+                    let rect = art_rect(a, WALL_ART_FIT, sizes);
+                    let height = sizes.get(&a.artwork_id).map_or(WALL_ART_FIT[1], |s| placed_size(s, WALL_ART_FIT, a.rotation_y)[1]);
+                    let base = a.position[1];
+                    let view = Some((reach_out(rect, a.rotation_y, WALL_ART_VIEW), base));
+                    Occupied { room, rect, span: (base, base + height), floor: false, front: None, view }
+                }
+                LayoutObject::Artwork(a) if a.parent_id.is_none() => Occupied {
+                    room,
+                    rect: art_rect(a, FLOOR_ART_FIT, sizes),
+                    span: (0.0, FLOOR_ART_FIT[1]),
+                    floor: true,
+                    front: None,
+                    view: None,
+                },
+                LayoutObject::Artwork(_) => return None,
+            })
+        })
+        .collect()
+}
+
+/// 床の家具 (原点 (x, z)・幅 w・奥行き d・向き rotation_y) の正面の通り道 (正面の向きに奥行き FURNISH_AISLE、幅は家具と同じ)
+fn front_zone(x: f64, z: f64, w: f64, d: f64, rotation_y: f64) -> Rect {
+    let (sin, cos) = rotation_y.sin_cos();
+    let reach = (d + FURNISH_AISLE) / 2.0;
+    footprint(x + reach * sin, z + reach * cos, w, FURNISH_AISLE, rotation_y)
+}
+
+/// 長方形を、正面 (rotation_y の向き。90° ごと) の側へ depth だけ伸ばす
+fn reach_out(rect: Rect, rotation_y: f64, depth: f64) -> Rect {
+    let (sin, cos) = rotation_y.sin_cos();
+    let mut r = rect;
+    if sin > 0.5 {
+        r.max_x += depth;
+    } else if sin < -0.5 {
+        r.min_x -= depth;
+    }
+    if cos > 0.5 {
+        r.max_z += depth;
+    } else if cos < -0.5 {
+        r.min_z -= depth;
+    }
+    r
+}
+
+/// 長方形を 4 方に margin だけ広げる
+fn expand(rect: &Rect, margin: f64) -> Rect {
+    Rect { min_x: rect.min_x - margin, max_x: rect.max_x + margin, min_z: rect.min_z - margin, max_z: rect.max_z + margin }
+}
+
+/// 足す物 (足元 rect・高さの範囲 span) が、o と FURNISH_GAP より近いか (足元と高さの両方で近いときだけ)
+fn too_close(o: &Occupied, rect: &Rect, span: (f64, f64)) -> bool {
+    rect_overlap(&expand(rect, FURNISH_GAP), &o.rect) && span_overlap((span.0 - FURNISH_GAP, span.1 + FURNISH_GAP), o.span)
+}
+
+/// m を mm に丸める (配置 JSON に 0.15000000000000002 のような値を書かない。-0 も 0 にする)
+fn round_mm(v: f64) -> f64 {
+    (v * 1000.0).round() / 1000.0 + 0.0
+}
+
+/// 0, +step, −step, +2·step, … と、中央から近い順に ±limit まで
+fn center_out(limit: f64, step: f64) -> impl Iterator<Item = f64> {
+    let n = if limit < 0.0 { -1 } else { (limit / step + 1e-9).floor() as i64 };
+    (0..=2 * n).map(move |i| {
+        let k = (i + 1) / 2;
+        round_mm(if i % 2 == 1 { k as f64 } else { -(k as f64) } * step)
+    })
+}
+
+/// 壁 side の長さ (m)
+fn wall_length(def: &RoomDef, side: Side) -> f64 {
+    match side {
+        Side::North | Side::South => def.size[0],
+        Side::West | Side::East => def.size[1],
+    }
+}
+
+/// 壁 side の内側の面から部屋の中へ off、壁に沿って along (北・南の壁は +X、西・東の壁は +Z が正) の点 (部屋の中心から見た (x, z))
+fn along_wall(def: &RoomDef, side: Side, off: f64, along: f64) -> (f64, f64) {
+    let (hw, hd) = (def.size[0] / 2.0, def.size[1] / 2.0);
+    match side {
+        Side::North => (along, round_mm(-hd + off)),
+        Side::South => (along, round_mm(hd - off)),
+        Side::West => (round_mm(-hw + off), along),
+        Side::East => (round_mm(hw - off), along),
+    }
+}
+
+/// 新しい家具 a のどの面のどこに作品を置くか (面の id (天板は None)・面の中心から見た位置)。
+/// 面は catalog.json の順に、作品が FURNISH_MIN_FILL より縮まない最初の面の、最初の置き場所 (pick_spot と同じ cell_centers の順)。
+/// 寸法の分からない作品 (None) は最初の面。合う面が無ければ None (その家具は選ばない)
+fn furnish_art_spot(a: &Asset, new: Option<&ArtSize>) -> Option<(Option<String>, [f64; 3])> {
+    const USUAL: [f64; 3] = [ART_FIT_MAX, ART_FIT_HEIGHT, ART_FIT_MAX];
+    // 実寸の GLB (custom) は、ふつうの天板でも実物の大きさ (1 倍) より大きくしない前提で比べる
+    // (小さな工作は CUSTOM_MIN_FILL で大きく見せるが、それより小さい段に置いても実物の大きさ以上なら縮みすぎではない)
+    let usual = new.map(|n| if n.custom { display_scale(n, USUAL, 0.0).min(1.0) } else { display_scale(n, USUAL, 0.0) });
+    a.surfaces.iter().find_map(|s| {
+        if let (Some(n), Some(usual)) = (new, usual)
+            && display_scale(n, art_fit(s), 0.0) < usual * FURNISH_MIN_FILL - 1e-9
+        {
+            return None;
+        }
+        let (x, z) = cell_centers(s).next()?;
+        Some(((s.id != TOP_SURFACE).then(|| s.id.clone()), [x, 0.0, z]))
+    })
+}
+
+/// おへやに空きが無いときに、家具を 1 つ足して、その上に作品を置く。足す物 (家具, 作品) を返す。足せなければ None。
+/// 空いている所があるかは見ない (先に pick_place で探すのは呼ぶ側。place_or_furnish)。
+///
+/// 家具と位置は次の順に探し、check_placement に通る最初の組み合わせにする
+/// (同じ配置・同じ作品 id からは同じ場所を選ぶ。object id だけは毎回違う):
+/// 1. 壁ぎわ (FURNISH_ALONG_WALL の家具の順 → 北・西・東・南の壁 → 壁の中央から左右へ FURNISH_STEP ずつ)。背を壁に向け、壁から 12 cm。
+/// 2. 部屋の内側。ばらけて見えるように、試す順を乱数 (FurnishRng。種は作品の id) で決める:
+///    FURNISH_INTERIOR の組の順 → 組の中の家具の順はかき混ぜる → 候補 (FURNISH_GRID の格子の点 × FURNISH_INTERIOR_TURNS の向き)
+///    を全部かき混ぜた順。候補の集合は乱数によらないので、入る場所があれば必ずどこかに置く。
+/// 3. 壁に掛ける家具 (FURNISH_ON_WALL の順 → 高さを mount_height から FURNISH_MOUNT_STEP ずつ上へ → 北・西・東・南 → 壁の中央から)。
+///
+/// どの家具も、作品が FURNISH_MIN_FILL より縮んでしまうなら選ばない (furnish_art_spot)。置き方の決まり (check_placement) のほかに:
+/// - ほかの物と FURNISH_GAP 空ける (足元と高さ)
+/// - 床の家具は、正面に FURNISH_AISLE の通り道を残す (部屋の内側の家具は 4 方)。今ある床の家具の正面の通り道にも置かない
+/// - 床の家具は、鑑賞モードのはじめの位置 (WALK_START_CLEAR) に置かない
+/// - 床の家具は、壁に掛けた作品の前 (WALL_ART_VIEW) に、作品の下端より高い物を置かない (pick_wall_spot と同じ)
+///
+/// 足した家具と作品は「新しく置いた物」として出入口の前も見る (DoorPolicy::OnlyMoved)。配置の物の数の上限 (MAX_OBJECTS) を超えるときも None
+pub fn place_on_new_furniture(
+    layout: &Layout,
+    sizes: &Sizes,
+    artwork_id: Uuid,
+    new: Option<&ArtSize>,
+) -> Option<(LayoutObject, LayoutObject)> {
+    furnish(layout, sizes, artwork_id, new).map(|(_, furniture, artwork)| (furniture, artwork))
+}
+
+/// place_on_new_furniture の中身。どの段で置いたかも返す
+fn furnish(
+    layout: &Layout,
+    sizes: &Sizes,
+    artwork_id: Uuid,
+    new: Option<&ArtSize>,
+) -> Option<(FurnishStage, LayoutObject, LayoutObject)> {
+    if layout.objects.len() + 2 > MAX_OBJECTS || layout.artwork_for(artwork_id).is_some() {
+        return None;
+    }
+    let occupied = occupied(layout, sizes);
+    let mut sizes = sizes.clone();
+    if let Some(n) = new {
+        sizes.insert(artwork_id, *n);
+    }
+    let used: HashSet<&str> = layout.objects.iter().map(|o| o.id()).collect();
+    let fresh = |prefix: &str| loop {
+        let id = new_object_id(prefix);
+        if !used.contains(id.as_str()) {
+            break id;
+        }
+    };
+    let (furniture_id, art_id) = (fresh("home"), fresh("art"));
+    let moved = HashSet::from([furniture_id.clone(), art_id.clone()]);
+
+    // 家具 a を (位置, 向き) に置き、その上の spot に作品を置いた配置が、置き方の決まりに通るか
+    let try_at = |def: &RoomDef, a: &Asset, spot: &(Option<String>, [f64; 3]), position: [f64; 3], rotation_y: f64| {
+        let furniture = LayoutObject::Furniture(Furniture {
+            id: furniture_id.clone(),
+            asset_id: a.id.clone(),
+            room_id: def.id.to_string(),
+            position,
+            rotation_y,
+        });
+        let artwork = LayoutObject::Artwork(ArtworkObject {
+            id: art_id.clone(),
+            artwork_id,
+            parent_id: Some(furniture_id.clone()),
+            room_id: None,
+            surface: spot.0.clone(),
+            placement: None,
+            position: spot.1,
+            rotation_y: 0.0,
+        });
+        let mut candidate = layout.clone();
+        candidate.objects.push(furniture.clone());
+        candidate.objects.push(artwork.clone());
+        check_placement(&candidate, &sizes, DoorPolicy::OnlyMoved(&moved)).is_ok().then_some((furniture, artwork))
+    };
+
+    for def in &ROOM_DEFS {
+        let here: Vec<&Occupied> = occupied.iter().filter(|o| o.room == def.id).collect();
+        // 床の家具 (足元 rect・高さ reach) を置いてよいか。aisle は、床の物がその家具の通り道にかかるか
+        let floor_clear = |rect: &Rect, reach: f64, aisle: &dyn Fn(&Rect) -> bool| {
+            rect_inside(rect, &room_rect(def))
+                && !(def.id == HUB_ID && rect_overlap(rect, &WALK_START_CLEAR))
+                && here.iter().all(|o| {
+                    !too_close(o, rect, (0.0, reach))
+                        && !(o.floor && aisle(&o.rect))
+                        && o.front.is_none_or(|front| !rect_overlap(rect, &front))
+                        && o.view.is_none_or(|(view, bottom)| reach <= bottom + TOLERANCE || !rect_overlap(rect, &view))
+                })
+        };
+        let candidates = |ids: Vec<&'static str>| {
+            ids.into_iter().filter_map(asset).filter_map(move |a| furnish_art_spot(a, new).map(|spot| (a, spot)))
+        };
+
+        // 1. 壁ぎわ (背を壁に向ける)
+        for (a, spot) in candidates(FURNISH_ALONG_WALL.to_vec()) {
+            let [w, _, d] = a.dimensions_meters;
+            for (side, rotation_y) in WALL_FACES {
+                for along in center_out(wall_length(def, side) / 2.0 - WALL_MARGIN - w / 2.0, FURNISH_STEP) {
+                    let (x, z) = along_wall(def, side, WALL_MARGIN + d / 2.0, along);
+                    let rect = footprint(x, z, w, d, rotation_y);
+                    let front = front_zone(x, z, w, d, rotation_y);
+                    if floor_clear(&rect, a.reach(), &|other: &Rect| rect_overlap(&front, other))
+                        && let Some((furniture, artwork)) = try_at(def, a, &spot, [x, 0.0, z], rotation_y)
+                    {
+                        return Some((FurnishStage::AlongWall, furniture, artwork));
+                    }
+                }
+            }
+        }
+
+        // 2. 部屋の内側 (ばらけた位置。まわりに通り道を残す)。試す順だけを乱数にする
+        let mut rng = FurnishRng::new(artwork_id);
+        for group in FURNISH_INTERIOR {
+            let mut ids = group.to_vec();
+            rng.shuffle(&mut ids);
+            for (a, spot) in candidates(ids) {
+                let [w, _, d] = a.dimensions_meters;
+                let mut places: Vec<(f64, f64, f64)> = Vec::new();
+                for rotation_y in FURNISH_INTERIOR_TURNS {
+                    // 90° 回すと、部屋の中で幅と奥行きが入れ替わる
+                    let (ew, ed) = if rotation_y == 0.0 { (w, d) } else { (d, w) };
+                    for z in grid_points(def.size[1] / 2.0 - WALL_MARGIN - ed / 2.0) {
+                        places.extend(grid_points(def.size[0] / 2.0 - WALL_MARGIN - ew / 2.0).map(|x| (x, z, rotation_y)));
+                    }
+                }
+                rng.shuffle(&mut places);
+                for (x, z, rotation_y) in places {
+                    let rect = footprint(x, z, w, d, rotation_y);
+                    let around = expand(&rect, FURNISH_AISLE);
+                    if floor_clear(&rect, a.reach(), &|other: &Rect| rect_overlap(&around, other))
+                        && let Some((furniture, artwork)) = try_at(def, a, &spot, [x, 0.0, z], rotation_y)
+                    {
+                        return Some((FurnishStage::Interior, furniture, artwork));
+                    }
+                }
+            }
+        }
+
+        // 3. 壁に掛ける家具 (低い段から)
+        for (a, spot) in candidates(FURNISH_ON_WALL.to_vec()) {
+            let w = a.dimensions_meters[0];
+            let (lo, hi) = mount_range(a);
+            let top = hi.min(FURNISH_WALL_TOP - a.reach());
+            let start = a.mount_height.unwrap_or(lo).max(lo);
+            let heights = (0..).map(|k| round_mm(start + f64::from(k) * FURNISH_MOUNT_STEP)).take_while(|y| *y <= top + 1e-9);
+            for y in heights {
+                for (side, rotation_y) in WALL_FACES {
+                    for along in center_out(wall_length(def, side) / 2.0 - w / 2.0, FURNISH_STEP) {
+                        let (x, z) = along_wall(def, side, 0.0, along);
+                        let probe = Furniture {
+                            id: String::new(),
+                            asset_id: a.id.clone(),
+                            room_id: def.id.to_string(),
+                            position: [x, y, z],
+                            rotation_y,
+                        };
+                        let rect = furniture_rect(&probe, a);
+                        if rect_inside(&rect, &room_inner_rect(def))
+                            && !here.iter().any(|o| too_close(o, &rect, (y, y + a.reach())))
+                            && let Some((furniture, artwork)) = try_at(def, a, &spot, [x, y, z], rotation_y)
+                        {
+                            return Some((FurnishStage::OnWall, furniture, artwork));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 作品を 1 つのおへやに自動で置く (利用者が飾るとき)。空きがあれば今ある家具か壁 (pick_place)、
+/// 無ければ家具を 1 つ足してその上 (place_on_new_furniture)。配置に足す物 (作品 1 つか、家具と作品の 2 つ) を返す。どちらもできなければ None
+pub fn place_or_furnish(layout: &Layout, sizes: &Sizes, artwork_id: Uuid, new: Option<&ArtSize>) -> Option<Vec<LayoutObject>> {
+    if has_room_for(layout, 1)
+        && let Some(object) = pick_place(layout, sizes, artwork_id, new, None)
+    {
+        return Some(vec![object]);
+    }
+    place_on_new_furniture(layout, sizes, artwork_id, new).map(|(furniture, artwork)| vec![furniture, artwork])
+}
+
+/// 配置にあと count 個の物を足せるか (物の数の上限 MAX_OBJECTS)
+pub fn has_room_for(layout: &Layout, count: usize) -> bool {
+    layout.objects.len() + count <= MAX_OBJECTS
+}
+
 /// 部屋ごとの、作品を飾れる場所の数 (その部屋の家具の面の置き場所の合計)。4 部屋とも入る (家具が無ければ 0)
 pub fn capacity_by_room(layout: &Layout) -> HashMap<&'static str, usize> {
     let mut by_room: HashMap<&'static str, usize> = ROOM_DEFS.iter().map(|d| (d.id, 0)).collect();
@@ -3583,5 +3996,284 @@ mod tests {
         let surfaces: usize = CATALOG.assets.iter().map(|a| a.surfaces.len()).sum();
         assert_eq!(surfaces, 16);
         assert_eq!(checked, (surfaces + ROOM_DEFS.len()) * ATELIER.len() * 2);
+    }
+
+    // =============================
+    // 家具を足して飾る (place_on_new_furniture・place_or_furnish)
+    // =============================
+
+    /// 初期配置のおへやに、arts(i) の大きさの作品を 1 点ずつ place_or_furnish で飾り続ける (止まるまで)。
+    /// 1 点ごとに、足した物を「新しく置いた物」として検証する。止まったときの配置・寸法・足した家具の数・飾った作品の数を返す
+    fn fill_room(arts: impl Fn(usize) -> Option<ArtSize>) -> (Layout, Sizes, usize, usize) {
+        let mut layout = default_layout();
+        let mut sizes = Sizes::new();
+        let (mut furniture, mut placed) = (0, 0);
+        for i in 0.. {
+            assert!(i < MAX_OBJECTS, "飾り続けても止まりません");
+            let id = Uuid::from_u128(0x1000 + i as u128);
+            let size = arts(i);
+            let Some(objects) = place_or_furnish(&layout, &sizes, id, size.as_ref()) else { break };
+            if let Some(s) = size {
+                sizes.insert(id, s);
+            }
+            let moved: HashSet<String> = objects.iter().map(|o| o.id().to_string()).collect();
+            furniture += objects.iter().filter(|o| matches!(o, LayoutObject::Furniture(_))).count();
+            layout.objects.extend(objects);
+            check_placement(&layout, &sizes, DoorPolicy::OnlyMoved(&moved)).unwrap_or_else(|e| panic!("{i} 点目: {e}"));
+            // 保存するときと同じく、JSON にして読み直せる
+            parse_layout(serde_json::to_value(&layout).unwrap()).unwrap();
+            placed += 1;
+        }
+        (layout, sizes, furniture, placed)
+    }
+
+    /// サンプルの 33 点を順に
+    fn atelier_art(i: usize) -> Option<ArtSize> {
+        Some(ArtSize { size: ATELIER[i % ATELIER.len()].1, custom: true, frame: false })
+    }
+
+    /// 足した床の家具 (初期配置に無い家具)
+    fn added_floor_furniture(layout: &Layout) -> Vec<(&Furniture, &'static Asset)> {
+        let default = default_layout();
+        layout
+            .objects
+            .iter()
+            .filter_map(|o| match o {
+                LayoutObject::Furniture(f) if default.furniture(&f.id).is_none() => asset(&f.asset_id).map(|a| (f, a)),
+                _ => None,
+            })
+            .filter(|(_, a)| !a.is_wall())
+            .collect()
+    }
+
+    #[test]
+    fn furnishing_waits_until_the_room_is_full() {
+        // 空きがあれば、家具は足さずに今ある家具に置く
+        let layout = default_layout();
+        let boat = atelier_art(1).unwrap();
+        let objects = place_or_furnish(&layout, &Sizes::new(), Uuid::from_u128(7), Some(&boat)).unwrap();
+        assert!(matches!(objects.as_slice(), [LayoutObject::Artwork(a)] if a.parent_id.is_some()), "{objects:?}");
+
+        // 空きを埋めると (初期配置は置き場所 17)、家具を 1 つ足してその上に置く
+        let mut full = default_layout();
+        for i in 0..17 {
+            let object = pick_place(&full, &Sizes::new(), Uuid::from_u128(100 + i), None, None).unwrap();
+            full.objects.push(object);
+        }
+        assert_eq!(pick_place(&full, &Sizes::new(), Uuid::from_u128(7), Some(&boat), None), None);
+        let sizes = Sizes::from([(Uuid::from_u128(7), boat)]);
+        let objects = place_or_furnish(&full, &sizes, Uuid::from_u128(7), Some(&boat)).unwrap();
+        let [LayoutObject::Furniture(f), LayoutObject::Artwork(a)] = objects.as_slice() else { panic!("{objects:?}") };
+        assert_eq!(a.parent_id.as_deref(), Some(f.id.as_str()));
+        assert_eq!(a.artwork_id, Uuid::from_u128(7));
+        // はじめに足すのは壁ぎわのサイドボード。北の壁の中央に、背を壁に向けて (正面が部屋の内側)
+        assert_eq!((f.asset_id.as_str(), f.room_id.as_str()), ("home_console", HUB_ID));
+        assert!(close(f.position[0], 0.0) && close(f.position[2], -5.0 + WALL_MARGIN + 0.255) && f.rotation_y == 0.0, "{f:?}");
+        let moved: HashSet<String> = objects.iter().map(|o| o.id().to_string()).collect();
+        let mut after = full.clone();
+        after.objects.extend(objects.iter().cloned());
+        check_placement(&after, &sizes, DoorPolicy::OnlyMoved(&moved)).unwrap();
+        // 足した家具の上は空きとして使われる (次の作品は家具を足さない)
+        let next = place_or_furnish(&after, &sizes, Uuid::from_u128(8), Some(&boat)).unwrap();
+        assert!(matches!(next.as_slice(), [LayoutObject::Artwork(a)] if a.parent_id.as_deref() == Some(f.id.as_str())), "{next:?}");
+    }
+
+    #[test]
+    fn furnishing_fills_the_room_and_stops() {
+        let (layout, sizes, furniture, placed) = fill_room(atelier_art);
+        let walls = layout
+            .objects
+            .iter()
+            .filter(|o| matches!(o, LayoutObject::Furniture(f) if asset(&f.asset_id).is_some_and(Asset::is_wall)))
+            .count();
+        eprintln!("サンプルの作品: 家具を {furniture} 個 (壁の家具 {walls} 個) 足して、作品 {placed} 点で止まった (物 {} 個)", layout.objects.len());
+        // 初期配置 (置き場所 17) に、壁ぎわのサイドボード・本棚・台座と部屋の内側の低い台を 21 個足して 91 点。
+        // 配置の物の数の上限 (MAX_OBJECTS 120) で止まる (上限が無ければ、家具 24 個・作品 100 点で床が埋まる。
+        // 部屋の内側の位置は乱数の順に試すので、格子の順に詰めるより床の使い方にむだが出る (格子の順のころは 26 個・104 点)。
+        // サンプルの工作は奥行きがあり、浅い壁の家具では縮みすぎるので、壁の家具は足さない)
+        assert_eq!((furniture, walls, placed), (21, 0, 91));
+        assert!(layout.objects.len() + 2 > MAX_OBJECTS);
+        // 止まった配置には、もう家具も作品も足せない
+        assert_eq!(place_or_furnish(&layout, &sizes, Uuid::from_u128(7), atelier_art(0).as_ref()), None);
+        // 足した床の家具は、鑑賞モードのはじめの位置にかからず、正面に通り道がある
+        for (f, a) in added_floor_furniture(&layout) {
+            let rect = furniture_rect(f, a);
+            assert!(!rect_overlap(&rect, &WALK_START_CLEAR), "{f:?}");
+            let [w, _, d] = a.dimensions_meters;
+            let front = front_zone(f.position[0], f.position[2], w, d, f.rotation_y);
+            for (g, b) in added_floor_furniture(&layout).into_iter().filter(|(g, _)| g.id != f.id) {
+                assert!(!rect_overlap(&front, &furniture_rect(g, b)), "{} の前を {} がふさいでいます", f.id, g.id);
+                assert!(!rect_overlap(&expand(&rect, FURNISH_GAP - 2.0 * TOLERANCE), &furniture_rect(g, b)), "{} と {}", f.id, g.id);
+            }
+        }
+        // 壁の家具は FURNISH_WALL_TOP より上に飾らない
+        for o in &layout.objects {
+            if let LayoutObject::Furniture(f) = o
+                && let Some(a) = asset(&f.asset_id).filter(|a| a.is_wall())
+                && default_layout().furniture(&f.id).is_none()
+            {
+                assert!(f.position[1] + a.reach() <= FURNISH_WALL_TOP + 1e-9, "{f:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn furnishing_works_with_frames_and_unknown_sizes() {
+        // 写真の額縁 (先に壁に掛かる)・寸法の分からない作品・サンプルの作品を順に
+        let frame = generated_frame();
+        let mixed = |i: usize| match i % 3 {
+            0 => Some(frame),
+            1 => None,
+            _ => atelier_art(i),
+        };
+        let (mut layout, mut sizes, furniture, placed) = fill_room(mixed);
+        // 止まったのは、そのとき置こうとした種類の作品が置けなくなったから。ほかの種類 (物 1 つで済む壁の額縁など) は
+        // まだ入ることがあるので、どれも入らなくなるまで足す
+        for n in 0.. {
+            assert!(n < MAX_OBJECTS, "飾り続けても止まりません");
+            let id = Uuid::from_u128(0x9000 + n as u128);
+            let added = [Some(frame), None, atelier_art(5)]
+                .into_iter()
+                .find_map(|size| place_or_furnish(&layout, &sizes, id, size.as_ref()).map(|objects| (size, objects)));
+            let Some((size, objects)) = added else { break };
+            if let Some(s) = size {
+                sizes.insert(id, s);
+            }
+            layout.objects.extend(objects);
+            check_placement(&layout, &sizes, DoorPolicy::Ignore).unwrap();
+        }
+        let on_wall = layout.artworks().filter(|a| a.on_wall()).count();
+        eprintln!(
+            "額縁・寸法なし・サンプル: 家具を {furniture} 個足して作品 {placed} 点で止まり、ほかの種類を足して {} 点 (壁に掛けた額縁 {on_wall} 点)",
+            layout.artworks().count()
+        );
+        assert!(furniture > 0 && on_wall > 0);
+        for size in [Some(frame), None, atelier_art(5)] {
+            assert_eq!(place_or_furnish(&layout, &sizes, Uuid::from_u128(7), size.as_ref()), None);
+        }
+        // 寸法の分からない作品だけでも止まる
+        let (_, _, furniture, placed) = fill_room(|_| None);
+        eprintln!("寸法なし: 家具を {furniture} 個足して、作品 {placed} 点で止まった");
+        assert!(furniture > 0);
+    }
+
+    #[test]
+    fn furnishing_picks_furniture_that_fits_the_artwork() {
+        let ledge = asset(LEDGE).unwrap();
+        let boat = atelier_art(1).unwrap();
+        // 工作 (奥行き 0.34) はピクチャーレッジ (奥行き 0.128) では縮みすぎるので選ばない。額縁 (薄い) は選ぶ
+        assert_eq!(furnish_art_spot(ledge, Some(&boat)), None);
+        assert!(furnish_art_spot(ledge, Some(&generated_frame())).is_some());
+        // 本棚の段 (高さ 0.35) では帆船が縮みすぎるので、天板に置く
+        let bookshelf = asset("home_bookshelf").unwrap();
+        assert_eq!(furnish_art_spot(bookshelf, Some(&boat)).unwrap().0, None);
+        // 小さい作品は段に置く。寸法が分からなければ最初の面
+        let small = ArtSize { size: [0.2, 0.2, 0.2], custom: true, frame: false };
+        assert_eq!(furnish_art_spot(bookshelf, Some(&small)).unwrap().0.as_deref(), Some("shelf2"));
+        assert_eq!(furnish_art_spot(bookshelf, None).unwrap().0.as_deref(), Some("shelf2"));
+    }
+
+    #[test]
+    fn furnishing_is_deterministic() {
+        // object id (毎回違う) を除けば、同じ配置からは同じ物を選ぶ
+        let normalize = |objects: Vec<LayoutObject>| -> Vec<Value> {
+            objects
+                .into_iter()
+                .map(|o| {
+                    let mut v = serde_json::to_value(o).unwrap();
+                    v["id"] = json!("x");
+                    if v.get("parentId").is_some() {
+                        v["parentId"] = json!("x");
+                    }
+                    v
+                })
+                .collect()
+        };
+        let (layout, sizes, _, _) = fill_room(|i| if i < 40 { atelier_art(i) } else { None });
+        let mut half = layout.clone();
+        // 途中まで埋まった配置 (足した家具の上の作品を外して、家具だけを残す)
+        half.objects.retain(|o| !matches!(o, LayoutObject::Artwork(a) if a.artwork_id.as_u128() % 2 == 0));
+        for base in [&layout, &half] {
+            let size = atelier_art(3);
+            let a = place_or_furnish(base, &sizes, Uuid::from_u128(7), size.as_ref()).map(normalize);
+            let b = place_or_furnish(base, &sizes, Uuid::from_u128(7), size.as_ref()).map(normalize);
+            assert_eq!(a, b);
+        }
+        let (again, _, _, _) = fill_room(|i| if i < 40 { atelier_art(i) } else { None });
+        let strip = |l: &Layout| normalize(l.objects.clone());
+        assert_eq!(strip(&layout), strip(&again));
+    }
+
+    #[test]
+    fn furnishing_scatters_the_interior_by_artwork_id() {
+        // 壁ぎわが埋まって、次は部屋の内側に家具を足す、という所まで飾る
+        let mut layout = default_layout();
+        let mut sizes = Sizes::new();
+        for i in 0.. {
+            assert!(i < MAX_OBJECTS, "部屋の内側に家具を足す所まで来ません");
+            let id = Uuid::from_u128(0x1000 + i as u128);
+            let size = atelier_art(i).unwrap();
+            let objects = match pick_place(&layout, &sizes, id, Some(&size), None) {
+                Some(object) => vec![object],
+                None => match furnish(&layout, &sizes, id, Some(&size)) {
+                    Some((FurnishStage::AlongWall, furniture, artwork)) => vec![furniture, artwork],
+                    Some((stage, ..)) => {
+                        assert_eq!(stage, FurnishStage::Interior);
+                        break;
+                    }
+                    None => panic!("家具を足せません"),
+                },
+            };
+            sizes.insert(id, size);
+            layout.objects.extend(objects);
+        }
+        let boat = atelier_art(1).unwrap();
+        // 作品の id ごとの、部屋の内側に足す家具 (種類・位置・向き)
+        let place_of = |id: u128| {
+            let (stage, furniture, artwork) = furnish(&layout, &sizes, Uuid::from_u128(id), Some(&boat)).unwrap();
+            assert_eq!(stage, FurnishStage::Interior);
+            let LayoutObject::Furniture(f) = &furniture else { panic!("{furniture:?}") };
+            // 足した結果は置き方の決まりに通る (足した 2 つは新しく置いた物)
+            let mut after = layout.clone();
+            let moved = HashSet::from([furniture.id().to_string(), artwork.id().to_string()]);
+            after.objects.extend([furniture.clone(), artwork]);
+            let mut with_boat = sizes.clone();
+            with_boat.insert(Uuid::from_u128(id), boat);
+            check_placement(&after, &with_boat, DoorPolicy::OnlyMoved(&moved)).unwrap();
+            // 部屋の内側の家具は、ほかの床の物と通り道 (FURNISH_AISLE) を空け、はじめの位置にかからない
+            let a = asset(&f.asset_id).unwrap();
+            let rect = furniture_rect(f, a);
+            assert!(!rect_overlap(&rect, &WALK_START_CLEAR), "{f:?}");
+            for o in occupied(&layout, &sizes).iter().filter(|o| o.floor) {
+                assert!(!rect_overlap(&expand(&rect, FURNISH_AISLE - 2.0 * TOLERANCE), &o.rect), "{f:?}");
+            }
+            (f.asset_id.clone(), f.position, f.rotation_y)
+        };
+        // 同じ作品 id なら同じ場所、違えば (ほとんどの場合) 違う場所
+        assert_eq!(place_of(7), place_of(7));
+        let places: Vec<_> = (1..=8).map(place_of).collect();
+        let distinct = places.iter().filter(|p| places.iter().filter(|q| q == p).count() == 1).count();
+        assert!(distinct >= 6, "{places:?}");
+        // 位置は格子の点、向きは 0°・±90°
+        for (_, [x, _, z], rotation_y) in &places {
+            assert!(close((x / FURNISH_GRID).round() * FURNISH_GRID, *x) && close((z / FURNISH_GRID).round() * FURNISH_GRID, *z));
+            assert!(FURNISH_INTERIOR_TURNS.contains(rotation_y));
+        }
+    }
+
+    #[test]
+    fn furnish_rng_is_repeatable() {
+        let draw = |seed: u128| {
+            let mut rng = FurnishRng::new(Uuid::from_u128(seed));
+            let mut items: Vec<u32> = (0..20).collect();
+            rng.shuffle(&mut items);
+            items
+        };
+        assert_eq!(draw(1), draw(1));
+        assert_ne!(draw(1), draw(2));
+        // かき混ぜても中身は変わらない
+        let mut sorted = draw(3);
+        sorted.sort();
+        assert_eq!(sorted, (0..20).collect::<Vec<u32>>());
     }
 }
