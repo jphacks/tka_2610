@@ -1,5 +1,0 @@
-# Extra dependencies of katachi-tools (Katachi Loop Studio itself is installed from its local folder by setup.ps1).
-# Versions verified on Windows 11 / Python 3.13.3 on 2026-11-03.
-rembg[cpu]==2.0.86
-onnxruntime==1.31.1
-pytest==9.2.0

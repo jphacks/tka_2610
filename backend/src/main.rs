@@ -2,10 +2,8 @@ mod age;
 mod ages_api;
 mod albums;
 mod artworks;
-mod capture;
 mod error;
 mod digest;
-mod generator;
 mod glb;
 mod home;
 mod home_api;
@@ -87,12 +85,6 @@ async fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| static_dir.join("models").join("rooms"));
 
-    // 写真から 3D を作る道具 (リポジトリの generator/)。KT_GENERATOR_ENABLED=1 のときだけ使う (本番では設定しない)。
-    // 既定はビルドした場所から辿るので、ほかの場所の generator/ を使うときは KT_GENERATOR_DIR で指定する
-    // iPhone で撮った写真 (capture/ の受信サーバーが受け取ったもの) の既定の場所は capture/captures (CAPTURE_DATA_DIR で変えられる)
-    let repo_dir = manifest_dir.join("..");
-    let photo_to_3d = generator::Generator::from_env(&repo_dir.join("generator"), &repo_dir.join("capture").join("captures"));
-
     let web_dist = env::var("WEB_DIST")
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest_dir.join("..").join("web").join("dist"));
@@ -154,9 +146,7 @@ async fn main() {
         museum_model_url,
         walk_model_url,
         room_model_urls,
-        generator: std::sync::Arc::new(photo_to_3d),
     };
-    generator::remove_leftovers(&state).await;
 
     // -----------------------------
     // おうちの配置 (作品の実寸 → 初期配置 → 旧データの整理 → アトリエの作品の登録)
@@ -209,14 +199,6 @@ async fn main() {
             get(albums::get_album).patch(albums::update_album).delete(albums::delete_album),
         )
         .route("/albums/{id}/artworks", put(albums::update_artworks))
-        // 写真から 3D を作る (試験中。使えないときは /generator が {"enabled": false}、ほかは 404)。写真を何枚も送るので、このルートだけ上限を上げる
-        .route("/generator", get(generator::status))
-        .route("/generator/jobs/{job_id}", get(generator::job))
-        .route("/capture/sessions", get(capture::sessions))
-        .route(
-            "/artworks/{id}/generate",
-            post(generator::start).layer(DefaultBodyLimit::max(generator::UPLOAD_BODY_LIMIT)),
-        )
         .route("/artworks/{id}/memo-draft", post(memo_draft::generate))
         .route("/artworks/memo-draft", post(memo_draft::generate_upload))
         // おもいで (写真・動画・声の記録)。動画を送れるよう、このルートだけ送信の上限を上げる

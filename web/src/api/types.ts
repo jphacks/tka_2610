@@ -612,29 +612,3 @@ export interface TheaterData {
   available: { first: string | null; last: string | null; today: string; presets: TheaterPreset[] }
   scenes: TheaterScene[]
 }
-
-/** 写真から 3D を作る（試験中）の job。Rust: generator.rs の JobDto（GET /api/generator/jobs/{job_id}） */
-export interface GeneratorJob {
-  job_id: string
-  artwork_id: string
-  status: 'running' | 'done' | 'failed'
-  /** 失敗したときの短い説明（日本語） */
-  error: string | null
-  /** 始めてからの秒数（終わった job は終わるまでの秒数） */
-  elapsed_secs: number
-}
-
-/** iPhone で撮った写真（capture/ の受信サーバーが受け取った撮影）。Rust: capture.rs の SessionSummary（GET /api/capture/sessions） */
-export interface CaptureSession {
-  session_id: string
-  /** 作品名（空のこともある） */
-  title: string
-  created_at: string | null
-  /** 例: "2026年11月9日 11:53" */
-  created_label: string
-  photo_count: number
-  /** 方向の確定した、置き換え済みでない写真の数（3D を作るときはここから 8 枚まで選ぶ） */
-  usable_count: number
-  /** 作品の大きさ（cm。[高さ, 直径]）。分からなければ null */
-  size_cm: number[] | null
-}
