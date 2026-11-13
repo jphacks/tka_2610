@@ -1,8 +1,9 @@
 // ⑩ マイページ（/settings）。タブ。iOS の設定アプリ風。
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useSettings, useUpdateSettings } from '../api'
 import { InviteSheet, NavBar, Screen, Sheet, useToast } from '../components'
-import { BellIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon, PersonIcon,ShareIcon} from '../icons'
+import { BellIcon, CameraIcon, ChevronRight, DocIcon, FamilyIcon, HelpIcon, HomeIcon, PersonIcon,ShareIcon} from '../icons'
+import { nativeCapture, openSessions } from '../native/bridge'
 import './Settings.css'
 
 // 虹のアイコンは TabBar と同じもの
@@ -70,6 +71,9 @@ export default function Settings() {
   const owner = settings.data?.owner_name ?? ''
   const birthday = settings.data?.child_birthday ?? null
   const soon = () => toast('この機能は準備中です')
+  // iPhone のアプリの中（橋渡しがあるとき）だけ、開発用の撮影データの画面への行を出す
+  const native = useMemo(() => nativeCapture(), [])
+  const sessions = () => openSessions().catch((e) => toast(e instanceof Error ? e.message : '撮影データを開けませんでした'))
 
   const save = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -131,6 +135,12 @@ export default function Settings() {
           <Row icon={<HelpIcon size={18} />} label="ヘルプ・よくある質問" onClick={soon} />
           <Row icon={<DocIcon size={18} />} label="利用規約・プライバシーポリシー" onClick={soon} />
         </div>
+
+        {native && (
+          <div className="list-group">
+            <Row icon={<CameraIcon size={18} />} label="撮影データ（開発用）" onClick={sessions} />
+          </div>
+        )}
 
         <div className="list-group">
           <button className="list-item logout" onClick={() => toast('ログイン機能は準備中です')}>

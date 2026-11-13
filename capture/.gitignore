@@ -1,0 +1,13 @@
+.DS_Store
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+__pycache__/
+*.pyc
+/captures/
+
+# Per-machine signing settings (Apple Team ID). See ios/Config/Local.xcconfig.example.
+ios/Config/Local.xcconfig
+.venv/
+node_modules/

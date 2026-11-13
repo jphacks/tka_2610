@@ -32,6 +32,7 @@
 | 壁紙・床材（テーマ）の見え方 | `three/scenes/home/theme.ts`（テーマの一覧とテクスチャは `backend/static/home/catalog.json` の `themes`・`materials`。内装セットの画像は `backend/static/home/textures/finish-pack/`。確かめるのは `npm run check:theme`） |
 | 手前の壁のカット（ドールハウスの見せ方。部屋が 2 つ以上あるときは部屋どうしの間の壁も） | `three/scenes/home/cutaway.ts`（手前の 2 面を選ぶ `facingSides` と、隠す `applyCutaway`）。カメラに合わせて毎フレーム当てるのは `three/scenes/home/HouseShells.tsx` |
 | 画面遷移のアニメーションを変える | `nav.ts` と `nav.css` |
+| iPhone のアプリ（`capture/`）とのやりとり（③ の「3D 生成で追加」） | `native/bridge.ts`（取り決めは先頭のコメントと `capture/docs/web-bridge.md`）。開発の偽の橋渡しは `native/fakeBridge.ts` |
 
 ## 読む順番
 
@@ -55,6 +56,7 @@ web/
     ├── App.tsx / .css  画面の一覧（URL → 画面）と、全画面共通の部品。.app はアプリの外枠
     ├── nav.ts / .css   画面遷移のアニメーション（useNav）
     ├── icons.tsx       アイコン（SVG）
+    ├── native/         iPhone のアプリ（capture/）との橋渡し。window.MemoriaNative に触るのは bridge.ts だけ
     ├── api/            サーバー（Rust）とのやりとり。入口は api/index.ts
     ├── pages/          画面（1 画面 1 ファイル。見た目があれば同じ名前の .css）
     ├── components/     共通部品（1 部品 1 ファイル。見た目があれば同じ名前の .css）。入口は components/index.ts
@@ -79,7 +81,7 @@ import { HomeScene, StageShell } from '../three'
 |---|---|---|---|---|
 | ② | ホーム（年齢のチップと、その年齢のおへやを積み上げた 3D の建物） | `/home`（`?age=年齢`） | `Home.tsx` / `.css` | タブ |
 | ②' | おへや（画面いっぱいの 3D のおへや。はじめはリビングの中の近景で、引けば家全体。ドラッグで見回し、放っておくとゆっくり回る。上部のおへやの名前を押すと、年齢・階の一覧から別のおへやへ直接移動できる） | `/rooms/:roomId` | `Room.tsx` / `.css` | push（② の建物の階・「1かい」などのボタン） |
-| ③ | 作品を追加 | `/add` | `AddArtwork.tsx` | モーダル |
+| ③ | 作品を追加（iPhone のアプリの中では、上に「3D 生成で追加」） | `/add` | `AddArtwork.tsx` / `.css` | モーダル |
 | ④ | 3D プレビュー | `/artworks/:id/preview` | `ArtworkPreview.tsx` / `.css` | モーダル |
 | ⑤ | おうちの中 | `/museum`（`?focus=作品ID` / `?room=部屋ID`） | `MuseumView.tsx` / `.css` | push |
 | ⑥ | 作品の詳細（上は触って回せる・拡大できる作品の 3D（`ArtworkViewerScene`）。下に「おもいで」：写真・動画・声の記録） | `/artworks/:id` | `ArtworkDetail.tsx` / `.css` | push |
@@ -104,6 +106,8 @@ import { HomeScene, StageShell } from '../three'
 - ⑦ memoria は、上から「今日の作品」（同じころの作品を含む）、「これまでの作品」の3Dダイジェスト、「音声が残ってる作品」、「作品にまつわる動画」の順です。「今日の作品」は `ArtworkViewerScene` で回せる3Dをコンパクトに表示し、読めなければ作品画像を表示します。作品名・説明文は出しません。日付の横の細い枠線の再生ボタンを押すと既存の `DigestPlayer` を3D表示で開き、全期間から選んだ最大8作品を自動再生します（`GET /api/recollections/digest?scope=all`）。作品を読み込んでからAPIの表示時間に従って次へ進み、一時停止・再生・前後の切り替えに対応します。3D再生時はスマホ画面全体に舞台を広げ、進み具合・閉じる・再生操作を安全領域の内側に重ねます（`is-immersive`）。作品名と説明文は出しません。日付・作品・動画の選択はRust（`recollections.rs`、`GET /api/recollections`）で行います。音声は最大6作品、動画は新しい作品から最大6件。動画は `videos[]` に作品と動画のおもいでを返し、一覧では動画の最初のコマだけを表示し（サムネイルがあればそれを使う）、作品名・ひとこと・再生ボタンは出しません。押すと紐づく作品の詳細へ進み、再生中の声を止めます。声は押すまで再生せず、別の声を再生したら前の声を止め、画面を離れたときも止めます。「音声が残ってる作品」と「作品にまつわる動画」は、作品一覧のアルバムの棚と同じように見出しの矢印でたためます（最初は開いていて、たたんだかはこの端末の localStorage に覚える。たたむと、その中で鳴っている声を止める）。「これまでの作品」は `DigestTheater` を `embedded` の190pxの枠に収め、再生・設定時にアプリ全体へ広げます（`GET /api/recollections/theater`）。サンプル「ことりのおうち」はmemoriaの表示対象から外し、作品一覧・おへやには残しています。
 - タブ名と画面上部の名前は「作品一覧」「memoria」「マイページ」で統一しています。ホームのタブ名は「ホーム」、画面上部は設定済みの館名です。4画面とも大きなタイトルを使わずコンパクトなバーに揃えています。作品一覧とmemoriaの上部には操作アイコンを置かず、作品の追加は下部タブの「＋」を使います。
 - ⑩ のプロフィールのシートで、子どもの生年月日（`child_birthday`）を変えられます。変えると、サーバーが作品を年齢のおへやへ置き直します。
+- ③ は、iPhone のアプリ（`capture/`。memoria を WKWebView で開く）の中で開いたときだけ、フォームの上に「3D 生成で追加」を出します（`native/bridge.ts` の `nativeCapture()` が null でないとき。画面を開いたときに 1 回読む）。押すと `CaptureSheet` で立体 / 平面と大きさを選び、`startCapture` でアプリの撮影画面へ進みます。「これで登録」で返ってきた写真は、`ArtworkForm` の `seed`（写真を選んだときと同じ `choosePhoto` を通る）でフォームに入り、種類は平面なら絵画、立体なら工作になります（入力した文字はそのまま。あとで写真や種類を変えてもよい）。「やめる」なら何もしません。うまくいかなかったときは、アプリが返した文言をトーストに出します。画面を開いたときに `pendingCapture` で渡しそびれた結果（撮影中に Web の画面が読み込み直されたとき）を確かめ、あればフォームに入れます。登録に成功したら `artworkCreated` で撮影の番号と作品の id・タイトルをアプリに知らせます（届かなくてもプレビューへは進む）。⑩ も、アプリの中でだけ「撮影データ（開発用）」の行（`openSessions`。アプリの撮影データの画面を開く）を出します。橋渡しが無いブラウザでは、③ も ⑩ も今までとまったく同じです。
+- 開発のときは、URL に `?fakeNative=1` を付けると偽の橋渡し（`native/fakeBridge.ts`）で同じ流れをブラウザで試せます（`=cancel` でやめた返事、`=pending` で渡しそびれた結果あり、`=error` でエラー、`=0` で戻す。付けた値はそのタブの sessionStorage に覚える）。`import.meta.env.DEV` のときだけ動くので、本番のビルドには入りません。
 
 ## 共通部品（`components/`）
 
@@ -126,7 +130,8 @@ import { HomeScene, StageShell } from '../three'
 | `AlbumNameSheet.tsx` | `AlbumNameSheet` | アルバムの名前を入れるシート（⑧ の「新しく作る」・⑧' の「名前を変える」） |
 | `AlbumSheet.tsx` / `.css` | `AlbumSheet` | ⑥ の「⋯」→「アルバムに入れる」のシート。アルバムを押すたびにその作品を入れる・外す（すぐ保存）。下の「新しいアルバムを作る」で、名前を入れて作ると同時にその作品を入れる |
 | `Loading.tsx` / `.css` | `Spinner` / `Busy` / `StageFallback` | 読み込み中の表示 |
-| `ArtworkForm.tsx` / `.css` | `ArtworkForm` | 作品の登録・編集フォーム（③と⑨で共通） |
+| `ArtworkForm.tsx` / `.css` | `ArtworkForm` | 作品の登録・編集フォーム（③と⑨で共通）。`seed`（写真と種類）を渡すと、写真を選んだときと同じように入る（③ の「3D 生成で追加」。同じ写真と種類をもう一度渡しても入れ直さない） |
+| `CaptureSheet.tsx` / `.css` | `CaptureSheet` | ③ の「3D 生成で追加」のシート。立体 / 平面（`Segmented`）、平面は紙の大きさ（アプリが教える一覧と「わからない」）、立体は高さ（cm・任意。アプリが教える範囲の外なら注意）を選び、「撮影をはじめる」で呼び出し側に渡す |
 | `MemorySection.tsx` / `.css` | `MemorySection` | ⑥ の「おもいで」。写真と動画は 3 列のタイル（動画は最初のコマと長さ）、声はリストの行（その場で再生）。「＋ 追加」のシートから写真・動画・音声ファイルを選ぶ（1 つずつ順に送り、進み具合を出す）・声を録音する。スマホなど指で操作する端末（`pointer: coarse`）では「写真をとる」「動画をとる」も出し、その場でカメラを開く（`capture="environment"` の入力。PC では効かないので出さない）。「⋯」でひとことを変える・消す |
 | `MemoryViewer.tsx` / `.css` | `MemoryViewer` | おもいでの写真と動画を画面いっぱいで見る（左右の送り・なぞる・← →・Esc）。この端末で再生できない動画は、ダウンロードのリンクを出す。シートを上に重ねるため z-index は 40 |
 | `VoiceRecorder.tsx` / `.css` | `VoiceRecorder` | 声を録音するシート（`MediaRecorder`。`audio/mp4` を優先、だめなら webm・ogg。3 分まで。止めると聞き直せる）。マイクが使えない（https か localhost でない・許可しない）ときは理由を出し、音声ファイルを選ぶ方へ |

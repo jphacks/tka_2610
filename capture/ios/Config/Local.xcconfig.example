@@ -1,0 +1,14 @@
+// Copy this file to Local.xcconfig (same folder) and set your Apple Team ID.
+// Local.xcconfig is gitignored; never commit your Team ID.
+//
+// Finding your Team ID: https://developer.apple.com/account -> Membership details -> Team ID
+// (10 characters), or in Xcode: Settings -> Accounts -> select your Apple ID -> the team list,
+// or Keychain Access -> your "Apple Development" certificate -> Organizational Unit.
+
+DEVELOPMENT_TEAM = 
+
+// Optional: open a memoria running on your Mac instead of the public one (see capture/README.md).
+// Use the Mac's Bonjour name (System Settings -> General -> Sharing -> Local hostname), not an IP address.
+// Do not write "http://" here: "//" starts a comment in xcconfig files.
+// MEMORIA_WEB_SCHEME = http
+// MEMORIA_WEB_HOST = your-mac-name.local:8080

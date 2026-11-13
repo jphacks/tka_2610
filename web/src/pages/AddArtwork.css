@@ -1,0 +1,61 @@
+/* ③ 作品を追加（AddArtwork）。フォームそのものは components/ArtworkForm.css と styles/form.css */
+
+/* 「3D 生成で追加」の入口（iPhone のアプリの中だけ出す） */
+.add-capture-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 22px;
+  padding: 14px 14px 14px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  text-align: left;
+  color: var(--ink);
+}
+
+.add-capture-entry:disabled {
+  opacity: 0.55;
+}
+
+.add-capture-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.add-capture-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.add-capture-text strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.add-capture-text small {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.add-capture-chev {
+  flex: none;
+  color: var(--ink-3);
+}
+
+@supports (corner-shape: squircle) {
+  .add-capture-entry,
+  .add-capture-icon {
+    corner-shape: squircle;
+  }
+}

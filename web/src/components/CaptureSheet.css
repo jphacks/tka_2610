@@ -1,0 +1,42 @@
+/* 「3D 生成で追加」のシート（CaptureSheet）。入力欄・切り替えボタンの見た目は styles/form.css と Segmented.css */
+
+.capture-sheet .field .hint {
+  margin-top: 8px;
+}
+
+/* 紙の大きさの一覧（「わからない」と、アプリが教える紙） */
+.capture-papers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.capture-paper {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  text-align: center;
+  transition: box-shadow 0.2s, background 0.2s, transform 0.35s var(--spring);
+}
+
+.capture-paper:active {
+  transform: scale(0.97);
+}
+
+.capture-paper.active {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+@supports (corner-shape: squircle) {
+  .capture-paper {
+    corner-shape: squircle;
+  }
+}

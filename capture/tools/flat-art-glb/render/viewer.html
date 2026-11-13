@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#fff}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head><body><script type="module">
+// Headless viewer used by render.cjs: loads /model.glb and exposes
+// window.renderView({view, h}) which returns a PNG data URL.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e9e6e1');
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.castShadow = true;
+key.shadow.mapSize.set(4096, 4096);
+key.shadow.bias = -0.00002;
+key.shadow.normalBias = 0.0002;
+scene.add(key, key.target);
+const camera = new THREE.PerspectiveCamera(20, 1, 0.01, 50);
+let box = null;
+window.state = 'loading';
+
+window.renderView = (v) => {
+  const size = box.getSize(new THREE.Vector3());
+  const c = box.getCenter(new THREE.Vector3());
+  const H = v.h || 1000;
+  const W = Math.round(H * size.x / size.y);
+  renderer.setSize(W, H);
+  camera.aspect = W / H;
+  camera.fov = 20;
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const fit = (Math.max(size.y, size.x / camera.aspect) / 2) / half;
+  if (v.view === 'oblique') {
+    // from the lower right, raised: shows the paper thickness and the layers
+    const dir = new THREE.Vector3(0.45, -0.35, 1).normalize();
+    camera.position.copy(c).addScaledVector(dir, fit * 1.12);
+    key.position.set(c.x - 0.9, c.y + 1.0, c.z + 0.8);
+    key.intensity = 1.7;
+    scene.environmentIntensity = 0.45;
+  } else {
+    // straight on, lit by the environment only: compares with the photo's colours
+    camera.position.set(c.x, c.y, c.z + fit * 1.04);
+    key.intensity = 0.0;
+    scene.environmentIntensity = 0.78;   // keeps white paper near its photographed brightness
+  }
+  camera.near = 0.01; camera.far = 50;
+  camera.updateProjectionMatrix();
+  camera.lookAt(c);
+  key.target.position.copy(c);
+  const d = Math.max(size.x, size.y) * 0.8;
+  Object.assign(key.shadow.camera, { left: -d, right: d, top: d, bottom: -d, near: 0.05, far: 6 });
+  key.shadow.camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  return renderer.domElement.toDataURL('image/png');
+};
+
+new GLTFLoader().load('/model.glb', (g) => {
+  g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(g.scene);
+  box = new THREE.Box3().setFromObject(g.scene);
+  let meshes = 0, tris = 0;
+  g.scene.traverse((o) => { if (o.isMesh) { meshes++; tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; } });
+  window.modelInfo = { min: box.min.toArray(), max: box.max.toArray(), meshes, triangles: tris };
+  window.state = 'ready';
+}, undefined, (e) => { window.state = 'error: ' + e.message; });
+</script></body></html>

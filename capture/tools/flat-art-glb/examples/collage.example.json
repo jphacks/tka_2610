@@ -1,0 +1,15 @@
+{
+  "photo": "photo.png",
+  "mode": "layers",
+  "sheet": {"size_mm": [392, 542], "thickness_mm": 0.27},
+  "colors": {
+    "backing": [[0.83, 0.41]],
+    "red": [[0.50, 0.41]],
+    "green": [[0.39, 0.275]],
+    "white": [[0.26, 0.744]]
+  },
+  "backing": "backing",
+  "stack": [["red", "white"], ["green"], ["white"]],
+  "white_reference": "white",
+  "min_piece_mm2": 150
+}

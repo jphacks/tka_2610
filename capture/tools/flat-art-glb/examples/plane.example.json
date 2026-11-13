@@ -1,0 +1,7 @@
+{
+  "photo": "drawing.jpg",
+  "mode": "plane",
+  "sheet": {"size_mm": [271, 392], "thickness_mm": 0.3},
+  "colors": {"paper": [[0.08, 0.5]]},
+  "backing": "paper"
+}
