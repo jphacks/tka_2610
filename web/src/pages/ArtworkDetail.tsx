@@ -2,7 +2,6 @@
 // 上は作品の 3D（触って回せる）とキャプション。3D を読み込むまでと、「写真」に切り替えたときは額縁に入った写真を出す。
 // おうちで見る・おうちに飾る・編集・削除ができる。
 // その下の「おもいで」（MemorySection）に、作品に付けた写真・動画・声の記録を並べ、足す・消すができる。
-// サーバーで使えるときだけ、「写真から 3D を作る（試験中）」（ModelGenerator）も出す。
 
 
 
@@ -21,7 +20,6 @@ import {
   ErrorBoundary,
   GlassButton,
   MemorySection,
-  ModelGenerator,
   Screen,
   Sheet,
   useToast,
@@ -316,9 +314,6 @@ export default function ArtworkDetail() {
             )}
           </div>
         )}
-
-        {/* ===== 写真から 3D を作る（試験中。使えるサーバーのときだけ出る） ===== */}
-        {artwork && <ModelGenerator artworkId={artwork.id} />}
 
         {/* ===== 関連作品 ===== */}
         {related.length > 0 && (
