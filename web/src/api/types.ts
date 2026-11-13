@@ -601,6 +601,8 @@ export interface TheaterData {
   period_label: string
   from: string
   to: string
+  /** ダイジェスト（年齢ごとにランダムで 2 点）のときの、えらび方の種。ふつうは null */
+  digest: number | null
   artwork_count: number
   truncated: boolean
   transition_ms: number

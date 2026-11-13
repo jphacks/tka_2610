@@ -1,6 +1,7 @@
 //! 期間をえらんで振り返る、3D のダイジェスト・シアター。
 //!
 //! 期間 (作品を作った日 `made_on`) の作品を古い順に全部ならべ、作品ごとの場面の時間割を作る。
+//! `digest` を付けると、年齢ごとにランダムで 2 点ずつだけをえらんで、古い順にならべる (ダイジェスト)。
 //! Web は再生位置の時刻 1 本から、どの場面か・大地の回転・写真や動画・メモ・声を決めるので、
 //! 時刻はすべてここで決める。おもいで (写真・動画・声) は追加した日にかかわらず作品と一緒に出す。
 use axum::{
@@ -22,6 +23,8 @@ use crate::{
 
 /// 1 回のシアターに出す作品の上限 (これより多いと truncated)
 const MAX_SCENES: usize = 200;
+/// ダイジェストで、年齢 (誕生日が無ければ年) ごとにえらぶ作品の数
+const DIGEST_PER_AGE: usize = 2;
 // ---- テンポ (ふつうの速さ 1× のときの長さ。画面の「進む速さ」は、これを全部 1/速さ 倍にする) ----
 /// 前の作品が流れ去り、次の作品が奥の稜線の上に来るまで (大地は止まらずに回る)
 const TRANSITION_MS: u32 = 2000;
@@ -61,6 +64,8 @@ pub struct TheaterQuery {
     from: Option<String>,
     to: Option<String>,
     category: Option<String>,
+    /// ダイジェストにする (年齢ごとにランダムで 2 点)。値は、えらび方の種。同じ種なら同じ作品になる
+    digest: Option<u32>,
 }
 
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -131,6 +136,8 @@ pub struct TheaterData {
     period_label: String,
     from: String,
     to: String,
+    /// ダイジェストのときの種 (ふつうは None)
+    digest: Option<u32>,
     artwork_count: usize,
     truncated: bool,
     transition_ms: u32,
@@ -394,6 +401,43 @@ pub fn in_range(dates: &[NaiveDate], from: NaiveDate, to: NaiveDate) -> (Vec<usi
     (all.into_iter().take(MAX_SCENES).collect(), truncated)
 }
 
+/// ダイジェストのくじ。種と作品の id から決まる数 (小さいほど先にえらばれる)
+fn lot(seed: u32, id: &Uuid) -> u64 {
+    // FNV-1a で id を混ぜ、splitmix64 で散らす (乱数の箱を持たずに、同じ種なら何度でも同じ結果にする)
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325 ^ u64::from(seed);
+    for b in id.as_bytes() {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h = h.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    h = (h ^ (h >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    h = (h ^ (h >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    h ^ (h >> 31)
+}
+
+/// ダイジェストにえらぶ作品の添え字。dates・ids は古い順。
+/// 年齢 (誕生日が無ければ作った年) ごとに、くじで DIGEST_PER_AGE 点ずつえらび、古い順のまま返す
+pub fn digest_picks(dates: &[NaiveDate], ids: &[Uuid], birthday: Option<NaiveDate>, seed: u32) -> Vec<usize> {
+    let group = |d: NaiveDate| match birthday {
+        Some(b) => i32::from(age::age_on(b, d)),
+        None => d.year(),
+    };
+    let mut picked = Vec::new();
+    let mut start = 0;
+    while start < dates.len() {
+        // 古い順なので、同じ年齢の作品は続いて並ぶ
+        let key = group(dates[start]);
+        let end = start + dates[start..].iter().take_while(|d| group(**d) == key).count();
+        let mut members: Vec<usize> = (start..end).collect();
+        members.sort_by_key(|&i| (lot(seed, &ids[i]), i));
+        members.truncate(DIGEST_PER_AGE);
+        picked.extend(members);
+        start = end;
+    }
+    picked.sort_unstable();
+    picked
+}
+
 fn duration_label(total_ms: u32) -> String {
     let seconds = total_ms.div_ceil(1000);
     if seconds < 60 {
@@ -409,7 +453,7 @@ fn duration_label(total_ms: u32) -> String {
 // API
 // =============================
 
-/// GET /api/recollections/theater?from=YYYY-MM-DD&to=YYYY-MM-DD[&category=drawing]
+/// GET /api/recollections/theater?from=YYYY-MM-DD&to=YYYY-MM-DD[&category=drawing][&digest=種]
 pub async fn theater(
     State(state): State<AppState>,
     Query(query): Query<TheaterQuery>,
@@ -450,7 +494,16 @@ pub async fn theater(
     .bind(crate::recollections::hidden_artwork_id())
     .fetch_all(&state.pool)
     .await?;
-    let (indices, truncated) = in_range(&rows.iter().map(|r| r.made_on).collect::<Vec<_>>(), from, to);
+    let dates: Vec<NaiveDate> = rows.iter().map(|r| r.made_on).collect();
+    let (indices, truncated) = match query.digest {
+        Some(seed) => {
+            let ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
+            let picks = digest_picks(&dates, &ids, ctx.birthday, seed);
+            let truncated = picks.len() > MAX_SCENES;
+            (picks.into_iter().take(MAX_SCENES).collect(), truncated)
+        }
+        None => in_range(&dates, from, to),
+    };
 
     let ids: Vec<Uuid> = indices.iter().map(|&i| rows[i].id).collect();
     let mut memories = memories::of_artworks(&state.pool, &ids).await?;
@@ -504,17 +557,23 @@ pub async fn theater(
 
     let (from_s, to_s) = (iso(from), iso(to));
     let noun = if category == Some("drawing") { "絵" } else { "作品" };
-    let title = presets
-        .iter()
-        .find(|p| p.from == from_s && p.to == to_s)
-        .map(|p| if noun == "作品" { p.title.clone() } else { p.title.replace("作品", noun) })
-        .unwrap_or_else(|| format!("えらんだ期間の{noun}"));
+    let title = if query.digest.is_some() {
+        let unit = if ctx.birthday.is_some() { "年齢" } else { "年" };
+        if noun == "作品" { format!("{unit}ごとのダイジェスト") } else { format!("{unit}ごとの{noun}のダイジェスト") }
+    } else {
+        presets
+            .iter()
+            .find(|p| p.from == from_s && p.to == to_s)
+            .map(|p| if noun == "作品" { p.title.clone() } else { p.title.replace("作品", noun) })
+            .unwrap_or_else(|| format!("えらんだ期間の{noun}"))
+    };
 
     Ok(Json(TheaterData {
         title,
         period_label: format!("{} — {}", date_short(from), date_short(to)),
         from: from_s,
         to: to_s,
+        digest: query.digest,
         artwork_count: scenes.len(),
         truncated,
         transition_ms: TRANSITION_MS,
@@ -658,6 +717,35 @@ mod tests {
         assert_eq!((leap[1].from.as_str(), leap[1].to.as_str()), ("2025-03-01", "2026-02-28"));
         // 誕生日が無ければ「これまで」だけ
         assert_eq!(presets(&dates, today, None).len(), 1);
+    }
+
+    #[test]
+    fn digest_picks_two_per_age_in_order() {
+        let birthday = d(2021, 6, 1);
+        // 3さい 3 点・4さい 1 点・5さい 4 点
+        let dates = [
+            d(2024, 7, 1), d(2024, 9, 1), d(2025, 3, 1),
+            d(2025, 7, 1),
+            d(2026, 6, 2), d(2026, 7, 1), d(2026, 8, 1), d(2026, 9, 1),
+        ];
+        let ids: Vec<Uuid> = (0..dates.len() as u128).map(|n| Uuid::from_u128(n + 1)).collect();
+        for seed in 0..50 {
+            let picks = digest_picks(&dates, &ids, Some(birthday), seed);
+            assert_eq!(picks.len(), 5, "seed {seed}");
+            assert!(picks.windows(2).all(|w| w[0] < w[1]), "古い順");
+            assert_eq!(picks.iter().filter(|&&i| i < 3).count(), 2);
+            assert!(picks.contains(&3), "1 点しかない年齢はその 1 点");
+            assert_eq!(picks.iter().filter(|&&i| i >= 4).count(), 2);
+            // 同じ種なら同じ
+            assert_eq!(picks, digest_picks(&dates, &ids, Some(birthday), seed));
+        }
+        // 種を変えると、えらばれる作品が変わることがある
+        let sets: std::collections::HashSet<Vec<usize>> =
+            (0..50).map(|seed| digest_picks(&dates, &ids, Some(birthday), seed)).collect();
+        assert!(sets.len() > 1);
+        // 誕生日が無ければ、作った年ごと (2024・2025・2026 → 2 + 2 + 2)
+        assert_eq!(digest_picks(&dates, &ids, None, 7).len(), 6);
+        assert!(digest_picks(&[], &[], Some(birthday), 1).is_empty());
     }
 
     #[test]

@@ -60,15 +60,19 @@ export function useMiniatureDigest(scope: DigestScope, drawingsOnly: boolean) {
 }
 
 
-/** 期間をえらんで振り返るシアター。from・to は YYYY-MM-DD（省くと作品のある全期間） */
-export function useTheater(from: string | null, to: string | null, drawingsOnly: boolean) {
+/**
+ * 期間をえらんで振り返るシアター。from・to は YYYY-MM-DD（省くと作品のある全期間）。
+ * digest は、年齢ごとにランダムで 2 点だけをえらぶときの種（同じ種なら同じ作品になる。null ならふつうに全部）
+ */
+export function useTheater(from: string | null, to: string | null, drawingsOnly: boolean, digest: number | null = null) {
   const search = new URLSearchParams()
   if (from) search.set('from', from)
   if (to) search.set('to', to)
   if (drawingsOnly) search.set('category', 'drawing')
+  if (digest !== null) search.set('digest', String(digest))
   return useQuery({
     placeholderData: previous => previous,
-    queryKey: [...keys.recollections, 'theater', from, to, drawingsOnly],
+    queryKey: [...keys.recollections, 'theater', from, to, drawingsOnly, digest],
     staleTime: 0,
     refetchOnWindowFocus: false,
     queryFn: async () => {
