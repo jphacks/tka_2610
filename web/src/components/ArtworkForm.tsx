@@ -31,6 +31,12 @@ const CATEGORY_HINT: Record<Category, string> = {
   other: '額縁に入れて「思い出の部屋」に飾ります。',
 }
 
+/** 外から入れる写真と種類（③ の「3D 生成で追加」で撮った写真）。写真を選んだときと同じように入り、入力した文字は消さない */
+export interface ArtworkSeed {
+  file: File
+  category: Category
+}
+
 const today = () => {
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -44,6 +50,7 @@ export function ArtworkForm({
   error,
   onSubmit,
   variant,
+  seed,
 }: {
   initial?: Artwork
   submitLabel: string
@@ -51,6 +58,8 @@ export function ArtworkForm({
   error?: string | null
   onSubmit: (form: FormData) => void
   variant: 'add' | 'edit'
+  /** 外から入れる写真と種類。同じ写真と種類をもう一度渡しても、入れ直さない */
+  seed?: ArtworkSeed | null
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   const generateImageMemo = useGenerateMemoFromImage()
@@ -116,6 +125,20 @@ export function ArtworkForm({
     setEdited(false)
     setFromModel(false)
   }
+
+  // 外から写真と種類を入れる（写真を選んだときと同じ choosePhoto。最後に入れた写真と種類を覚え、同じなら何もしない）
+  const seeded = useRef<ArtworkSeed | null>(null)
+  useEffect(() => {
+    if (!seed) return
+    const last = seeded.current
+    if (last && last.file === seed.file && last.category === seed.category) return
+    seeded.current = seed
+    // 前にファイルの入力で選んだ写真を、もう一度選び直せるようにしておく
+    if (fileInput.current) fileInput.current.value = ''
+    choosePhoto(seed.file)
+    setCategory(seed.category)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- choosePhoto は state の setter と ref だけを使う
+  }, [seed])
 
   /** 「向きをなおす・切り取る」で直した写真に置き換える (選び直しではないので、picked は変えない。影の補正はやり直し) */
   const applyEdit = (fixed: File) => {
