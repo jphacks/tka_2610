@@ -96,7 +96,9 @@ Canvasは停止中の連続描画を抑える `frameloop=demand` とDPR最大1.3
 
 memoria（`/map`）の「期間をえらんで振り返る」から、全画面のシアター（`/map/theater`）を開きます。えらんだ期間に作った作品を全部、古い順に、手描きの家や木が立つ丸い大地の上で振り返ります。カメラは動かさず、大地が映像のように止まらずに回り続け、作品が奥の稜線から現れて、手前の下へ流れていきます（作品が見えている間はゆっくり、作品と作品のあいだは少し速く。`timeline.ts` の `globeAngleAt`）。作品の左右には、その作品のおもいでの写真・動画が写真立てとして立ち、作品の少し上にメモ全体が雲の形でふわっと浮かびます。この端末の音源ファイルを BGM にでき、曲のはじめの位置と音量を選べます。
 
-`GET /api/recollections/theater?from=YYYY-MM-DD&to=YYYY-MM-DD[&category=drawing]` は Rust の `theater.rs` が作る場面の時間割を返します。
+`GET /api/recollections/theater?from=YYYY-MM-DD&to=YYYY-MM-DD[&category=drawing][&digest=種]` は Rust の `theater.rs` が作る場面の時間割を返します。
+
+期間のチップの「ダイジェスト」（`?digest=種`）は、作品のある全期間から、年齢ごと（誕生日が無ければ作った年ごと）にランダムで 2 点ずつだけをえらび、古い順に流します（`theater.rs` の `digest_picks`。えらぶ数は `DIGEST_PER_AGE`）。くじは種と作品の id から決まるので、同じ種なら何度読み込んでも同じ作品になります（詳細から戻ったときに続きから見られる）。「ほかの作品にする」・もう一度チップを押す・見終わったあとの「ほかの作品で見る」で、画面が新しい種をえらびます。
 
 - 作品は `made_on` が期間内のものを全部（上限 200 点。超えたら `truncated`）。`to` は今日までに丸め、省くと作品のある全期間です。`from > to`・日付の形の誤り・不正な種類は 400 です。
 - おもいでは追加した日にかかわらず、作品と一緒に出します（写真・動画は 1 作品 6 件まで、声は最初の 1 件）。
@@ -587,7 +589,7 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 | GET | `/api/generator/jobs/:job_id` | 写真から 3D を作る job の様子（`status` は `running`・`done`・`failed`、`error`、`elapsed_secs`）。使えないとき・知らない job は 404 |
 | GET | `/media/*` | 生成した画像・サムネイル・GLB、おもいでのファイル（`memories/`。Range に対応）と、家の GLB（部屋ごとの `museum/room-<部屋 id>-<版>.glb` と、リビングだけの `museum/museum-<版>.glb`） |
 | GET | `/home-assets/*` | 家具の GLB（`modules/`）と、壁紙・床材のテクスチャ（`textures/`）。`backend/static/home/` をそのまま配信する |
-| GET | `/api/recollections/theater` | 期間をえらんで振り返るシアターの時間割（`?from=`・`?to=`・`?category=drawing`。上の「期間をえらんで振り返るシアター」） |
+| GET | `/api/recollections/theater` | 期間をえらんで振り返るシアターの時間割（`?from=`・`?to=`・`?category=drawing`・`?digest=種` で年齢ごとに 2 点ずつ。上の「期間をえらんで振り返るシアター」） |
 | GET | `/stage-assets/*` | シアターの舞台の絵と輪郭（`backend/static/stage/`。`tools/digest-stage` が作る） |
 | GET | `/healthz` | 死活確認 |
 

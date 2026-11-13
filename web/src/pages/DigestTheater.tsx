@@ -1,17 +1,18 @@
 // memoria内に埋め込むシアター。再生するとアプリ全体に広げる。/map/theater から単独でも開ける。
 //
 // えらんだ期間に作った作品を、古い順に全部、手描きの町が回る丸い大地の上で振り返る。
+// 「ダイジェスト」（?digest=種）では、年齢ごとにランダムで 2 点ずつだけを古い順に流す（えらぶのは Rust。種が同じなら同じ作品）。
 //   作品 … 大地が回って奥から手前に来る（3D は TheaterScene。three/ の遅延読み込みの中）
 //   写真・動画 … その作品のおもいでが、左右に写真立てとして立つ
 //   メモ … 作品の少し上に、ふわっと浮かび上がる（文ごとに順に）
 //   音楽 … この端末の音源ファイルを BGM にできる（サーバーへは送らない。theaterMusic.ts）
 // 場面の時刻はすべて Rust（/api/recollections/theater）が決め、再生の時計と音合わせは theaterPlayback.ts。
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { Fragment, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigationType, useSearchParams } from 'react-router-dom'
 import { useTheater, type TheaterData } from '../api'
 import { ErrorBoundary, GlassButton, MemoryViewer } from '../components'
-import { BackIcon, CalendarIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ThemeIcon } from '../icons'
+import { BackIcon, CalendarIcon, ChevronRight, CloseIcon, ExpandIcon, MicIcon, NoteIcon, PauseIcon, PlayIcon, ShuffleIcon, ThemeIcon } from '../icons'
 import { useNav } from '../nav'
 import { StageShell, THEATER_SPEEDS, TheaterScene, chapterMarks, clockLabel, isTouchDevice, jumpTimeAt, scaleTheater } from '../three'
 import { audioDuration, loadMusic, loadSettings, saveMusic, saveSettings, type TheaterMusic, type TheaterSettings } from './theaterMusic'
@@ -30,6 +31,12 @@ const speedHint = (speed: number) =>
   : speed >= 3 ? 'ざっと流して見ます。メモは読みきれず、動画や声は途中までになります。'
   : speed > 1 ? '早く進みます。動画は途中までになることがあります。'
   : 'ふつうの速さです。再生中も下の「1×」から変えられます。'
+
+/** ダイジェストのチップ（「これまで」のすぐあとに出す）。年齢ごとにランダムで 2 点ずつ */
+const DIGEST_LABEL = 'ダイジェスト'
+/** ダイジェストの作品のえらび方の種（URL の ?digest=。0〜2^31-1） */
+const newDigestSeed = () => Math.floor(Math.random() * 0x7fffffff)
+const parseDigestSeed = (value: string | null) => (value && /^\d{1,10}$/.test(value) && Number(value) <= 0xffffffff ? Number(value) : null)
 
 /** 何もしなければ、操作の表示をこれだけ経ってから薄くする */
 const HUD_IDLE_MS = 3200
@@ -116,6 +123,8 @@ function SetupPanel({
   drawingsOnly,
   onRange,
   onDrawings,
+  digest,
+  onDigest,
   music,
   onMusic,
   settings,
@@ -131,6 +140,8 @@ function SetupPanel({
   drawingsOnly: boolean
   onRange: (from: string, to: string) => void
   onDrawings: (value: boolean) => void
+  digest: boolean
+  onDigest: () => void
   music: TheaterMusic | null
   onMusic: (music: TheaterMusic | null) => void
   settings: TheaterSettings
@@ -146,7 +157,7 @@ function SetupPanel({
   const available = data?.available
   const currentFrom = from ?? data?.from ?? ''
   const currentTo = to ?? data?.to ?? ''
-  const activePreset = available?.presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
+  const activePreset = digest ? 'digest' : available?.presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
 
   const stopPreview = useCallback(() => { preview.current?.pause(); setPreviewing(false) }, [])
   useEffect(() => stopPreview, [stopPreview])
@@ -194,8 +205,11 @@ function SetupPanel({
       <section className="theater-setup-section" aria-labelledby="theater-period">
         <h2 id="theater-period">期間</h2>
         <div className="theater-presets" role="group" aria-label="よく使う期間">
-          {available?.presets.map((p) => (
-            <button type="button" key={p.key} aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+          {available?.presets.map((p, i) => (
+            <Fragment key={p.key}>
+              <button type="button" aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+              {i === 0 && <button type="button" aria-pressed={digest} onClick={onDigest}>{DIGEST_LABEL}</button>}
+            </Fragment>
           ))}
         </div>
         <div className="theater-dates">
@@ -217,6 +231,7 @@ function SetupPanel({
           {pending ? 'Loading…' : data ? (data.artwork_count > 0 ? <><strong>{data.artwork_count}点</strong>の作品 · {data.duration_label}<small>{data.period_label}</small></> : 'この期間の作品はありません') : ''}
         </p>
         {data?.truncated && <p className="theater-note">作品が多いので、はじめの {data.artwork_count} 点を流します。期間をせまくすると全部見られます。</p>}
+        {digest && <p className="theater-note">年齢ごとに、ランダムで 2 点ずつえらんで古い順に流します。もう一度押すと、ほかの作品になります。</p>}
       </section>
 
       <section className="theater-setup-section" aria-labelledby="theater-speed">
@@ -290,6 +305,8 @@ function TheaterPoster({
   from,
   to,
   onRange,
+  digest,
+  onDigest,
   settings,
   music,
   onStart,
@@ -300,6 +317,9 @@ function TheaterPoster({
   from: string | null
   to: string | null
   onRange: (from: string, to: string) => void
+  /** ダイジェストを見ているか。onDigest は、ダイジェストにする（見ているときは、ほかの作品にえらび直す） */
+  digest: boolean
+  onDigest: () => void
   settings: TheaterSettings
   music: TheaterMusic | null
   onStart: () => void
@@ -308,7 +328,7 @@ function TheaterPoster({
   const currentFrom = from ?? data?.from ?? ''
   const currentTo = to ?? data?.to ?? ''
   const presets = data?.available.presets ?? []
-  const activePreset = presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
+  const activePreset = digest ? 'digest' : presets.find((p) => p.from === currentFrom && p.to === currentTo)?.key
   const empty = !!data && data.artwork_count === 0
   // えらんでいるチップが列の外（右のぼかしの向こう）にあれば、見える所まで横にすべらせる
   const chips = useRef<HTMLDivElement>(null)
@@ -341,7 +361,7 @@ function TheaterPoster({
   }, [activePreset])
   return (
     <section className="theater-poster" aria-labelledby="theater-poster-title">
-      <span className="theater-eyebrow">期間をえらんで振り返る</span>
+      <span className="theater-eyebrow">{digest ? '年齢ごとに 2 点ずつ振り返る' : '期間をえらんで振り返る'}</span>
       <h1 id="theater-poster-title">{data?.title ?? '作品のシアター'}</h1>
       <p className="theater-poster-meta" aria-live="polite">
         {pending ? 'Loading…'
@@ -350,6 +370,11 @@ function TheaterPoster({
           : <><strong>{data.artwork_count}点</strong><span>{data.duration_label}</span><span>{data.period_label}</span></>}
       </p>
       {data?.truncated && <p className="theater-poster-note">作品が多いので、はじめの {data.artwork_count} 点を流します</p>}
+      {digest && (
+        <button type="button" className="theater-poster-reroll" disabled={pending} onClick={onDigest}>
+          <ShuffleIcon size={14} /><span>ほかの作品にする</span>
+        </button>
+      )}
       {/* 「これまで」と年齢は横にすべる列、「日付をえらぶ」は右端にいつも出す（年齢が増えても外へ押し出されない） */}
       <div className="theater-poster-periods">
         <div
@@ -359,8 +384,11 @@ function TheaterPoster({
           aria-label="よく使う期間"
           onScroll={updateMore}
         >
-          {presets.map((p) => (
-            <button type="button" key={p.key} aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+          {presets.map((p, i) => (
+            <Fragment key={p.key}>
+              <button type="button" aria-pressed={activePreset === p.key} onClick={() => onRange(p.from, p.to)}>{p.label}</button>
+              {i === 0 && <button type="button" aria-pressed={digest} onClick={onDigest}>{DIGEST_LABEL}</button>}
+            </Fragment>
           ))}
         </div>
         <button
@@ -400,7 +428,8 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
   const from = params.get('from')
   const to = params.get('to')
   const drawingsOnly = params.get('drawing') === '1'
-  const query = useTheater(from, to, drawingsOnly)
+  const digest = parseDigestSeed(params.get('digest'))
+  const query = useTheater(from, to, drawingsOnly, digest)
 
   const [settings, setSettingsState] = useState<TheaterSettings>(loadSettings)
   const setSettings = useCallback((next: TheaterSettings) => { setSettingsState(next); saveSettings(next) }, [])
@@ -432,7 +461,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
 
   // 期間が変わったら、はじめの作品が着いたところを見せて止める。
   // 作品を押して詳細へ行き、戻ってきたときは、押したところから続ける（takeResume）
-  const revision = shown ? `${shown.from}-${shown.to}-${drawingsOnly}-${shown.artwork_count}` : ''
+  const revision = shown ? `${shown.from}-${shown.to}-${drawingsOnly}-${shown.digest ?? ''}-${shown.artwork_count}` : ''
   // 戻る操作でこの画面に来たか（メニューから開き直したときや、期間を変えたときは続きから始めない）
   const navigationType = useNavigationType()
   const cameBack = useRef(navigationType === 'POP')
@@ -476,6 +505,17 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
     const next = new URLSearchParams(params)
     next.set('from', f)
     next.set('to', t)
+    next.delete('digest')
+    setParams(next, { replace: true })
+  }
+  /** ダイジェストにする（作品のある全期間から。もう見ているときは、新しい種でほかの作品にえらび直す） */
+  const pickDigest = () => {
+    const next = new URLSearchParams(params)
+    next.delete('from')
+    next.delete('to')
+    let seed = newDigestSeed()
+    if (seed === digest) seed = (seed + 1) % 0x7fffffff
+    next.set('digest', String(seed))
     setParams(next, { replace: true })
   }
   const setDrawings = (value: boolean) => {
@@ -760,7 +800,8 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
             <h2>{shown.artwork_count}点の作品を振り返りました</h2>
             <div className="theater-end-actions">
               <button type="button" className="btn btn-filled" onClick={() => { seek(0); setPlaying(true) }}><PlayIcon size={16} />もう一度</button>
-              <button type="button" className="btn btn-outline" onClick={() => setSetupOpen(true)}>期間を変える</button>
+              {digest !== null && <button type="button" className="btn btn-outline" onClick={pickDigest}><ShuffleIcon size={16} />ほかの作品で見る</button>}
+              <button type="button" className={digest !== null ? 'btn-plain' : 'btn btn-outline'} onClick={() => setSetupOpen(true)}>期間を変える</button>
               <button type="button" className="btn-plain" onClick={close}>memoriaへ戻る</button>
             </div>
           </div>
@@ -773,6 +814,8 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
             from={from}
             to={to}
             onRange={setRange}
+            digest={digest !== null}
+            onDigest={pickDigest}
             settings={settings}
             music={music}
             onStart={start}
@@ -789,6 +832,8 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
             drawingsOnly={drawingsOnly}
             onRange={setRange}
             onDrawings={setDrawings}
+            digest={digest !== null}
+            onDigest={pickDigest}
             music={music}
             onMusic={setMusic}
             settings={settings}

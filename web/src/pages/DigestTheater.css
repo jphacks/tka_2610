@@ -517,6 +517,22 @@
   text-overflow: ellipsis;
 }
 
+/* ダイジェストのとき：作品の数の下の「ほかの作品にする」（えらび直す。小さな文字のボタン） */
+.theater-poster-reroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 0 -10px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.theater-poster-reroll:disabled { opacity: 0.5; }
+
 @keyframes theater-poster-in {
   from {
     opacity: 0;
@@ -1152,7 +1168,7 @@
      作品名        ( ▶ )
      33点 · 約4分
      [これまで][3さい]…  📅
-   上の小さな見出し・作品が多いときの注意・速さと音楽の行は出さない（速さと音楽は 📅 から開く設定のシートで変える） */
+   上の小さな見出し・作品が多いときの注意・ダイジェストの「ほかの作品にする」・速さと音楽の行は出さない（ダイジェストは、チップをもう一度押すとえらび直せる）（速さと音楽は 📅 から開く設定のシートで変える） */
 .theater-screen.is-compact .theater-poster {
   --poster-pad: 14px;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1191,5 +1207,6 @@
 .theater-screen.is-compact .theater-poster-play-label,
 .theater-screen.is-compact .theater-poster .theater-eyebrow,
 .theater-screen.is-compact .theater-poster-note,
+.theater-screen.is-compact .theater-poster-reroll,
 .theater-screen.is-compact .theater-poster-settings { display: none; }
 .theater-screen.is-compact .theater-stage canvas { touch-action: pan-y; }

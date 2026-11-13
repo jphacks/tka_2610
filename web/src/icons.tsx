@@ -202,6 +202,17 @@ export const RotateIcon = (p: IconProps) => (
   </Svg>
 )
 
+/** えらび直す（ダイジェストの作品を変える） */
+export const ShuffleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 7h3.5c2 0 3.3 1 4.4 2.6l2.2 4.8c1.1 1.6 2.4 2.6 4.4 2.6H21" />
+    <path d="M3 17h3.5c1.4 0 2.5-.5 3.4-1.4" />
+    <path d="M14.1 8.4c.9-.9 2-1.4 3.4-1.4H21" />
+    <path d="m18 4 3 3-3 3" />
+    <path d="m18 14 3 3-3 3" />
+  </Svg>
+)
+
 /** 消す（ごみ箱） */
 export const TrashIcon = (p: IconProps) => (
   <Svg {...p}>
