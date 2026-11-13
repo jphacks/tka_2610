@@ -42,6 +42,8 @@ final class FlatCaptureController: ObservableObject {
     @Published private(set) var lookDownDeg: Double?
     @Published private(set) var captureInFlight = false
     @Published private(set) var photoCount = 0
+    /// 撮影画面の映像の枠の縦横比（縦に持って見た幅 / 高さ）。使っている映像の形式から決める。分からない間は nil（3:4 にする）。
+    @Published private(set) var previewAspect: Double?
     @Published private(set) var lastShot: LastShot?
     @Published var banner: Banner?
     @Published var autoCaptureEnabled: Bool
@@ -127,6 +129,7 @@ final class FlatCaptureController: ObservableObject {
             configuration.videoFormat = format
         }
         stabilizer.reset()
+        previewAspect = configuration.videoFormat.portraitAspect
         arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
@@ -148,27 +151,29 @@ final class FlatCaptureController: ObservableObject {
 
     private func tick() {
         guard phase == .capturing, !detecting, arView.bounds.width > 0, let frame = arView.session.currentFrame else { return }
+        // 輪郭は ARSCNView の座標で出す（撮影画面は ARSCNView を写真と同じ縦横比にするので、写真の端＝画面の映像の端）。
         let viewport = arView.bounds.size
-        let toView = frame.displayTransform(for: .portrait, viewportSize: viewport)
+        let resolution = frame.camera.imageResolution
         let lookDown = FlatGeometry.lookDownDeg(cameraToWorld: simd_double4x4(fast: frame.camera.transform))
         let timestamp = frame.timestamp
         let buffer = CapturedImage(pixelBuffer: frame.capturedImage)
         detecting = true
         detectQueue.async { [weak self] in
             let result = SheetDetector.detect(pixelBuffer: buffer.pixelBuffer)
-            onMain { self?.handle(result, timestamp: timestamp, lookDown: lookDown, toView: toView, viewport: viewport) }
+            onMain { self?.handle(result, timestamp: timestamp, lookDown: lookDown, resolution: resolution, viewport: viewport) }
         }
     }
 
-    private func handle(_ result: SheetDetector.Result?, timestamp: Double, lookDown: Double, toView: CGAffineTransform, viewport: CGSize) {
+    private func handle(_ result: SheetDetector.Result?, timestamp: Double, lookDown: Double, resolution: CGSize, viewport: CGSize) {
         detecting = false
         guard isRunning, phase == .capturing else { return }
         let corners = result?.corners
         lastCorners = corners
         lookDownDeg = lookDown
         outline = corners?.map { p in
-            let n = CGPoint(x: p.x, y: p.y).applying(toView)
-            return CGPoint(x: n.x * viewport.width, y: n.y * viewport.height)
+            let v = CameraPreview.viewPoint(fromSensor: p, imageWidth: Double(resolution.width), imageHeight: Double(resolution.height),
+                                            viewWidth: Double(viewport.width), viewHeight: Double(viewport.height))
+            return CGPoint(x: v.x, y: v.y)
         }
         let next = FlatGuidance.evaluate(corners: corners, lookDownDeg: lookDown, plan: plan)
         if guidance != next { guidance = next }

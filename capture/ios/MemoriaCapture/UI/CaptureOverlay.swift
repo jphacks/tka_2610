@@ -1,35 +1,56 @@
 import CaptureCore
 import SwiftUI
 
-/// AR の画面の上に重ねる案内（SwiftUI。保存する写真には入らない）。
+/// 前の方法（底の中心と円柱）の撮影画面の案内（SwiftUI。保存する写真には入らない）。
+/// 共通の入れ物（`CameraPreviewContainer`）の場所ごとに 1 つずつ置く（`part`）：上の帯に案内の文、
+/// 映像の上に知らせ・方向の地図・確認項目、下の帯に操作（基準を決める間の大きな操作は、映像の下の端に重なる）。
 struct CaptureOverlay: View {
+    enum Part {
+        /// 上の帯：案内の文。
+        case top
+        /// 映像の上に浮かべるもの。
+        case panels
+        /// 下の帯：操作。
+        case bottom
+    }
+
     @ObservedObject var controller: CaptureController
+    let part: Part
     /// 「確認へ」のボタンの文言（memoria から頼まれた撮影では「これで登録」）。
     var reviewLabel = "確認へ"
     let onReview: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
-            if let banner = controller.banner {
-                BannerView(message: banner.message, isError: banner.isError)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+        switch part {
+        case .top:
+            CaptureGuidanceText(text: controller.guidanceText, tip: controller.guidanceTip)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+        case .panels:
+            VStack(spacing: 8) {
+                if let banner = controller.banner {
+                    BannerView(message: banner.message, isError: banner.isError)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if controller.phase == .capturing {
+                    topPanel
+                }
+                if controller.isComplete {
+                    completePanel
+                }
+                Spacer(minLength: 0)
+                if controller.phase == .capturing {
+                    StatusChips(assessment: controller.assessment)
+                }
             }
-            if controller.phase == .capturing {
-                topPanel
-            }
-            if controller.isComplete {
-                completePanel
-            }
-            guidance
-            Spacer(minLength: 0)
-            if controller.phase == .capturing {
-                StatusChips(assessment: controller.assessment)
-            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .animation(.easeInOut(duration: 0.2), value: controller.banner)
+        case .bottom:
+            // シャッターの列（78 pt と上下の余白 10 pt）が下の帯（`CameraPreviewContainer.controlsHeight`）に収まるよう、上下の余白は足さない。
             bottomPanel
+                .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-        .animation(.easeInOut(duration: 0.2), value: controller.banner)
     }
 
     // MARK: 上：方向の地図・進み具合
@@ -99,23 +120,6 @@ struct CaptureOverlay: View {
         }
         .padding(10)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-    }
-
-    private var guidance: some View {
-        VStack(spacing: 6) {
-            Text(controller.guidanceText)
-                .font(.headline)
-            if let tip = controller.guidanceTip {
-                Label(tip, systemImage: "lightbulb.fill")
-                    .font(.caption)
-                    .foregroundStyle(.yellow)
-            }
-        }
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-        .foregroundStyle(.white)
     }
 
     // MARK: 下：操作

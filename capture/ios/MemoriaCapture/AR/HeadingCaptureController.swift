@@ -31,6 +31,8 @@ final class HeadingCaptureController: ObservableObject {
     @Published private(set) var plan: DirectionPlan
     @Published private(set) var captureInFlight = false
     @Published private(set) var photoCount = 0
+    /// 撮影画面の映像の枠の縦横比（縦に持って見た幅 / 高さ）。使っている映像の形式から決める。分からない間は nil（3:4 にする）。
+    @Published private(set) var previewAspect: Double?
     @Published private(set) var maskBacklog = 0
     /// 今の基準の正面を撮った。
     @Published private(set) var hasFront = false
@@ -180,6 +182,7 @@ final class HeadingCaptureController: ObservableObject {
         processor.resetMotion()
         focus.reset()
         evaluator.reset()
+        previewAspect = configuration.videoFormat.portraitAspect
         arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 

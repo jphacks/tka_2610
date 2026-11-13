@@ -2,15 +2,8 @@ import ARKit
 import CaptureCore
 import SwiftUI
 
-/// ARSCNView を SwiftUI に置く（平面の作品の撮影）。
-struct FlatARViewContainer: UIViewRepresentable {
-    let controller: FlatCaptureController
-
-    func makeUIView(context: Context) -> ARSCNView { controller.arView }
-    func updateUIView(_ uiView: ARSCNView, context: Context) {}
-}
-
-/// 平面の作品の撮影画面：カメラの上に用紙の輪郭・短い案内・シャッターを重ねる。
+/// 平面の作品の撮影画面：写真と同じ範囲の映像（`CameraPreviewContainer`）の上に用紙の輪郭、上の帯に短い案内と選んだ紙・傾き、
+/// 下の帯に自動撮影・シャッター・「これで登録」（「確認へ」）。
 struct FlatCaptureView: View {
     @StateObject private var controller: FlatCaptureController
     @EnvironmentObject private var model: AppModel
@@ -24,12 +17,15 @@ struct FlatCaptureView: View {
     }
 
     var body: some View {
-        ZStack {
-            FlatARViewContainer(controller: controller).ignoresSafeArea()
+        CameraPreviewContainer(arView: controller.arView, imageAspect: controller.previewAspect) {
+            // 輪郭は ARSCNView の座標（映像の枠と同じ）。
             SheetOutline(points: controller.outline, ready: controller.guidance == .ready)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            overlay
+        } panels: {
+            panels
+        } top: {
+            topBar
+        } bottom: {
+            bottomBar
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -50,48 +46,35 @@ struct FlatCaptureView: View {
         }
     }
 
-    private var overlay: some View {
+    /// 映像の上に浮かべるもの：撮ったときの知らせ（上の端）と、撮った写真の結果（下の端）。
+    private var panels: some View {
         VStack(spacing: 8) {
             if let banner = controller.banner {
                 BannerView(message: banner.message, isError: banner.isError)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
-            Text(controller.guidanceText)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
-                .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(.white)
+            Spacer(minLength: 0)
             if let shot = controller.lastShot {
                 lastShotPanel(shot)
             }
-            Spacer(minLength: 0)
-            bottomPanel
         }
         .padding(.horizontal, 12)
-        .padding(.bottom, 8)
+        .padding(.vertical, 8)
         .animation(.easeInOut(duration: 0.2), value: controller.banner)
     }
 
     private func lastShotPanel(_ shot: FlatCaptureController.LastShot) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: shot.sheetFound && !shot.sheetAtEdge && shot.overhead ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                .font(.title2)
-                .foregroundStyle(shot.sheetFound && !shot.sheetAtEdge && shot.overhead ? .green : .orange)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("1 / 1 撮りました").font(.subheadline.bold())
-                Text(shotDetail(shot)).font(.caption).foregroundStyle(.secondary)
-            }
+        let good = shot.sheetFound && !shot.sheetAtEdge && shot.overhead
+        return HStack(spacing: 8) {
+            Image(systemName: good ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(good ? .green : .orange)
+            Text("1 / 1 撮りました").bold()
+            Text(shotDetail(shot)).foregroundStyle(.secondary).lineLimit(2)
             Spacer(minLength: 0)
-            Button(model.isEmbeddedCapture(controller.sessionId) ? "これで登録" : "確認へ") {
-                model.finishCapture(sessionId: controller.sessionId)
-            }
-                .buttonStyle(.borderedProminent)
-                .disabled(controller.captureInFlight || controller.photoCount == 0)
         }
-        .padding(10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .font(.caption)
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func shotDetail(_ shot: FlatCaptureController.LastShot) -> String {
@@ -107,45 +90,58 @@ struct FlatCaptureView: View {
         return parts.joined(separator: "・")
     }
 
+    /// 上の帯：案内の文と、選んだ紙・傾き。
+    private var topBar: some View {
+        VStack(spacing: 6) {
+            CaptureGuidanceText(text: controller.guidanceText)
+            if controller.phase == .capturing, controller.declaredSheet != nil || controller.lookDownDeg != nil {
+                HStack(spacing: 6) {
+                    if let sheet = controller.declaredSheet {
+                        CaptureInfoChip(text: "紙：\(sheet.isCustom ? sheet.labelWithSize : sheet.displayName)（選んだ大きさ）")
+                    }
+                    if let tilt = controller.lookDownDeg {
+                        CaptureInfoChip(text: "傾き \(Int(tilt.rounded()))°（\(Int(DirectionPlanPreset.flatTopElevation - DirectionPlanPreset.flatTopElevationTolerance))° 以上で真上）")
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    /// 下の帯：自動撮影・シャッター・「これで登録」（「確認へ」）。
     @ViewBuilder
-    private var bottomPanel: some View {
+    private var bottomBar: some View {
         switch controller.phase {
         case .starting:
             ProgressView().padding()
         case .unsupported, .failed:
             EmptyView()
         case .capturing:
-            VStack(spacing: 10) {
-                if let sheet = controller.declaredSheet {
-                    Text("紙：\(sheet.isCustom ? sheet.labelWithSize : sheet.displayName)（選んだ大きさ）")
-                        .font(.caption)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.black.opacity(0.5), in: Capsule())
-                        .foregroundStyle(.white)
+            HStack {
+                Toggle("自動", isOn: $controller.autoCaptureEnabled)
+                    .toggleStyle(.button)
+                    .tint(.green)
+                    .frame(width: 90)
+                Spacer()
+                ShutterButton(progress: controller.holdProgress, busy: controller.captureInFlight,
+                              enabled: !controller.captureInFlight, size: 76) {
+                    controller.shutterTapped()
                 }
-                if let tilt = controller.lookDownDeg {
-                    Text("傾き \(Int(tilt.rounded()))°（\(Int(DirectionPlanPreset.flatTopElevation - DirectionPlanPreset.flatTopElevationTolerance))° 以上で真上）")
-                        .font(.caption.monospacedDigit())
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.black.opacity(0.5), in: Capsule())
-                        .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    model.finishCapture(sessionId: controller.sessionId)
+                } label: {
+                    Text(model.isEmbeddedCapture(controller.sessionId) ? "これで登録" : "確認へ")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
-                HStack {
-                    Toggle("自動", isOn: $controller.autoCaptureEnabled)
-                        .toggleStyle(.button)
-                        .tint(.green)
-                        .frame(width: 90)
-                    Spacer()
-                    ShutterButton(progress: controller.holdProgress, busy: controller.captureInFlight,
-                                  enabled: !controller.captureInFlight, size: 76) {
-                        controller.shutterTapped()
-                    }
-                    Spacer()
-                    Color.clear.frame(width: 90, height: 1)
-                }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(controller.captureInFlight || controller.photoCount == 0)
+                    .frame(width: 90)
             }
-            .padding(10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
     }
 }

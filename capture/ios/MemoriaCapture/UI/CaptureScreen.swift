@@ -114,14 +114,6 @@ struct MessageScreen: View {
     }
 }
 
-/// ARSCNView を SwiftUI に置く。
-struct ARViewContainer: UIViewRepresentable {
-    let controller: CaptureController
-
-    func makeUIView(context: Context) -> ARSCNView { controller.arView }
-    func updateUIView(_ uiView: ARSCNView, context: Context) {}
-}
-
 struct CaptureView: View {
     @StateObject private var controller: CaptureController
     @EnvironmentObject private var model: AppModel
@@ -135,11 +127,16 @@ struct CaptureView: View {
     }
 
     var body: some View {
-        ZStack {
-            ARViewContainer(controller: controller).ignoresSafeArea()
-            CaptureOverlay(controller: controller, reviewLabel: model.isEmbeddedCapture(controller.sessionId) ? "これで登録" : "確認へ") {
-                model.finishCapture(sessionId: controller.sessionId)
-            }
+        // 照準（底の中心）・円柱・方向の輪は ARSCNView が描く 3D の印で、ARSCNView が自分の大きさで投影する。
+        // 照準を当てる点は ARSCNView の中心（＝映像の枠の中心＝写真の中心）。
+        CameraPreviewContainer(arView: controller.arView, imageAspect: controller.previewAspect) {
+            EmptyView()
+        } panels: {
+            overlay(.panels)
+        } top: {
+            overlay(.top)
+        } bottom: {
+            overlay(.bottom)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -171,6 +168,12 @@ struct CaptureView: View {
             Button("やめる", role: .cancel) {}
         } message: {
             Text(controller.assessment.warnings.map { "・\($0.message)" }.joined(separator: "\n"))
+        }
+    }
+
+    private func overlay(_ part: CaptureOverlay.Part) -> CaptureOverlay {
+        CaptureOverlay(controller: controller, part: part, reviewLabel: model.isEmbeddedCapture(controller.sessionId) ? "これで登録" : "確認へ") {
+            model.finishCapture(sessionId: controller.sessionId)
         }
     }
 }
