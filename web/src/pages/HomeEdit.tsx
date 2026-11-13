@@ -367,13 +367,14 @@ export default function HomeEdit() {
         return
       }
       selectAfterSync.current = artwork.id
-      // 置き場所はサーバーが選ぶ（選んでいる部屋の空いている天板。house の無い古いサーバーには部屋を送らない）。
+      // 置き場所はサーバーが選ぶ（選んでいる部屋の空いている天板。空きが無ければ家具を 1 つ足してその上。
+      // house の無い古いサーバーには部屋を送らない）。
       // 成功すると、おうち・配置・作品の一覧を取り直す
       // 置き場所はこのおへやの中（作品の年齢のおへやだけが候補なので、違う年齢の作品は一覧に出さない）
       await display.mutateAsync({ id: artwork.id, display: true, roomId: ageRoomId ?? undefined })
     } catch (error) {
       selectAfterSync.current = null
-      // 409 は「飾る場所がいっぱいです…」（選んだ部屋に空きが無いときも。ほかの部屋には置かない）
+      // 409 は「〇〇 は、家具を足す場所も無いほどいっぱいです…」（家具も足せないときだけ。ほかの部屋には置かない）
       toast(error instanceof Error ? error.message : '飾れませんでした')
     } finally {
       setBusy(false)

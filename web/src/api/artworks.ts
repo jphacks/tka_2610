@@ -109,6 +109,7 @@ function useStoreArtwork() {
   }
 }
 
+/** 作品を登録する。サーバーは登録した作品を、作ったときの年齢のおへやに飾る（返る作品の displayed・room_name）ので、おへやと配置も取り直す */
 export function useCreateArtwork() {
   const invalidate = useInvalidate()
   const store = useStoreArtwork()
@@ -170,8 +171,9 @@ export function useFavorite() {
 
 /**
  * おうちに飾る（display: true）・飾るのをやめる（false）。
- * roomId（おへやの id）を渡すと、そのおへやの空いている場所に置く（本文 { room_id }。空きが無ければ 409 で、ほかのおへやには置かない。
- * 作品の年齢と違うおへやは 400）。省くと、作品を作ったときの年齢のおへやを下の階からサーバーが選ぶ
+ * roomId（おへやの id）を渡すと、そのおへやの空いている場所に置く（本文 { room_id }。空きが無ければサーバーがそのおへやに家具を足して置き、
+ * 家具を足す場所も無ければ 409 で、ほかのおへやには置かない。作品の年齢と違うおへやは 400）。
+ * 省くと、作品を作ったときの年齢のおへやを下の階からサーバーが選ぶ（空きが無ければ家具を足す）
  */
 export function useDisplay() {
   const invalidate = useInvalidate()

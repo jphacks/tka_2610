@@ -1,8 +1,9 @@
 // ③ 作品を追加（/add）。モーダルで下から開く。
-// 登録が終わると ④ 3D プレビューへ進む。
+// 登録が終わると ④ 3D プレビューへ進む。登録した作品はサーバーが、作ったときの年齢のおへやに飾る
+// （空きが無ければ家具を足して。それでも飾れなければ飾っていないまま。プレビューの「おうちに飾る」が残る）。
 import { useEffect } from 'react'
 import { useCreateArtwork, useMuseum } from '../api'
-import { ArtworkForm, Busy, NavBar, Screen } from '../components'
+import { ArtworkForm, Busy, NavBar, Screen, useToast } from '../components'
 import { useNav } from '../nav'
 import { shellUrlsOf, warmUp3D, warmUpArtwork } from '../three'
 
@@ -10,6 +11,7 @@ export default function AddArtwork() {
   const nav = useNav()
   const create = useCreateArtwork()
   const museum = useMuseum()
+  const toast = useToast()
 
   // 入力している間に 3D の準備をしておき、次のプレビュー画面をすぐ出す
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function AddArtwork() {
             create.mutate(form, {
               onSuccess: (artwork) => {
                 warmUpArtwork(artwork.model_url)
+                if (artwork.displayed) toast(`${artwork.room_name ?? 'おうち'}に飾りました`)
                 nav.replace(`/artworks/${artwork.id}/preview`, 'fade')
               },
             })
