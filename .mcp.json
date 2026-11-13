@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "memoria-capture": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "exec uv run --script \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/capture/mcp-server/memoria_mcp.py\""]
+    }
+  }
+}

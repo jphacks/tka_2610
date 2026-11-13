@@ -1,0 +1,147 @@
+{
+  "template": "slab",
+  "top": {
+    "photo": "top.png",
+    "corners": [
+      [
+        0.12,
+        0.1
+      ],
+      [
+        0.88,
+        0.11
+      ],
+      [
+        0.93,
+        0.9
+      ],
+      [
+        0.07,
+        0.89
+      ]
+    ],
+    "width_mm": 200
+  },
+  "outline": [
+    [
+      0.13,
+      0.11
+    ],
+    [
+      0.87,
+      0.12
+    ],
+    [
+      0.92,
+      0.89
+    ],
+    [
+      0.08,
+      0.88
+    ]
+  ],
+  "outline_round_mm": 5,
+  "layers": [
+    {
+      "name": "base",
+      "height_mm": 30,
+      "inset_mm": 0,
+      "material": {
+        "color": [
+          0.2,
+          0.2,
+          0.22
+        ],
+        "roughness": 0.6
+      }
+    },
+    {
+      "name": "lid",
+      "height_mm": 4,
+      "inset_mm": 0,
+      "texture": "top",
+      "material": {
+        "color": [
+          0.8,
+          0.8,
+          0.8
+        ],
+        "roughness": 0.3
+      }
+    }
+  ],
+  "features": [
+    {
+      "name": "knobs",
+      "shape": "button",
+      "diameter_mm": 24,
+      "height_mm": 6,
+      "texture": "top",
+      "at": [
+        [
+          0.3,
+          0.5
+        ],
+        [
+          0.7,
+          0.5
+        ]
+      ]
+    },
+    {
+      "name": "screws",
+      "shape": "disc",
+      "diameter_mm": 6,
+      "height_mm": 1,
+      "material": {
+        "color": [
+          0.75,
+          0.75,
+          0.75
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      "at": [
+        [
+          0.15,
+          0.15
+        ]
+      ]
+    }
+  ],
+  "side_marks": [
+    {
+      "name": "port",
+      "layer": "base",
+      "side": "back",
+      "along_frac": 0.5,
+      "height_frac": 0.5,
+      "size_mm": [
+        9,
+        3
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "top",
+      "az": 0,
+      "el": 89.9,
+      "up": [
+        0,
+        0,
+        -1
+      ],
+      "photo": "top.png",
+      "w": 900,
+      "h": 700
+    },
+    {
+      "name": "front",
+      "az": 0,
+      "el": 15,
+      "photo": "front.png"
+    }
+  ]
+}

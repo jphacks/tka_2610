@@ -1,0 +1,12 @@
+// Signing settings for the MemoriaCapture app target.
+// The Apple Team ID is per developer, so it lives in Local.xcconfig next to this file,
+// which is gitignored. Copy Local.xcconfig.example to Local.xcconfig and fill it in.
+// Without Local.xcconfig the team is empty (unsigned builds and the simulator still work).
+
+// The memoria web app the app opens (Info.plist MemoriaWebURL = $(MEMORIA_WEB_SCHEME)://$(MEMORIA_WEB_HOST)).
+// Scheme and host are separate because "//" starts a comment in xcconfig files.
+// To use a memoria running on your Mac, override both in Local.xcconfig (see Local.xcconfig.example).
+MEMORIA_WEB_SCHEME = https
+MEMORIA_WEB_HOST = memoria-try.tka-2610.workers.dev
+
+#include? "Local.xcconfig"

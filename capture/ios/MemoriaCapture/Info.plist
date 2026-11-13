@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>MemoriaWebURL</key>
+	<string>$(MEMORIA_WEB_SCHEME)://$(MEMORIA_WEB_HOST)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_memoriacap._tcp</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>作品のまわりを撮影して、3D にするための写真を撮ります。</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>同じ Wi-Fi の Mac（Memoria の受信側）を見つけて、撮影した写真を送ります。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>memoria の画面で、動画や声を記録するときにマイクを使います。</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arkit</string>
+	</array>
+</dict>
+</plist>
