@@ -2,15 +2,8 @@ import ARKit
 import CaptureCore
 import SwiftUI
 
-/// ARSCNView を SwiftUI に置く（向きで案内する撮影）。
-struct HeadingARViewContainer: UIViewRepresentable {
-    let controller: HeadingCaptureController
-
-    func makeUIView(context: Context) -> ARSCNView { controller.arView }
-    func updateUIView(_ uiView: ARSCNView, context: Context) {}
-}
-
-/// 向きで案内する立体の作品の撮影画面：画面の中央の十字・回る向きと残りの角度・高さ・シャッター。
+/// 向きで案内する立体の作品の撮影画面：写真と同じ範囲の映像（`CameraPreviewContainer`）の中央の十字・回る向きと残りの角度・高さ・シャッター。
+/// 上の帯に案内の文、映像の上に方向の地図と確認項目、下の帯にシャッターの列。
 /// 底の中心・円柱の設定は無い。作品が十字にあるかは撮る人が合わせる。
 struct HeadingCaptureView: View {
     @StateObject private var controller: HeadingCaptureController
@@ -25,13 +18,17 @@ struct HeadingCaptureView: View {
     }
 
     var body: some View {
-        ZStack {
-            HeadingARViewContainer(controller: controller).ignoresSafeArea()
-            // 十字は、画面の全体（カメラの映像の中心＝写真の中心）の中央に置く。
+        CameraPreviewContainer(arView: controller.arView, imageAspect: controller.previewAspect) {
+            // 十字は映像の枠（＝写真の全体）の中央＝写真の中心（向きの案内の中心の線と、撮ったあとの計算が使う点）。
             Crosshair(state: controller.crosshair)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            overlay
+        } panels: {
+            panels
+        } top: {
+            CaptureGuidanceText(text: controller.guidanceText, tip: controller.guidanceTip, tipSystemImage: "arrow.left.and.right")
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+        } bottom: {
+            bottomPanel
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -59,7 +56,8 @@ struct HeadingCaptureView: View {
         }
     }
 
-    private var overlay: some View {
+    /// 映像の上に浮かべるもの：知らせ・方向の地図と進み具合・そろったとき（上の端）、確認項目（下の端）。十字のまわりは空ける。
+    private var panels: some View {
         VStack(spacing: 8) {
             if let banner = controller.banner {
                 BannerView(message: banner.message, isError: banner.isError)
@@ -71,15 +69,13 @@ struct HeadingCaptureView: View {
             if controller.isComplete {
                 completePanel
             }
-            guidance
             Spacer(minLength: 0)
             if controller.phase == .capturing {
                 StatusChips(assessment: controller.assessment, hidden: [.inFrame])
             }
-            bottomPanel
         }
         .padding(.horizontal, 12)
-        .padding(.bottom, 8)
+        .padding(.vertical, 8)
         .animation(.easeInOut(duration: 0.2), value: controller.banner)
     }
 
@@ -132,23 +128,6 @@ struct HeadingCaptureView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private var guidance: some View {
-        VStack(spacing: 6) {
-            Text(controller.guidanceText)
-                .font(.headline)
-            if let tip = controller.guidanceTip {
-                Label(tip, systemImage: "arrow.left.and.right")
-                    .font(.caption)
-                    .foregroundStyle(.yellow)
-            }
-        }
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-        .foregroundStyle(.white)
-    }
-
     @ViewBuilder
     private var bottomPanel: some View {
         switch controller.phase {
@@ -192,8 +171,8 @@ struct HeadingCaptureView: View {
                 .buttonStyle(.bordered)
                 .disabled(controller.captureInFlight)
             }
-            .padding(10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
     }
 }

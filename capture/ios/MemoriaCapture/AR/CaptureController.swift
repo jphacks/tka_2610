@@ -72,6 +72,8 @@ final class CaptureController: ObservableObject {
     @Published private(set) var plan: DirectionPlan
     @Published private(set) var captureInFlight = false
     @Published private(set) var photoCount = 0
+    /// 撮影画面の映像の枠の縦横比（縦に持って見た幅 / 高さ）。使っている映像の形式から決める。分からない間は nil（3:4 にする）。
+    @Published private(set) var previewAspect: Double?
     /// このセッションで、切り抜きの順番待ち・作成中の写真の数（撮影は止めない）。
     @Published private(set) var maskBacklog = 0
     @Published private(set) var referenceState: ReferenceState = .none
@@ -282,6 +284,7 @@ final class CaptureController: ObservableObject {
         processor.resetMotion()
         focus.reset()
         evaluator.reset()
+        previewAspect = configuration.videoFormat.portraitAspect
         arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
