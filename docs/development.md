@@ -17,6 +17,7 @@ Web で写真を登録すると Rust のサーバーが 3D モデル（GLB）を
 - [docs/house-assets.md](./house-assets.md)：家の建物 GLB の仕様（本番の GLB を作ってもらうときに渡す）
 - [tools/home-rooms/README.md](../tools/home-rooms/README.md)：開発用の建物 GLB（今入っているもの）の作り方
 - [backend/static/atelier/README.md](../backend/static/atelier/README.md)：サンプルの作品 33 点の出どころと、モデルの縮め方
+- [capture/README.md](../capture/README.md)：memoria を中で開いて撮影の画面を持つ iPhone のアプリ（`capture/`）
 - [AGENTS.md](../AGENTS.md)：AI エージェント向けの作業メモ（構成・守ること）
 
 ## システム構成
@@ -383,6 +384,7 @@ PC でも、ほかの画面と同じスマホの枠の中で模様替えしま�
 ├── tools/
 │   ├── home-rooms/        開発用の建物 GLB（static/models/rooms/）を作る Python のスクリプトと確認のスクリプト（説明は README.md）
 │   └── home-thumbs/       模様替えの「追加 → 家具」に出す家具の画像（static/home/thumbs/）を、家具の GLB から Blender で撮るスクリプト
+├── capture/               iPhone のアプリ（memoria を中で開き、撮影の画面を持つ）と、撮影データを Mac で受け取る道具（説明は capture/README.md）
 ├── docs/                  作業メモ（Web の構成・鑑賞モード・Supabase・家の建物 GLB の仕様）
 └── docker-compose.yml     PostgreSQL
 ```
@@ -543,6 +545,35 @@ PC と同じ Wi-Fi につないで `http://<PC の IP アドレス>:8080` を開
 
 1. サーバー PC のファイアウォールで 8080 番を許可します。
 2. ほかの PC のブラウザでは `http://<サーバー PC の IP アドレス>:8080` を開きます。
+
+### iPhone のアプリで撮って登録するとき（`capture/`）
+
+`capture/ios/` の iPhone のアプリは、memoria を中で開き、撮影の画面だけをネイティブで持ちます。アプリの中で開いたときだけ、作品を追加の画面に「3D 生成で追加」が出ます。立体か平面か（と紙の大きさ・高さ）を選んで撮り、「これで登録」を押すと、写真がいつもの登録フォームに入ります（平面は「絵画」、立体は「工作」）。あとは今までどおり登録して飾ります。撮影データ一式は iPhone に残ります（生成 AI はまだつないでいません）。Safari や PC のブラウザでは、入口は出ません。
+
+ブラウザで流れを試すときは、開発サーバーで URL に `?fakeNative=1` を付けます（開発のときだけ動く偽の橋渡し。本番のビルドには入りません）。
+
+```powershell
+cd web
+npm run dev
+```
+
+http://localhost:5173/add?fakeNative=1 を開くと「3D 生成で追加」が出て、「撮影をはじめる」から少し待つと、絵を描いた仮の写真がフォームに入ります。`?fakeNative=cancel` は撮影をやめたとき、`?fakeNative=pending` は撮影中に画面が読み込み直されて結果を渡しそびれたとき、`?fakeNative=error` はアプリがエラーを返したときの動きです。付けた値はそのタブで覚えるので、マイページ（`/settings`）の「撮影データ（開発用）」も見られます。`?fakeNative=0` で戻します。アプリに送った内容はブラウザのコンソールに `[fakeNative]` で出ます。
+
+アプリをローカルの memoria につなぐときは、次のようにします（アプリは何も指定しなければ memoria-try を開きます）。
+
+1. Web をビルドします（`cd web` → `npm run build`）。
+2. Rust のサーバーを起動します（`cd backend` → `cargo run`。8080 番。このサーバーの家は 1 つです）。
+3. `capture/ios/Config/Local.xcconfig`（git に入りません。無ければ `Local.xcconfig.example` をコピー）に、つなぎ先を書きます。xcconfig では `//` から後ろがコメントになるので、URL を 2 つに分けて書きます。
+
+   ```
+   MEMORIA_WEB_SCHEME = http
+   MEMORIA_WEB_HOST = <Mac の名前>.local:8080
+   ```
+
+   Mac の名前は「システム設定」→「一般」→「共有」のいちばん下の「ローカルホスト名」です。iPhone と Mac は同じ Wi-Fi につなぎます。
+4. アプリをビルドして iPhone に入れます（手順は `capture/AGENTS.md`）。
+
+Cloudflare 版の開発サーバー（`cloudflare/` の `npm run dev`）には、http ではつなげません。家の Cookie（`memoria_house`）に `Secure` が付いているので、http では Cookie が残らず、要求のたびに新しい家として扱われます。
 
 ## 環境変数
 
