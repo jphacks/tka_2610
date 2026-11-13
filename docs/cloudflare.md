@@ -1,16 +1,17 @@
 # Cloudflare で動かす（テスト環境）
 
-Render の代わりに、Cloudflare だけで memoria を動かすための作業メモです。今はテスト環境で、本番（Render）とチームの共有の Supabase には触りません。
+Cloudflare だけで memoria を動かすための作業メモです。デモ（memoria-try）はこれで公開しています。チームの共有の Supabase にはつなぎません。
+前に使っていた Render へ公開する設定（`Dockerfile`・`render.yaml`）は消しました（Render のサービスそのものは、Render の管理画面で止めます）。
 無料プランのまま、クレジットカードを登録しないで使えます。
 
 ## 仕組み
 
-| 部分 | Render（今） | Cloudflare（このフォルダ） |
+| 部分 | 手元の開発（`backend/`） | Cloudflare（このフォルダ） |
 |---|---|---|
 | 画面（`web/dist`）・家具と壁紙・舞台・建物の GLB・サンプルの作品 33 点 | Rust のサーバーが配る | **静的ファイル**（Workers Static Assets）。Worker を通らずに配られる |
 | API（`/api`） | Rust（axum + sqlx） | **Durable Object**（`Museum`。Rust を Wasm にして、同じ axum の API を動かす） |
-| データベース | Supabase（PostgreSQL） | Durable Object の中の **SQLite** |
-| 登録した写真・GLB・おもいで（`/media`） | サーバーのディスク（再起動で消える） | Durable Object の SQLite（1 MB ずつに分けて入れる。消えない） |
+| データベース | PostgreSQL（Docker か Homebrew。共有の Supabase にもつなげる） | Durable Object の中の **SQLite** |
+| 登録した写真・GLB・おもいで（`/media`） | サーバーを動かしている PC のディスク | Durable Object の SQLite（1 MB ずつに分けて入れる。消えない） |
 
 - 入口の Worker（`src/lib.rs`）は、`/api` と `/media` を Durable Object に渡すだけです。
   - ただし `/media` のうち、サンプルの作品（ファイル名に `-seed.` が入る）と建物の GLB（`/media/museum/`）は静的ファイルにあるので、Worker が静的ファイルから取って返します（`static_asset`）。

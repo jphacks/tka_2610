@@ -88,7 +88,7 @@
 ## 開発技術
 ### 活用した技術
 #### API・データ
-* PostgreSQL（Supabase）：作品・おへやごとの配置・設定・おもいでの記録
+* データベース：Cloudflare の Durable Objects（SQLite。デモ）・PostgreSQL（手元の開発）：作品・おへやごとの配置・設定・おもいでの記録
 * 自前の REST API（Rust）：作品の登録・3D モデルの生成・おへやの配置の検証と保存・年齢の計算
 
 #### フレームワーク・ライブラリ・モジュール
@@ -96,7 +96,7 @@
 * 3D：three.js・React Three Fiber・drei（GLB の読み込み、影、ポストエフェクト）
 * バックエンド：Rust・axum・sqlx・tokio・image（写真の縮小と GLB の生成）
 * 録音：MediaRecorder API
-* 公開：Docker・Render
+* 公開：Cloudflare Workers・Durable Objects（Rust を WebAssembly にして動かす）
 
 #### デバイス
 * スマートフォン（iPhone・Android）のブラウザ：撮影・録音・タッチでの見回し
@@ -110,4 +110,4 @@
 * **作品のおもいで**（PR #16 `b8b6761`）：写真・動画・声の記録と、アプリでの録音（[`backend/src/memories.rs`](backend/src/memories.rs)・[`web/src/components/MemorySection.tsx`](web/src/components/MemorySection.tsx)）。
 * **ジオラマのように見せるホーム**（PR #21 `669c98e`）：積み上げたおへやの影・接地の影・隅の陰・ティルトシフト（[`web/src/three/scenes/StackScene.tsx`](web/src/three/scenes/StackScene.tsx)・[`web/src/three/scenes/DioramaEffects.tsx`](web/src/three/scenes/DioramaEffects.tsx)）。
 
-開発の手順・仕組みは [docs/development.md](docs/development.md)、公開の手順は [docs/deploy.md](docs/deploy.md) にあります。
+開発の手順・仕組みは [docs/development.md](docs/development.md)、公開（Cloudflare）の手順は [docs/cloudflare.md](docs/cloudflare.md) にあります。

@@ -94,7 +94,6 @@ iPhone のアプリ（capture/ios）
 
 ## 本番では使わない
 
-- **本番（Render）に `KT_GENERATOR_ENABLED` を入れないでください。** 入れ物（`Dockerfile`）には Python も `generator/` も入りません（`.dockerignore` で送らない）。入れても venv が無いので `disabled` になりますが、入れないのが決まりです。
 - **Cloudflare 版（`cloudflare/`）には、この API がありません。** `/api/generator`・`/api/capture/sessions` は 404 なので、画面には何も出ません。
-- `capture/`（iPhone のアプリ・受信サーバー・3D を作るツール）も入れ物に入れません（`.dockerignore`）。`CAPTURE_DATA_DIR` も本番には入れません。
+- `capture/`（iPhone のアプリ・受信サーバー・3D を作るツール）も、手元の PC だけで使います。
 - 環境変数を入れなければ、サーバーは今までとまったく同じに動きます（`GET /api/generator` が `{"enabled": false}` を返すだけ）。

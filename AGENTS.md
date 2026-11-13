@@ -69,7 +69,7 @@ Web の構成（画面・共通部品・3D・スタイル）と、変更する�
 - **適用済みのマイグレーションを書き換えない。** `backend/migrations/` の既存ファイルを変えるとチェックサムが変わり、サーバーが `VersionMismatch` で起動できなくなります。変更は新しい番号のファイルで足してください。
 - **SQL の改行コードを `.gitattributes` で固定しない。** Windows では CRLF のまま適用済みの環境があり、LF に固定するとその環境で起動できなくなります。詳しくは [docs/supabase.md](docs/supabase.md) の「マイグレーションの改行コード対策」を見てください。
 - **写真から GLB を作る処理（`backend/src/glb.rs`）は仮の実装です。** 差し替える前提で扱ってください。手元の PC では、`generator/` の `kt auto` で作った GLB に作品ごとに差し替えることもできます（試験中。`backend/src/generator.rs`。job はメモリにだけあり、同時に 1 つ。作った GLB は編集でアップロードした GLB と同じ `custom`。[docs/generator.md](docs/generator.md)）。
-- **本番（Render）に `KT_GENERATOR_ENABLED`・`CAPTURE_DATA_DIR` を入れない。** 写真から 3D を作る機能は手元の PC 用です。入れ物（`Dockerfile`）には Python も `generator/` も入れません（`.dockerignore`）。Cloudflare 版にはこの API が無く、Web は `GET /api/generator` が `enabled: true` のときだけ画面に出します（404 やエラーは出さないだけ）。環境変数が無ければ、サーバーは今までと同じに動きます。
+- **写真から 3D を作る機能（`KT_GENERATOR_ENABLED`・`CAPTURE_DATA_DIR`）は手元の PC 用です。** Cloudflare 版にはこの API が無く、Web は `GET /api/generator` が `enabled: true` のときだけ画面に出します（404 やエラーは出さないだけ）。環境変数が無ければ、サーバーは今までと同じに動きます。
 - **Katachi Loop Studio の本体・形の生成の重み（Hunyuan3D-2.1）・`generator/.venv` をリポジトリに入れない。** どれも使う人が手元に入れます（`generator/setup.sh`・`setup_gen.sh`。ライセンスは `generator/THIRD_PARTY_NOTICES.md`。Hunyuan3D-2.1 は EU・イギリス・韓国で使えず、生成物をほかの AI モデルの改良に使えない）。
 - **`capture/captures/`（iPhone から受け取った写真・マスク・`session.json`）をコミットしない。** 作品や家の中が写っています（`capture/.gitignore` で外している）。テストの撮影は、テストの中で作るか一時フォルダにコピーして使います。受信サーバーの既定のポート 8765 は Katachi の画面と同じなので、両方を動かすときは `--port` で変えます。
 - **`generator/` に試した写真（もとのリポジトリの `bench/`・`result/`）を入れない。** 本の表紙など、権利のある写真が入っているためです。`generator/tests/` の実写のテストは、写真（`~/Pictures/作品` か `KT_WORKS_DIR`）が無ければ飛ばします。`generator/` の改行の決まり（`*.ps1` は CRLF、`*.sh` は LF）は `generator/.gitattributes` の中だけにして、リポジトリ直下には置きません（上の SQL の改行）。
@@ -94,7 +94,7 @@ Web の構成（画面・共通部品・3D・スタイル）と、変更する�
 - **Web の画面から `web/src/three/scenes/` の中を直接 import しない。** 必ず `import { ... } from '../three'`（`web/src/three/index.tsx`）を使います。直接読むと three.js が最初に読み込まれ、表示が遅くなります。
 - **Web の CSS は、1 か所でだけ使うものはその `.tsx` の隣の同じ名前の `.css` に、2 か所以上で使うものは `web/src/styles/` に書く。** 色は `web/src/styles/tokens.css` の CSS 変数を使い、直接書かない。
 - **おもいでのファイルは、表 `artwork_memories` の `file`・`thumb_file` にあるものだけが正。** `backend/data/media/memories/` に手でファイルを置かないでください（起動時に、表に無いファイルは消えます）。種類と上限は `memories.rs` の `ACCEPTED`・`MemoryKind::max_bytes` と、`web/src/api/memories.ts` の `MEMORY_LIMITS`・`KIND_OF_EXT` を一緒に変えます。
-- **公開（Render）の入れ物はリポジトリ直下の `Dockerfile` と `render.yaml`。** 手順は [docs/deploy.md](docs/deploy.md)。入れ物の中ではファイルの場所を環境変数（`STATIC_DIR`・`WEB_DIST`・`MEDIA_DIR`）で渡すので、サーバーに新しいファイルの読み込みを足すときは、ビルドした場所（`CARGO_MANIFEST_DIR`）に頼らず、これらから辿る。無料プランのディスクは再起動で消える（サンプルの作品は起動のときに作り直される）。
+- **公開は Cloudflare（memoria-try）だけ。** 仕組みと手順は [docs/cloudflare.md](docs/cloudflare.md)。Render へ公開する設定（`Dockerfile`・`render.yaml`）は消しました。`backend/` は手元の開発とテストで使います。
 - **`.env` や接続文字列、パスワードをコミットしない。**
 - **コミットメッセージや PR の説明に、AI ツールの署名（`Co-Authored-By` や「Generated with」など）を入れない。**
 
