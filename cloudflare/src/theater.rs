@@ -260,21 +260,13 @@ pub struct ScenePlan {
 }
 
 /// 場面の長さと、写真・動画・メモ・声の出る時刻を決める。
-/// 写真・動画は左右 2 枠に交互に置き、2 つずつ順に見せる (動画がある回は、その長さだけ見せる)。
+/// 写真・動画は左右 2 枠に交互に置き、2 つずつ順に見せる。動画も写真と同じ長さ (PHOTO_ROUND_MS) だけ見せ、
+/// 場面を延ばさない (動画はその間だけ流す。短い動画は最後のコマで止まる)。
 /// 場面の長さは、写真・動画を見る時間・メモを読む時間・声を聞く時間のいちばん長いもの
 pub fn plan_scene(media: &[MediaInfo], lines: &[String], voice_ms: Option<Option<i32>>) -> ScenePlan {
     let media = &media[..media.len().min(MAX_MEDIA)];
-    // 2 つずつの回に分け、回ごとの長さを決める
-    let rounds: Vec<u32> = media
-        .chunks(2)
-        .map(|pair| {
-            pair.iter()
-                .filter(|m| m.video)
-                .map(|m| video_play_ms(m.duration_ms))
-                .max()
-                .map_or(PHOTO_ROUND_MS, |v| v.max(PHOTO_ROUND_MS))
-        })
-        .collect();
+    // 2 つずつの回に分ける。どの回も同じ長さ (動画があっても延ばさない)
+    let rounds: Vec<u32> = media.chunks(2).map(|_| PHOTO_ROUND_MS).collect();
     let media_end = MEDIA_AT_MS + rounds.iter().sum::<u32>();
 
     let mut line_times = Vec::with_capacity(lines.len());
@@ -311,7 +303,8 @@ pub fn plan_scene(media: &[MediaInfo], lines: &[String], voice_ms: Option<Option
         let end = if last_round { hold_ms - SCENE_TAIL_MS } else { round_start + rounds[round] };
         for (i, m) in pair.iter().enumerate() {
             let side = if i == 0 { Side::Left } else { Side::Right };
-            let play = m.video.then(|| video_play_ms(m.duration_ms));
+            // 動画は、写真立てが立っている間だけ流す
+            let play = m.video.then(|| video_play_ms(m.duration_ms).min(end - round_start));
             slots.push((side, round_start, end, play));
         }
         round_start += rounds[round];
