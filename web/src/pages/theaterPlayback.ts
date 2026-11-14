@@ -5,7 +5,7 @@
 // だから、止める・シークする・前後の作品へ飛ぶ、のどれをしても音と映像がずれない。
 // 前後の作品へ飛ぶのも、作品が着いた時刻（arrive_ms。timeline.ts の jumpTimeAt が決める）へのシークで、ここに別の仕組みは無い。
 // 作品の 3D を読み込み中のあいだは、作品が着いた時刻で時計を止めて待つ（読めなければ 12 秒で写真に替わる）。
-// 動画の音や声が鳴っているあいだは、BGM を小さくする（ダッキング）。最後の余韻では BGM を小さくして終わる。
+// 動画はいつも音を消して流す（映像だけ）。声が鳴っているあいだは、BGM を小さくする（ダッキング）。最後の余韻では BGM を小さくして終わる。
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { TheaterData } from '../api'
 import { frameAt, memoLineAt, type TheaterPhase } from '../three'
@@ -20,7 +20,7 @@ export interface PlaybackView {
   /** 作品の 3D を読み込み中で、時計を止めて待っている */
   waiting: boolean
   ended: boolean
-  /** 動画か声の音が鳴っている */
+  /** 声が鳴っている（動画はいつも音を消すので数えない） */
   mediaAudible: boolean
 }
 
@@ -184,7 +184,7 @@ export function useTheaterPlayback(data: TheaterData | undefined, options: Playb
       const showing = f.phase === 'hold' || f.phase === 'outro'
       let audible = false
 
-      // 動画：その写真立てが立っていて、流す長さのうちだけ再生する
+      // 動画：その写真立てが立っていて、流す長さのうちだけ再生する。音はいつも消す（映像だけ）
       for (const [id, video] of videos.current) {
         const slot = scene?.media.find((m) => m.memory.id === id)
         let want = false
@@ -193,13 +193,12 @@ export function useTheaterPlayback(data: TheaterData | undefined, options: Playb
           const local = f.local - slot.show_ms
           if (local >= 0 && local < slot.play_ms && f.local < slot.hide_ms) { want = true; pos = local / 1000 }
         }
-        video.muted = !o.mediaSound
+        video.muted = true
         const playable = !video.error && (!Number.isFinite(video.duration) || pos < video.duration)
         if (want && playable) {
           if (video.readyState >= 1 && Math.abs(video.currentTime - pos) > DRIFT) video.currentTime = pos
           if (active) {
             if (video.paused) void video.play().catch(() => {})
-            if (o.mediaSound && !video.paused) audible = true
           } else if (!video.paused) video.pause()
         } else if (!video.paused) video.pause()
       }
