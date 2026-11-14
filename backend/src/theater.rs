@@ -260,21 +260,13 @@ pub struct ScenePlan {
 }
 
 /// 場面の長さと、写真・動画・メモ・声の出る時刻を決める。
-/// 写真・動画は左右 2 枠に交互に置き、2 つずつ順に見せる (動画がある回は、その長さだけ見せる)。
+/// 写真・動画は左右 2 枠に交互に置き、2 つずつ順に見せる。動画も写真と同じ長さ (PHOTO_ROUND_MS) だけ見せ、
+/// 場面を延ばさない (動画はその間だけ流す。短い動画は最後のコマで止まる)。
 /// 場面の長さは、写真・動画を見る時間・メモを読む時間・声を聞く時間のいちばん長いもの
 pub fn plan_scene(media: &[MediaInfo], lines: &[String], voice_ms: Option<Option<i32>>) -> ScenePlan {
     let media = &media[..media.len().min(MAX_MEDIA)];
-    // 2 つずつの回に分け、回ごとの長さを決める
-    let rounds: Vec<u32> = media
-        .chunks(2)
-        .map(|pair| {
-            pair.iter()
-                .filter(|m| m.video)
-                .map(|m| video_play_ms(m.duration_ms))
-                .max()
-                .map_or(PHOTO_ROUND_MS, |v| v.max(PHOTO_ROUND_MS))
-        })
-        .collect();
+    // 2 つずつの回に分ける。どの回も同じ長さ (動画があっても延ばさない)
+    let rounds: Vec<u32> = media.chunks(2).map(|_| PHOTO_ROUND_MS).collect();
     let media_end = MEDIA_AT_MS + rounds.iter().sum::<u32>();
 
     let mut line_times = Vec::with_capacity(lines.len());
@@ -311,7 +303,8 @@ pub fn plan_scene(media: &[MediaInfo], lines: &[String], voice_ms: Option<Option
         let end = if last_round { hold_ms - SCENE_TAIL_MS } else { round_start + rounds[round] };
         for (i, m) in pair.iter().enumerate() {
             let side = if i == 0 { Side::Left } else { Side::Right };
-            let play = m.video.then(|| video_play_ms(m.duration_ms));
+            // 動画は、写真立てが立っている間だけ流す
+            let play = m.video.then(|| video_play_ms(m.duration_ms).min(end - round_start));
             slots.push((side, round_start, end, play));
         }
         round_start += rounds[round];
@@ -671,15 +664,22 @@ mod tests {
     }
 
     #[test]
-    fn videos_stretch_the_scene_but_are_capped() {
-        let plan = plan_scene(&[video(Some(9000)), photo()], &[], None);
-        assert_eq!(plan.slots[0].3, Some(9000));
-        assert_eq!(plan.slots[1].3, None);
-        assert_eq!(plan.hold_ms, MEDIA_AT_MS + 9000 + SCENE_TAIL_MS);
-        let long = plan_scene(&[video(Some(60_000))], &[], None);
-        assert_eq!(long.slots[0].3, Some(VIDEO_MAX_MS));
-        let unknown = plan_scene(&[video(None)], &[], None);
-        assert_eq!(unknown.slots[0].3, Some(VIDEO_UNKNOWN_MS));
+    fn videos_do_not_stretch_the_scene() {
+        // 動画があっても、写真だけのときと同じ長さ
+        let with_video = plan_scene(&[video(Some(9000)), photo()], &[], None);
+        let photos_only = plan_scene(&[photo(), photo()], &[], None);
+        assert_eq!(with_video.hold_ms, photos_only.hold_ms);
+        assert_eq!(with_video.slots[1].3, None);
+        // 動画は写真立てが立っている間だけ流す (短い動画はその長さ)
+        let shown = with_video.slots[0].2 - with_video.slots[0].1;
+        assert_eq!(with_video.slots[0].3, Some(shown));
+        assert_eq!(plan_scene(&[video(Some(1500))], &[], None).slots[0].3, Some(1500));
+        // 2 回目の回も、写真と同じ時刻に入れ替わる
+        let three = plan_scene(&[video(Some(60_000)), photo(), video(None)], &[], None);
+        assert_eq!(three.slots[0].2, MEDIA_AT_MS + PHOTO_ROUND_MS);
+        assert_eq!(three.slots[0].3, Some(PHOTO_ROUND_MS));
+        assert_eq!(three.slots[2].1, MEDIA_AT_MS + PHOTO_ROUND_MS);
+        assert!(three.slots[2].3.unwrap() <= three.slots[2].2 - three.slots[2].1);
     }
 
     #[test]
