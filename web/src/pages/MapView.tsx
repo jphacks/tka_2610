@@ -141,10 +141,10 @@ export default function MapView() {
               <section className="recall-section" aria-labelledby="recall-moment-title">
                 <div className="recall-section-head"><h2 id="recall-moment-title">今日の作品</h2><span>{data.moment_title}</span></div>
                 <article className="recall-hero">
-                  <div className={`recall-hero-images${featured.photo ? ' with-photo' : ''}`}>
+                  <TLink to={`/artworks/${featured.artwork.id}`} className={`recall-hero-images${featured.photo ? ' with-photo' : ''}`} aria-label={`「${featured.artwork.title}」の詳細を見る`} onClick={() => playing.current?.pause()}>
                     <RecallModel key={`${featured.artwork.id}:${featured.artwork.model_url}`} card={featured} />
                     {featured.photo && <div className="recall-photo"><Img src={featured.photo.thumb_url ?? featured.photo.url} alt={featured.photo.caption || '作品に残したおもいでの写真'} eager /><span>おもいでの写真</span></div>}
-                  </div>
+                  </TLink>
                   <div className="recall-hero-caption">
                     <p className="recall-date">{featured.artwork.date_long}{featured.artwork.age_month_label && <span>{featured.artwork.age_month_label}</span>}</p>
                     {featured.voice && <RecallVoice memory={featured.voice} title={featured.artwork.title} onPlay={onPlay} />}
