@@ -12,7 +12,6 @@
 //   walk/ArtworkPicker.tsx      照準の先にある作品を見つける（E / クリック / タップで作品カードを開く）
 //   walk/lighting.tsx           照明・空・影・映り込み
 //   walk/PostEffects.tsx        画面の仕上げ（隅の陰・光のにじみ・アンチエイリアス。PC だけ）
-//   walk/ArtworkSpotlights.tsx  近くの作品を照らすスポットライト
 //   walk/SharpTextures.tsx      床や作品を斜めから見てもぼやけないようにする
 //   home/HomeObjects.tsx        配置 JSON のとおりに家具と作品を置く（ほかの 3D 画面と同じ部品）
 //   home/HouseShells.tsx        家の建物を部屋ごとに置く（ほかの 3D 画面と同じ部品）
@@ -36,7 +35,7 @@
 //     トーンマッピング（Neutral）と sRGB への変換は、PC では PostEffects の最後の OutputPass が、lite では描くときに renderer が、
 //     同じ renderer の設定（onCreated）で行うので、色や明るさは PC とそろう（隅の陰と光のにじみが無い分だけ違う）
 //   - 描画の細かさ（dpr）の上限を 1.5 → 1.25（重いときに PerformanceMonitor が 1 まで下げるのは同じ）
-//   - 作品のスポットライトを 6 → 2 個、小さい部屋のダウンライトを 3 → 1 灯（stagePreset の smallLite。今の家はリビングだけなので 5 灯のまま）。
+//   - 小さい部屋のダウンライトを 3 → 1 灯（stagePreset の smallLite。今の家はリビングだけなので 5 灯のまま）。
 //     three.js はライトの数だけ画面の全部の点で計算するため
 //   - 太陽の影の細かさを 2048 → 1024 px、映り込みの細かさを 128 → 64 px（どちらも作り直したときだけ撮るのは同じ）
 // 作品の GLB を置く数は HomeObjects が端末（pointer: coarse）で決める（スマホは近い 6 つ）。
@@ -51,7 +50,6 @@ import { HomeObjects } from './home/HomeObjects'
 import { HouseShells, useShells } from './home/HouseShells'
 import { houseBounds, houseRoomsOf, wallThicknessOf } from './home/house'
 import { ArtworkPicker } from './walk/ArtworkPicker'
-import { ArtworkSpotlights } from './walk/ArtworkSpotlights'
 import { buildCollisionWorld } from './walk/collision'
 import { FirstPersonControls } from './walk/FirstPersonControls'
 import type { TouchStick } from './walk/inputMode'
@@ -84,8 +82,6 @@ const CAMERA = { ...HOME_STAGE.camera, position: HOME_STAGE.spawn }
 const MAX_DPR = 1.5
 /** 軽い表示（タッチの端末）での描画の細かさの上限 */
 const LITE_MAX_DPR = 1.25
-/** 軽い表示で照らす作品の数（PC は ArtworkSpotlights の既定の 6 つ） */
-const LITE_ARTWORK_LIGHTS = 2
 /** 軽い表示での太陽の影の細かさ（px。PC は lighting.tsx の既定の 2048） */
 const LITE_SHADOW_MAP_SIZE = 1024
 /** 軽い表示での映り込みの細かさ（立方体の 1 面の px。PC は lighting.tsx の既定の 128） */
@@ -299,7 +295,6 @@ export function WalkScene({
         <HomeObjects layout={museum.layout} catalog={museum.catalog} slots={museum.slots} house={museum.house} onReady={rebuild} />
       </group>
       <Ceilings rooms={rooms} />
-      <ArtworkSpotlights slots={museum.slots} player={player} maxLights={lite ? LITE_ARTWORK_LIGHTS : undefined} />
       <SharpTextures />
       <StaticShadows version={stageVersion} />
       <ReflectionCapture

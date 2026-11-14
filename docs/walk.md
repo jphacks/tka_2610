@@ -52,7 +52,6 @@
 | 画面の仕上げ（`PostEffects`：隅の陰 GTAO・光のにじみ・MSAA） | あり | なし。ふちのギザギザは Canvas の `antialias` で取る |
 | トーンマッピングと sRGB への変換 | `PostEffects` の最後の `OutputPass` が、renderer の設定（Neutral・sRGB）で行う | 描くときに renderer がそのまま同じ設定で行う。色と明るさはそろう（隅の陰と光のにじみが無い分だけ違う） |
 | 描画の細かさ（dpr）の上限 | 1.5 | 1.25（どちらも、重いときは `PerformanceMonitor` が 1 まで下げる） |
-| 作品のスポットライト | 近い 6 つ | 近い 2 つ（`ArtworkSpotlights` の `maxLights`） |
 | ダウンライト | リビングの 5 灯 | 5 灯（リビングは減らさない。小さい部屋（短い辺が 9 m 未満）があれば、その部屋は中央の 1 灯だけ。`roomLights.smallLite`） |
 | 太陽の影の細かさ | 2048 px | 1024 px（影は動かないので、作り直したときだけ描くのは同じ） |
 | 映り込みの細かさ（立方体の 1 面） | 128 px | 64 px |
@@ -67,7 +66,7 @@ three.js はライトの数だけ画面のすべての点で計算するので�
 | 家の建物（ステージ） | `/api/museum` の `house.rooms[].model_url`（部屋ごと。今は hub だけ）。サーバーの `HOME_ROOM_MODELS_DIR`（既定は `backend/static/models/rooms`）の `hub.glb` を `/media/museum/room-<部屋 id>-〇〇.glb` として配信している。`HouseShells` が部屋ごとに読み込み、部屋の中心（`house.rooms[].origin`）へ平行移動して並べる。ほかの 3D 画面と同じ GLB。`model_url` が null の部屋は建物を描かない。`house` の無い古いサーバーのときだけ、`model_url`（リビングだけの `home-empty.glb`）を 1 つ読む |
 | 歩く画面だけの別の建物 | `/api/museum` の `walk_model_url`。サーバーの `WALK_MODEL_PATH` を指定したときだけあり、ふだんは無い。あれば **リビングの建物の代わりに** 使う |
 | 家具 | `/api/museum` の `layout`（配置 JSON）と `catalog`（家具の GLB の URL・大きさ・作品を載せる面）。GLB は `/home-assets/modules/〇〇.glb`（`backend/static/home/modules/`）。ほかの 3D 画面と同じ `HomeObjects` で置く |
-| 飾っている作品 | 置く場所は `layout`、モデルの URL・種類・実寸（`artwork.model_size`）・収める枠（`fit`）は `slots`。`HomeObjects` が家具の面（天板・本棚の段）の上か床に、実寸 × 倍率（`home/placement.ts` の `displayScale`。`slots[].scale` と同じ値）の大きさで置く。実寸が分からない作品は枠に収める。作品の照明（`walk/ArtworkSpotlights.tsx`）は今も枠 `fit` の高さで狙う点を決め、本棚の段の作品だけ、上の棚板の下から光が入るよう低く遠くから当てる |
+| 飾っている作品 | 置く場所は `layout`、モデルの URL・種類・実寸（`artwork.model_size`）・収める枠（`fit`）は `slots`。`HomeObjects` が家具の面（天板・本棚の段）の上か床に、実寸 × 倍率（`home/placement.ts` の `displayScale`。`slots[].scale` と同じ値）の大きさで置く。実寸が分からない作品は枠に収める |
 | 壁紙・床材（テーマ） | `/api/museum` の `layout.rooms[部屋]` の `wall`・`floor`（部屋ごと）と、`catalog.materials`（テクスチャの URL と 1 枚の大きさ）。部屋ごとの `MuseumModel` が `home/theme.ts` で壁と床の材質を差し替える（ほかの 3D 画面と同じ） |
 | 天井 | 建物の GLB には天井が無いので、`WalkScene` が部屋ごとに、壁の高さ（4.2 m）に板（`Ceiling_<部屋 id>`。部屋の内寸より 0.6 m 大きく、壁の中まで届かせる）を張る。位置と大きさは `house.rooms` から |
 | 天井の照明（ダウンライト） | 部屋ごとに `house.rooms` の位置と大きさから作る（`walk/stagePreset.ts` の `roomDownlights`。下の「ステージの設定」） |
@@ -139,7 +138,6 @@ three.js はライトの数だけ画面のすべての点で計算するので�
 | `web/src/three/scenes/walk/ArtworkPicker.tsx` | 画面の中心（照準）の先にある作品を探す。手前に壁や家具があれば選ばない |
 | `web/src/three/scenes/walk/lighting.tsx` | 照明・空・影・映り込み。Unity の強さを three.js の単位に換算する |
 | `web/src/three/scenes/walk/PostEffects.tsx` | 画面の仕上げ（隅の陰・光のにじみ・アンチエイリアス）。PC だけ（スマホの軽い表示では置かない） |
-| `web/src/three/scenes/walk/ArtworkSpotlights.tsx` | 近くの作品を照らすスポットライト（`slots` の世界座標と向きを使う） |
 | `web/src/three/scenes/walk/SharpTextures.tsx` | 床や作品を斜めから見てもぼやけないようにする |
 | `web/src/three/walkPose.ts` | 歩いている位置と向きを覚えておく（詳細画面から戻ったときに続きから歩くため） |
 
@@ -154,7 +152,7 @@ three.js はライトの数だけ画面のすべての点で計算するので�
 | 光のにじみ | 明るいところが少しにじむ（ブルーム） | `PostEffects.tsx` |
 | 映り込み | 環境マップは映り込み（鏡面反射）にだけ効かせる（Unity の反射プローブと同じ考え方） | `stageMaterials.ts`、`lighting.tsx` |
 | ガラス | 板そのものは光らず、景色を映すだけにした（日が当たっても白い膜にならない） | `stageMaterials.ts` |
-| 作品の照明 | 近くの作品 6 つ（スマホの軽い表示では 2 つ）までを、上から作品用のスポットライトで照らす（本棚の段の作品は、上の棚板にさえぎられないよう低く遠くから。照明は 3.0 m より上に置かない）。歩くのに合わせて付け替える | `ArtworkSpotlights.tsx` |
+| 作品の照明 | 作品だけを照らすライトは置かない（前は近くの作品を上から照らし、歩くのに合わせて付け替えていたが、近づくと家具ごと明るくなって見えるのでやめた）。作品も家具と同じ、部屋のダウンライト・太陽・空の光で見せる | `lighting.tsx` |
 | くっきりさ | 床や作品を斜めから見ても模様がぼやけない（異方性フィルタ） | `SharpTextures.tsx` |
 | 影 | 建物・家具・作品の影は毎フレームではなく、当たり判定を作り直したときだけ描き直す | `lighting.tsx` の `StaticShadows` |
 
