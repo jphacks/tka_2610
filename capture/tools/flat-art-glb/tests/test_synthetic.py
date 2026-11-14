@@ -172,6 +172,33 @@ class SyntheticCollageTest(unittest.TestCase):
         self.assertEqual(len(js['images']), 1)
         self.assertEqual(rep['glb']['triangles'], 12)
 
+    def test_plane_mode_with_given_corners_keeps_the_whole_sheet(self):
+        # An already rectified picture (the sheet fills the image) with a dark stroke from edge to edge: the part
+        # below the stroke is not connected to the rest of the paper, but it is inside the given corners.
+        d = Path(self.tmp.name)
+        w, h = 400, 560
+        img = np.full((h, w, 3), WHITE, np.uint8)
+        cv2.line(img, (0, 300), (w - 1, 290), INK, 6)
+        cv2.rectangle(img, (100, 380), (300, 500), RED, -1)
+        cv2.imwrite(str(d / 'rectified.png'), img)
+        cfg = {'photo': 'rectified.png', 'mode': 'plane',
+               'sheet': {'size_mm': [200, 280], 'corners': [[0, 0], [1, 0], [1, 1], [0, 1]]},
+               'colors': {'paper': [[0.03, 0.03], [0.97, 0.03]]}, 'backing': 'paper'}
+        (d / 'rectified.json').write_text(json.dumps(cfg))
+        rep = flat_build.build(d / 'rectified.json', d / 'out_rectified', log=lambda *a: None)
+        self.assertEqual(rep['sheet']['corners_source'], 'config')
+        data = (d / 'out_rectified' / 'model.glb').read_bytes()
+        clen = struct.unpack('<I', data[12:16])[0]
+        js = json.loads(data[20:20 + clen])
+        binary = data[20 + clen + 8:]
+        view = js['bufferViews'][js['images'][0]['bufferView']]
+        tex = cv2.imdecode(np.frombuffer(binary[view['byteOffset']:view['byteOffset'] + view['byteLength']], np.uint8),
+                           cv2.IMREAD_COLOR)
+        # the red rectangle below the stroke survives (it would be inpainted with paper colour otherwise)
+        cy, cx = int(tex.shape[0] * 440 / h), int(tex.shape[1] * 0.5)
+        b, g, r = tex[cy, cx].astype(int)
+        self.assertGreater(r - max(b, g), 80, tex[cy, cx])
+
 
 class RectifyTest(unittest.TestCase):
     def test_guess_size(self):
