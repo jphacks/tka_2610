@@ -438,6 +438,7 @@ function TheaterPoster({
       <div className="theater-poster-periods">
         <div
           className={`theater-poster-chips${more.left ? ' more-left' : ''}${more.right ? ' more-right' : ''}`}
+          data-drag-scroll
           ref={chips}
           role="group"
           aria-label="よく使う期間"

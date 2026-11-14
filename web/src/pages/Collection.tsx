@@ -166,7 +166,7 @@ function MonthScroller({
   return (
     <div className="month-scroller">
       <div className="month-lens" aria-hidden="true" />
-      <div ref={track} className="month-track" role="tablist" aria-label="作った月" onScroll={onScroll} onPointerDown={takeOver} onTouchStart={takeOver} onWheel={takeOver}>
+      <div ref={track} className="month-track" data-drag-scroll role="tablist" aria-label="作った月" onScroll={onScroll} onPointerDown={takeOver} onTouchStart={takeOver} onWheel={takeOver}>
         {items.map((it) => {
           const selected = it.key === value
           return (
@@ -247,7 +247,7 @@ function AlbumShelf({ drag }: { drag: DragState | null }) {
         {open && <span className="album-shelf-hint">{drag ? (drag.over ? '離すと入れます' : 'ここへ運んで入れます') : '作品を長押しして、ここへ運べます'}</span>}
       </div>
       <div id="album-shelf-body" className="album-shelf-body" aria-hidden={!open}>
-      <div className="album-shelf-track">
+      <div className="album-shelf-track" data-drag-scroll>
         <button
           type="button"
           className={`album-card album-card-new pressable${drag?.over === NEW_ALBUM ? ' is-over' : ''}`}
@@ -368,7 +368,7 @@ export default function Collection() {
             <div className="collection-filter-options">
               <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
             {/* 年：すべて・作品のある年。選んでいるものだけ塗る */}
-            <div className="collection-years" role="tablist" aria-label="作った年">
+            <div className="collection-years" data-drag-scroll role="tablist" aria-label="作った年">
               <button
                 type="button"
                 role="tab"

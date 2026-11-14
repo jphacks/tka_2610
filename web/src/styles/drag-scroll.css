@@ -1,0 +1,17 @@
+/* 横に流れる列（data-drag-scroll）を、PC のマウスでつかんで動かす（動きは dragScroll.ts）。
+   マウスのある端末だけ、つかめる手の形にする。動かしているあいだは、握った手の形にして、文字を選ばない */
+@media (hover: hover) and (pointer: fine) {
+  [data-drag-scroll] {
+    cursor: grab;
+  }
+}
+
+.is-drag-scrolling,
+.is-drag-scrolling * {
+  cursor: grabbing !important;
+}
+
+.is-drag-scrolling-page {
+  -webkit-user-select: none;
+  user-select: none;
+}
