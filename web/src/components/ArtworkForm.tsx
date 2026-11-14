@@ -142,6 +142,8 @@ export function ArtworkForm({
 
   /** 「向きをなおす・切り取る」で直した写真に置き換える (選び直しではないので、picked は変えない。影の補正はやり直し) */
   const applyEdit = (fixed: File) => {
+    // 加工せずに確定したときは、現在の写真や「影をとる」の状態を保つ。
+    if (fixed === picked) return
     fixTurn.current++
     setFixedFile(null)
     setUseFixed(false)

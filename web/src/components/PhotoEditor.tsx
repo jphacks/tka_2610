@@ -26,7 +26,7 @@ export function PhotoEditor({
   file: File | null
   open: boolean
   onClose: () => void
-  /** 直した写真を渡す */
+  /** 確定した写真を渡す。加工していないときは元の File をそのまま返す */
   onDone: (fixed: File) => void
 }) {
   const [work, setWork] = useState<HTMLCanvasElement | null>(null)
@@ -112,7 +112,12 @@ export function PhotoEditor({
 
   const done = async () => {
     if (!file || !rotated) return
-    if (quarter % 4 === 0 && isFull(rect)) return onClose()
+    if (quarter % 4 === 0 && isFull(rect)) {
+      // 確定とキャンセルを区別する。加工なしでも、写真の追加元へ返す。
+      onDone(file)
+      onClose()
+      return
+    }
     setBusy(true)
     setError(null)
     try {
