@@ -87,6 +87,11 @@ def detect_sheet(photo, clf, cfg, warnings):
     info['photo_px_per_mm'] = {'median': round(nat[0], 3), 'min': round(nat[1], 3), 'max': round(nat[2], 3)}
     inside = np.zeros((h, w), np.uint8)
     cv2.fillConvexPoly(inside, np.round(quad).astype(np.int32), 1)
+    if info['corners_source'] == 'config':
+        # Corners given by the config are the sheet: everything inside them is paper. The backing-colour blob would
+        # drop parts of the sheet that a stroke or a piece cuts off from the rest (e.g. a line across a rectified
+        # picture from edge to edge), and those parts would be inpainted away.
+        paper = inside.astype(bool)
     out_of_frame = 1.0 - float(r.warp(np.full((h, w), 255, np.uint8), 1.0)[1].mean())
     info['unseen_fraction'] = round(out_of_frame, 4)
     if out_of_frame > 0.002:

@@ -20,11 +20,12 @@
 
 ```sh
 cd tools/solid-glb
-npm install            # three と gltf-validator（描画と検証に使う）
+npm ci                 # three・gltf-validator・playwright（描画と検証に使う）
+npx playwright install chromium
 python3 -c "import cv2, numpy, mapbox_earcut"   # 無ければ pip install numpy opencv-python-headless mapbox_earcut
 ```
 
-描画には Playwright と Chromium を使います（`require('playwright')` が動く環境が必要）。
+`capture/` で `scripts/install-mcp.sh --tools-only` を実行すると、この準備（Python は `tools/.venv` に入る）を flat-art-glb の分もまとめて行います。MCP サーバーの `photo_grid`・`build_model`・`check_model` はこの環境で動き、手順の 2〜5 を AI が MCP のツールで行えます（[mcp-server/README.md](../../mcp-server/README.md)）。
 
 ## 手順
 
