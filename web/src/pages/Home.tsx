@@ -1,5 +1,5 @@
 // ② ホーム（/home）。タブ。
-// 「すべて」は全年齢の作品を1階から詰め直す鑑賞用の建物（保存済み配置は変えない）。
+// 「すべて」は全年齢の作品を飾る建物。模様替えは年齢別とは独立して保存する。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 建物の階か、その下の「1かい」「2かい」のボタンを押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
 // 「…」→「おへやを削除」で対象を選ぶ。作品のある階や途中の階は削除できない。
@@ -11,7 +11,7 @@ import { useAddRoom, useAgeStack, useAges, useDeleteRoom, type AgeStack } from '
 import { ActionMenu, NavBar, Screen, Sheet, StageFallback, TLink, useToast } from '../components'
 import { ChevronRight, MoreIcon, PlusIcon, SofaIcon, TrashIcon } from '../icons'
 import { useNav } from '../nav'
-import { StackScene, StageShell, warmUp3D } from '../three'
+import { StackScene, StageShell, warmUp3D, warmUpStack } from '../three'
 import './Home.css'
 
 export default function Home() {
@@ -57,6 +57,8 @@ export default function Home() {
   const removable = removeTarget?.id === top?.id && removeTarget?.count === 0 ? removeTarget : null
   const initial = (data?.name ?? 'は').slice(0, 1)
 
+  useEffect(() => warmUpStack(), [])
+
   // 建物の GLB を先に読んでおく（どの階も同じ建物）
   useEffect(() => {
     if (stack.data) warmUp3D(stack.data.house.rooms.flatMap((r) => (r.model_url ? [r.model_url] : [])))
@@ -99,7 +101,7 @@ export default function Home() {
     <Screen tabbar className="home-screen">
       <NavBar
         title={data?.name ?? 'はるのミュージアム'}
-        left={!all && rooms.length > 0 && (
+        left={rooms.length > 0 && (
           <button type="button" className="icon-btn" aria-label="おへやのメニュー" aria-haspopup="menu"
             aria-expanded={menuOpen} disabled={loading || stack.isError} onClick={() => setMenuOpen(true)}>
             <MoreIcon size={22} />
@@ -197,8 +199,8 @@ export default function Home() {
       <ActionMenu open={menuOpen} onClose={() => setMenuOpen(false)} items={[
         { label: '模様替え', icon: <SofaIcon size={18} />,
           onSelect: () => { setRemoveId(null); setRoomAction('edit'); setManagingRooms(true) } },
-        { label: 'おへやを削除', icon: <TrashIcon size={18} />, destructive: true,
-          onSelect: () => { setRemoveId(null); setRoomAction('delete'); setManagingRooms(true) } },
+        ...(!all ? [{ label: 'おへやを削除', icon: <TrashIcon size={18} />, destructive: true,
+          onSelect: () => { setRemoveId(null); setRoomAction('delete'); setManagingRooms(true) } }] : []),
       ]} />
       <Sheet open={managingRooms} onClose={() => { if (!deleteRoom.isPending) { setManagingRooms(false); setRemoveId(null) } }}
         title={removable ? `${removable.name}を消しますか？` : roomAction === 'edit' ? '模様替えするおへや' : 'おへやを削除'}>
@@ -222,7 +224,7 @@ export default function Home() {
                     onClick={() => {
                       if (roomAction === 'edit') {
                         setManagingRooms(false)
-                        nav.push(`/home/edit?room=${encodeURIComponent(room.id)}`)
+                        nav.push(all ? `/home/edit?all_floor=${room.floor}` : `/home/edit?room=${encodeURIComponent(room.id)}`)
                       } else setRemoveId(room.id)
                     }}>
                     <span>{room.name}</span>

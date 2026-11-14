@@ -477,14 +477,14 @@ pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView
         .collect()
 }
 
-/// 「すべて」の鑑賞用のおへや。自動配置を返すだけで、保存された配置には触れない。
+/// 「すべて」の保存済みのおへや。新作・削除を反映し、模様替えは保つ。
 pub async fn all_room(
     State(state): State<AppState>,
     axum::extract::Path(floor): axum::extract::Path<usize>,
 ) -> AppResult<Json<MuseumOverview>> {
-    let displayed = all_artwork_rows(&state.db)?;
-    let arts: Vec<_> = displayed.iter().map(DisplayedRow::placement).collect();
-    let layout = crate::all_ages::pack(&arts).map_err(AppError::internal)?
+    let snapshot = crate::all_home_api::load(&state)?;
+    let displayed = snapshot.artworks;
+    let layout = snapshot.home.floors
         .into_iter().nth(floor).ok_or_else(|| AppError::not_found("そのおへやはありません"))?;
     let settings = load_settings(&state)?;
     let slots = slot_views(&layout, &displayed);

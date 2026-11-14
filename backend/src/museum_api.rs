@@ -60,7 +60,7 @@ impl DisplayedRow {
 }
 
 /// 全年齢の作品。未展示の作品も含み、登録順で毎回同じ配置にする。
-pub(crate) async fn all_artwork_rows(pool: &sqlx::PgPool) -> AppResult<Vec<DisplayedRow>> {
+pub(crate) async fn all_artwork_rows<'e>(executor: impl sqlx::PgExecutor<'e>) -> AppResult<Vec<DisplayedRow>> {
     Ok(sqlx::query_as::<_, DisplayedRow>(
         "SELECT id, title, thumb_file, model_file, model_kind, tint, \
             model_width, model_height, model_depth, \
@@ -69,7 +69,7 @@ pub(crate) async fn all_artwork_rows(pool: &sqlx::PgPool) -> AppResult<Vec<Displ
             (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'audio') AS memory_audio \
          FROM artworks ORDER BY created_at, id",
     )
-    .fetch_all(pool)
+    .fetch_all(executor)
     .await?)
 }
 
@@ -487,14 +487,14 @@ pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView
         .collect()
 }
 
-/// 「すべて」の鑑賞用のおへや。自動配置を返すだけで、保存された配置には触れない。
+/// 「すべて」の保存済みのおへや。新作・削除を反映し、模様替えは保つ。
 pub async fn all_room(
     State(state): State<AppState>,
     axum::extract::Path(floor): axum::extract::Path<usize>,
 ) -> AppResult<Json<MuseumOverview>> {
-    let displayed = all_artwork_rows(&state.pool).await?;
-    let arts: Vec<_> = displayed.iter().map(DisplayedRow::placement).collect();
-    let layout = crate::all_ages::pack(&arts).map_err(AppError::internal)?
+    let snapshot = crate::all_home_api::load(&state).await?;
+    let displayed = snapshot.artworks;
+    let layout = snapshot.home.floors
         .into_iter().nth(floor).ok_or_else(|| AppError::not_found("そのおへやはありません"))?;
     let settings = load_settings(&state).await?;
     let slots = slot_views(&layout, &displayed);

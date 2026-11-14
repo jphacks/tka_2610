@@ -55,7 +55,7 @@ export type {
 } from './types'
 export { ApiError, queryClient } from './client'
 export { useMuseum, useSettings, useUpdateSettings } from './museum'
-export { saveLayoutOnLeave, useLayout, useSaveLayout } from './home'
+export { saveLayoutOnLeave, useDisplayAll, useLayout, useSaveLayout } from './home'
 export { useAddRoom, useAgeStack, useAges, useDeleteRoom } from './ages'
 export { MEMORY_LIMITS, hasMemories, kindOfFile, probeMedia, useDeleteMemory, useUpdateMemory, useUploadMemory } from './memories'
 export type { UploadMemoryInput } from './memories'

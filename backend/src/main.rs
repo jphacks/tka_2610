@@ -1,6 +1,8 @@
 mod age;
 mod ages_api;
 mod all_ages;
+mod all_home;
+mod all_home_api;
 mod albums;
 mod artworks;
 mod error;
@@ -220,6 +222,8 @@ async fn main() {
         .route("/ages", get(ages_api::list_ages))
         .route("/ages/all", get(ages_api::all_stack))
         .route("/ages/all/{floor}", get(museum_api::all_room))
+        .route("/ages/all/{floor}/layout", get(all_home_api::get_layout).put(all_home_api::put_layout))
+        .route("/ages/all/{floor}/artworks/{id}", post(all_home_api::display_artwork))
         .route("/ages/{age}", get(ages_api::age_stack))
         .route("/ages/{age}/rooms", post(ages_api::add_room))
         .route("/rooms/{id}", delete(ages_api::delete_room))

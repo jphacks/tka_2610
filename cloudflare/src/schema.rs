@@ -1,4 +1,4 @@
-//! Durable Object の SQLite の表。backend のマイグレーション 001〜016 を当てたあとの形と同じ
+//! Durable Object の SQLite の表。backend のマイグレーション 001〜017 を当てたあとの形と同じ
 //! (Unity 用の exhibits と、おへやに分ける前の home_layout は使わないので作らない)。
 //!
 //! 表を変えるときは、SCHEMA の文を書き換えずに MIGRATIONS に足す (版は meta の schema_version)。
@@ -109,8 +109,14 @@ CREATE TABLE IF NOT EXISTS media_chunks (
 );
 "#;
 
-/// 版 2 から先の変更 (版, 文)。今は無い
-const MIGRATIONS: &[(i64, &str)] = &[];
+/// 版 2 から先の変更 (版, 文)。
+const MIGRATIONS: &[(i64, &str)] = &[(2, r#"
+CREATE TABLE IF NOT EXISTS all_home_layout (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    state TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+"#)];
 
 /// 表を用意して、最初の設定の行を入れる (backend の 002・010 と同じ値)
 pub fn migrate(db: &Db) -> AppResult<()> {

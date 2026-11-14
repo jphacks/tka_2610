@@ -95,9 +95,9 @@ export default function Room() {
                 <GlassButton label="歩く" className="room-action" onClick={() => nav.push(all ? `/museum/walk?all_floor=${floor}` : `/museum/walk?room=${roomId}`)}>
                   <WalkIcon size={21} />
                 </GlassButton>
-                {!all && <GlassButton label="模様替え" className="room-action" onClick={() => nav.push(`/home/edit?room=${roomId}`)}>
+                <GlassButton label="模様替え" className="room-action" onClick={() => nav.push(all ? `/home/edit?all_floor=${floor}` : `/home/edit?room=${roomId}`)}>
                   <SofaIcon size={21} />
-                </GlassButton>}
+                </GlassButton>
               </div>
             </div>
           </>

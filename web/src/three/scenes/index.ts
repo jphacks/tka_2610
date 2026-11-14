@@ -1,6 +1,5 @@
-// three.js を使う重いコードのまとめ役。three/index.tsx からだけ動的に読み込まれ、
-// このファイルから辿れるものが 1 つの遅延読み込みファイル（チャンク）にまとまる。
-// 画面からは直接 import せず、three/index.tsx の HomeScene などを使う。
+// 3D 部品の再エクスポート一覧。実行時の遅延読み込みは three/index.tsx が各ファイルを直接指定する。
+// ここをまとめて import すると全画面のコードを読み込むため、先読みでも使わない。
 export { preloadArtwork, preloadModel } from './models'
 export { snapshotModel } from './snapshot'
 export { HomeEditScene } from './HomeEditScene'
