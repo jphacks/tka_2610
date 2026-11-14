@@ -7,11 +7,13 @@ export function Sheet({
   open,
   onClose,
   title,
+  className = '',
   children,
 }: {
   open: boolean
   onClose: () => void
   title?: ReactNode
+  className?: string
   children: ReactNode
 }) {
   const { mounted, visible } = usePresence(open, 320)
@@ -43,7 +45,7 @@ export function Sheet({
     <>
       <div className={`scrim${visible ? ' in' : ''}`} onClick={onClose} />
       <div
-        className={`sheet${visible ? ' in' : ''}${drag ? ' dragging' : ''}`}
+        className={`sheet${visible ? ' in' : ''}${drag ? ' dragging' : ''}${className ? ` ${className}` : ''}`}
         role="dialog"
         aria-modal="true"
         style={drag ? { transform: `translateY(${drag}px)` } : undefined}
