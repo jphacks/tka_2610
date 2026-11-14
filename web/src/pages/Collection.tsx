@@ -353,7 +353,17 @@ export default function Collection() {
       <div className="page collection-page">
         <AlbumShelf drag={drag} />
         <details className="collection-filter-panel" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
-          <summary><span>絞り込み</span><span className="collection-filter-current">{scopeLabel}</span><BackIcon size={14} className="collection-filter-arrow" /></summary>
+          <summary>
+            <span className="collection-filter-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7h9m4 0h3M4 17h3m4 0h9" />
+                <circle cx="15" cy="7" r="2" />
+                <circle cx="9" cy="17" r="2" />
+              </svg>
+              絞り込み
+            </span>
+            <BackIcon size={12} className="collection-filter-arrow" />
+          </summary>
           {filtersOpen && (
             <div className="collection-filter-options">
               <Segmented<Tab> label="作品の種類" options={TABS} value={category} onChange={(value) => go({ category: value })} />
