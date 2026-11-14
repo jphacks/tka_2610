@@ -549,7 +549,7 @@ export default function HomeEdit() {
         </div>
       </Sheet>
 
-      <Sheet open={themeOpen} onClose={() => setThemeOpen(false)} title={roomTabs.length > 1 ? `テーマ（${roomName}）` : 'テーマ'}>
+      <Sheet className="edit-theme-sheet" open={themeOpen} onClose={() => setThemeOpen(false)} title={roomTabs.length > 1 ? `テーマ（${roomName}）` : 'テーマ'}>
         <div className="sheet-body">
           <div className="edit-themes" role="radiogroup" aria-label="壁紙と床材">
             {(catalog?.themes ?? []).map((theme) => {

@@ -201,6 +201,24 @@
   background: var(--accent-soft);
 }
 
+/* テーマは画面の下側に収め、見出しを残して一覧だけスクロールする。
+   dvh ではなく親の高さを使い、PC の端末枠や横向きでも上にはみ出させない。 */
+.edit-theme-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: min(60%, calc(100% - var(--safe-top) - var(--safe-bottom) - 24px));
+}
+
+.edit-theme-sheet .sheet-grabber-area {
+  flex-shrink: 0;
+}
+
+.edit-theme-sheet .sheet-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* テーマの一覧（1 列）。使っているテーマは差し色の枠と「使用中」 */
 .edit-themes {
   display: grid;
