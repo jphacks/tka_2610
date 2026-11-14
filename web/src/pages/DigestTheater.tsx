@@ -277,7 +277,7 @@ function SetupPanel({
         </label>
         <label className="theater-switch">
           <input type="checkbox" checked={settings.mediaSound} onChange={(e) => onSettings({ ...settings, mediaSound: e.target.checked })} />
-          <span>動画と声の音も出す<small>鳴っているあいだは音楽を小さくします</small></span>
+          <span>声の録音も流す<small>鳴っているあいだは音楽を小さくします。動画の音は流しません</small></span>
         </label>
         <label className="theater-switch">
           <input type="checkbox" checked={settings.stopMotion} onChange={(e) => onSettings({ ...settings, stopMotion: e.target.checked })} />
