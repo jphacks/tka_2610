@@ -12,7 +12,7 @@
 // 読み込んだら（version が変わったら）場面の全部のメッシュに影を落とし・受けさせる（useShadowEverything）。
 // three.js に付属のものだけを使う（鑑賞モードの walk/PostEffects.tsx と同じ作り）。
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
@@ -36,10 +36,23 @@ const KEY_DIRECTION = new THREE.Vector3(-0.55, 1, 0.45).normalize()
  * 建物を照らして影を落とす光と、建物の下の接地の影。
  * center は建物の真ん中、radius は建物を包む球の半径、floorY は建物のいちばん下（土台の下）
  */
-export function DioramaLight({ center, radius, floorY, lite }: { center: Vec3; radius: number; floorY: number; lite: boolean }) {
+export function DioramaLight({ center, radius, floorY, lite, version }: { center: Vec3; radius: number; floorY: number; lite: boolean; version: number }) {
+  const light = useRef<THREE.DirectionalLight>(null)
+  const invalidate = useThree((s) => s.invalidate)
+  const [refreshContact, setRefreshContact] = useState(true)
+  // 家具・作品・テーマ・壁のカットが変わったときだけ影を作る。
+  // カメラが動くだけなら同じ影を使い、モデル全体の再描画と4回のぼかしを省く。
+  useLayoutEffect(() => {
+    if (light.current) light.current.shadow.needsUpdate = true
+    setRefreshContact(true)
+    invalidate()
+  }, [version, center, radius, floorY, lite, invalidate])
+  useFrame(() => {
+    if (refreshContact) setRefreshContact(false)
+  })
   const target = useMemo(() => new THREE.Object3D(), [])
   const position = useMemo(() => new THREE.Vector3(...center).addScaledVector(KEY_DIRECTION, radius * 2), [center, radius])
-  useEffect(() => {
+  useLayoutEffect(() => {
     target.position.set(...center)
     target.updateMatrixWorld()
   }, [target, center])
@@ -48,6 +61,8 @@ export function DioramaLight({ center, radius, floorY, lite }: { center: Vec3; r
     <>
       <primitive object={target} />
       <directionalLight
+        ref={light}
+        shadow-autoUpdate={false}
         position={position}
         target={target}
         color={KEY_COLOR}
@@ -67,6 +82,7 @@ export function DioramaLight({ center, radius, floorY, lite }: { center: Vec3; r
       />
       {/* 建物の下の、机に置いた模型のような影。建物の幅より少し広く */}
       <ContactShadows
+        frames={refreshContact ? Infinity : 0}
         position={[center[0], floorY - 0.01, center[2]]}
         scale={radius * 1.9}
         far={3}
@@ -138,8 +154,10 @@ const TiltShiftShader = {
 }
 
 /** 仕上げ。lite（タッチの端末）では隅の陰を省く */
-export function DioramaPost({ lite, tilt = 2.2, band = 0.2, afterOutput }: {
+export function DioramaPost({ lite, tilt = 2.2, band = 0.2, afterOutput, aoScale = 1 }: {
   lite: boolean
+  /** 隅の陰の解像度。ホームは半分にして、陰の計算の画素数を1/4にする */
+  aoScale?: number
   /** ぼかしの強さ */
   tilt?: number
   /** ぼかさない真ん中の帯の半分の幅 */
@@ -184,21 +202,22 @@ export function DioramaPost({ lite, tilt = 2.2, band = 0.2, afterOutput }: {
     composer.setSize(size.width, size.height)
     const w = size.width * dpr
     const h = size.height * dpr
+    ao?.setSize(Math.max(1, Math.round(w * aoScale)), Math.max(1, Math.round(h * aoScale)))
     tiltX.uniforms.delta.value.set(1 / w, 0)
     tiltY.uniforms.delta.value.set(0, 1 / h)
     for (const pass of [tiltX, tiltY]) {
       pass.uniforms.amount.value = tilt
       pass.uniforms.band.value = band
     }
-  }, [composer, tiltX, tiltY, size.width, size.height, dpr, tilt, band])
+  }, [composer, ao, aoScale, tiltX, tiltY, size.width, size.height, dpr, tilt, band])
 
-  // composer.dispose() は自分の描画用バッファしか片付けないので、隅の陰も片付ける
+  // composer.dispose() は各パスを片付けない。年齢を切り替えたあとにバッファ・材質を残さない。
   useEffect(
     () => () => {
-      ao?.dispose()
+      for (const pass of composer.passes) if (pass !== afterOutput) pass.dispose()
       composer.dispose()
     },
-    [composer, ao],
+    [composer, afterOutput],
   )
 
   // 優先度 1 の useFrame があると、R3F は自分では描かない（frameloop demand でも、描くときだけ呼ばれる）

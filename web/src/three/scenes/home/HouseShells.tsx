@@ -97,7 +97,7 @@ function updateCut(cut: RoomCut, room: HouseRoom, camera: THREE.Camera, withDoor
  * 毎フレーム、読み込めた部屋ごとに向きを決め直し、変わった部屋だけ当て直す。
  * マップは変化があるときだけ描く（frameloop="demand"）ので、当て直したら描き直しを頼む
  */
-function CutawayFollower({ shells, cuts, withDoors }: { shells: Shell[]; cuts: Map<string, RoomCut>; withDoors: boolean }) {
+function CutawayFollower({ shells, cuts, withDoors, onChange }: { shells: Shell[]; cuts: Map<string, RoomCut>; withDoors: boolean; onChange?: () => void }) {
   const invalidate = useThree((s) => s.invalidate)
   useFrame(({ camera }) => {
     let changed = false
@@ -105,7 +105,10 @@ function CutawayFollower({ shells, cuts, withDoors }: { shells: Shell[]; cuts: M
       const cut = cuts.get(room.id)
       if (cut && updateCut(cut, room, camera, withDoors, false)) changed = true
     }
-    if (changed) invalidate()
+    if (changed) {
+      invalidate()
+      onChange?.()
+    }
   })
   // 外したとき（cutaway が false に変わったとき）は、カットを全部元に戻す
   useEffect(
@@ -127,6 +130,7 @@ export function HouseShells({
   walk = false,
   onReady,
   onLoaded,
+  onCutawayChange,
 }: {
   museum: Museum
   /** 壁紙と床材を読む配置（rooms[部屋]）。模様替えでは下書き。省くと museum.layout */
@@ -142,6 +146,8 @@ export function HouseShells({
   onReady?: () => void
   /** 建物を読み込んだとき・テーマの材質を差し替えたとき（MuseumModel の onLoaded）。部屋の id も渡す */
   onLoaded?: (root: THREE.Object3D, roomId: RoomId) => void
+  /** カメラに合わせた壁のカットが変わったとき（ホームの影を更新する） */
+  onCutawayChange?: () => void
 }) {
   const shells = useShells(museum, walk)
   const materials = museum.catalog.materials
@@ -183,7 +189,7 @@ export function HouseShells({
 
   return (
     <>
-      {cutaway !== false && <CutawayFollower shells={shells} cuts={cuts} withDoors={cutaway === 'house'} />}
+      {cutaway !== false && <CutawayFollower shells={shells} cuts={cuts} withDoors={cutaway === 'house'} onChange={onCutawayChange} />}
       {shells.map(({ room, url }) => (
         <group key={room.id} name={`SHELL_${room.id}`} position={[room.origin[0], 0, room.origin[1]]}>
           {/* 部屋ごとに分けて、読み込めた部屋から出す */}
@@ -198,6 +204,7 @@ export function HouseShells({
               onLoaded={(root) => {
                 if (cutaway !== false) followNow(room, root, cutaway === 'house')
                 onLoaded?.(root, room.id)
+                onCutawayChange?.()
               }}
             />
           </Suspense>

@@ -32,11 +32,18 @@ export {
 // 建物の GLB の URL（先読み用）・建物の GLB があるか（無ければ 3D の代わりに説明を出す）
 export { hasHouseModel, houseRoomsOf, shellUrlsOf } from './scenes/home/house'
 
-const load = () => import('./scenes')
+// 画面ごとに読み込む。ホームで歩く画面・シアター・編集のコードまで待たない。
+const loadStack = () => import('./scenes/StackScene')
+const loadModels = () => import('./scenes/models')
 
-export const MiniatureScene = lazy(() => load().then((m) => ({ default: m.MiniatureScene })))
+/** ホームの API を待つ間に、積み上げの表示に必要なコードを読み始める */
+export function warmUpStack() {
+  void loadStack().catch(() => {})
+}
+
+export const MiniatureScene = lazy(() => import('./scenes/MiniatureScene').then((m) => ({ default: m.MiniatureScene })))
 // 期間をえらんで振り返るシアター（/map/theater）。時間割の読み方（timeline.ts）は three.js を使わないので、ここからそのまま渡す
-export const TheaterScene = lazy(() => load().then((m) => ({ default: m.TheaterScene })))
+export const TheaterScene = lazy(() => import('./scenes/theater/TheaterScene').then((m) => ({ default: m.TheaterScene })))
 export {
   STOP_MOTION_FPS,
   THEATER_SPEEDS,
@@ -53,20 +60,20 @@ export {
   type TheaterPhase,
 } from './scenes/theater/timeline'
 
-export const HomeScene = lazy(() => load().then((m) => ({ default: m.HomeScene })))
-export const MuseumScene = lazy(() => load().then((m) => ({ default: m.MuseumScene })))
-export const PreviewScene = lazy(() => load().then((m) => ({ default: m.PreviewScene })))
+export const HomeScene = lazy(() => import('./scenes/HomeScene').then((m) => ({ default: m.HomeScene })))
+export const MuseumScene = lazy(() => import('./scenes/MuseumScene').then((m) => ({ default: m.MuseumScene })))
+export const PreviewScene = lazy(() => import('./scenes/PreviewScene').then((m) => ({ default: m.PreviewScene })))
 // ⑥ 作品の詳細の上の 3D（触って回せる作品のモデル）
-export const ArtworkViewerScene = lazy(() => load().then((m) => ({ default: m.ArtworkViewerScene })))
-export const StackScene = lazy(() => load().then((m) => ({ default: m.StackScene })))
-export const WalkScene = lazy(() => load().then((m) => ({ default: m.WalkScene })))
-export const HomeEditScene = lazy(() => load().then((m) => ({ default: m.HomeEditScene })))
+export const ArtworkViewerScene = lazy(() => import('./scenes/ArtworkViewer').then((m) => ({ default: m.ArtworkViewerScene })))
+export const StackScene = lazy(() => loadStack().then((m) => ({ default: m.StackScene })))
+export const WalkScene = lazy(() => import('./scenes/WalkScene').then((m) => ({ default: m.WalkScene })))
+export const HomeEditScene = lazy(() => import('./scenes/HomeEditScene').then((m) => ({ default: m.HomeEditScene })))
 // 型だけなので、three.js は読み込まれない
 export type { WalkStatus } from './scenes/WalkScene'
 
 /** 作品の 3D モデル（GLB のファイル）を撮って、写真の代わりの JPEG にする（登録で写真が無いとき。scenes/snapshot.ts） */
 export function snapshotModel(file: File): Promise<File> {
-  return load().then((m) => m.snapshotModel(file))
+  return import('./scenes/snapshot').then((m) => m.snapshotModel(file))
 }
 
 const idle = (fn: () => void) => {
@@ -81,7 +88,7 @@ const idle = (fn: () => void) => {
 export function warmUp3D(modelUrls: string | string[] | null | undefined, extraModels: string[] = []) {
   const shells = Array.isArray(modelUrls) ? modelUrls : modelUrls ? [modelUrls] : []
   idle(() => {
-    load().then((m) => {
+    loadModels().then((m) => {
       shells.forEach((url) => m.preloadModel(url))
       extraModels.forEach((url) => m.preloadModel(url))
     })
@@ -91,7 +98,7 @@ export function warmUp3D(modelUrls: string | string[] | null | undefined, extraM
 /** 作品の詳細で、作品の GLB（元の大きさのテクスチャ）と 3D のコードを先にダウンロードしておく */
 export function warmUpArtwork(modelUrl: string) {
   idle(() => {
-    load().then((m) => m.preloadArtwork(modelUrl))
+    loadModels().then((m) => m.preloadArtwork(modelUrl))
   })
 }
 

@@ -1,4 +1,4 @@
-//! 「すべて」の鑑賞用配置。年齢別の保存済み配置には書き込まない。
+//! 「すべて」の初期配置と自動配置の部品。保存・整理は all_home が受け持つ。
 //! 初期配置の空き → 家具を追加 → 次の階、の順。後の作品も必ず下の階から試す。
 use crate::{
     home::{self, ArtSize, Layout, Sizes},
@@ -6,6 +6,7 @@ use crate::{
 };
 use uuid::Uuid;
 
+#[cfg(test)]
 pub fn pack(artworks: &[(Uuid, Option<ArtSize>)]) -> Result<Vec<Layout>, String> {
     let sizes: Sizes = artworks
         .iter()
@@ -34,7 +35,7 @@ pub fn pack(artworks: &[(Uuid, Option<ArtSize>)]) -> Result<Vec<Layout>, String>
 }
 
 // 自動配置は再取得のたびに作り直すので、家具・作品の表示用 id も作品 id から固定する。
-fn place(layout: &Layout, sizes: &Sizes, id: Uuid, size: Option<&ArtSize>) -> Option<Vec<home::LayoutObject>> {
+pub(crate) fn place(layout: &Layout, sizes: &Sizes, id: Uuid, size: Option<&ArtSize>) -> Option<Vec<home::LayoutObject>> {
     let mut objects = home::place_or_furnish(layout, sizes, id, size)?;
     let added = objects.iter().find_map(|object| match object {
         home::LayoutObject::Furniture(f) => Some(f.id.clone()),
@@ -42,11 +43,11 @@ fn place(layout: &Layout, sizes: &Sizes, id: Uuid, size: Option<&ArtSize>) -> Op
     });
     for object in &mut objects {
         match object {
-            home::LayoutObject::Furniture(f) => f.id = format!("all-furniture-{id}"),
+            home::LayoutObject::Furniture(f) => f.id = format!("all-f-{}", id.simple()),
             home::LayoutObject::Artwork(a) => {
-                a.id = format!("all-art-{id}");
+                a.id = format!("all-a-{}", id.simple());
                 if added.is_some() && a.parent_id == added {
-                    a.parent_id = Some(format!("all-furniture-{id}"));
+                    a.parent_id = Some(format!("all-f-{}", id.simple()));
                 }
             }
         }
@@ -54,7 +55,7 @@ fn place(layout: &Layout, sizes: &Sizes, id: Uuid, size: Option<&ArtSize>) -> Op
     Some(objects)
 }
 
-/// 保存されたおへやと区別する表示専用の識別子。age = -1 は DB には書かない。
+/// 年齢別のおへやと区別する識別子。age = -1 は house_rooms には書かない。
 pub fn room_info(floor: usize) -> RoomInfo {
     RoomInfo {
         id: Uuid::new_v5(&Uuid::NAMESPACE_URL, format!("memoria:all-ages:{floor}").as_bytes()),

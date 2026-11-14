@@ -41,7 +41,7 @@ Cloudflare だけで memoria を動かすための作業メモです。デモ（
 - `cloudflare/src/`：Worker と Durable Object。
   - DB に触らない処理（置き方の決まり `home.rs`・年齢 `age.rs`・GLB `glb.rs`・写真 `media.rs`・種類 `museum.rs`）は、`backend/src/` のファイルをそのまま読み込んでいます（`#[path]`）。backend と同じ結果になります。
   - DB とファイルに触る処理（`artworks.rs`・`home_api.rs` など）は、backend から書き移したものです。SQL は SQLite に、`sqlx` は `db.rs` に、`tokio::fs` は `store.rs` に置き換えています。
-  - 表の形は `schema.rs` です（backend のマイグレーション 001〜016 を当てたあとと同じ形）。
+  - 表の形は `schema.rs` です（backend のマイグレーション 001〜017 を当てたあとと同じ形）。
 - `cloudflare/prep/`：静的ファイルを `public/` に集め、Worker に埋め込む値を `generated/` に書く道具（手元で動かす Rust）。
   - サンプルの作品の写真は、backend の seed と同じ処理で縮めます。
 - `public/`・`generated/`・`build/` は作られるものなので、git に入れません。

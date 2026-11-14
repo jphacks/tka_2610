@@ -12,6 +12,8 @@ export function Stage({
   camera,
   frameloop = 'always',
   shadows = false,
+  dpr = [1, 1.75],
+  antialias = true,
 }: {
   children: ReactNode
   camera: { position: [number, number, number]; fov: number }
@@ -19,14 +21,18 @@ export function Stage({
   frameloop?: 'always' | 'demand'
   /** 影を有効にする（やわらかい影。影を落とす光は使う画面が足す。ホームの積み上げの DioramaLight） */
   shadows?: boolean
+  /** 小さく映るホームでは描画解像度を抑える。他の画面の既定値はそのまま */
+  dpr?: number | [number, number]
+  /** 後処理側で MSAA を使う画面は、Canvas 側の二重の MSAA を省ける */
+  antialias?: boolean
 }) {
   return (
     <Canvas
-      dpr={[1, 1.75]}
+      dpr={dpr}
       frameloop={frameloop}
       shadows={shadows ? 'soft' : false}
       camera={{ ...camera, near: 0.1, far: 80 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      gl={{ antialias, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
         // 子どもの絵の色がくすまないトーンマッピング
         gl.toneMapping = THREE.NeutralToneMapping

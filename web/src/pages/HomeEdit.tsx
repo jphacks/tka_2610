@@ -1,4 +1,5 @@
 // ⑫ 模様替え（/home/edit?room=おへやの id）。push で開く（おへやの「模様替え」・おうちの中の「⋯」から）。
+// 「すべて」は ?all_floor= で階を選び、専用の配置へ保存する。
 // おへや（年齢ごとの部屋）は ?room= で選ぶ（省くと今の年齢のおへや）。配置の読み書きも、作品を足すのもそのおへや。
 // 斜め上から見た家の家具や作品を、ドラッグで動かす・回す・消す・足す（壁の家具は回す代わりに上げ下げする）。変えた配置は、最後の操作から 600 ms 後に自動で保存する。
 //
@@ -21,6 +22,8 @@ import {
   saveLayoutOnLeave,
   useArtworks,
   useDisplay,
+  useDisplayAll,
+  useAgeStack,
   useMuseum,
   useSaveLayout,
   type Artwork,
@@ -110,14 +113,18 @@ function FurnitureThumb({ src }: { src: string }) {
 export default function HomeEdit() {
   const [params] = useSearchParams()
   const roomParam = params.get('room')
+  const allFloor = params.get('all_floor')
+  const all = allFloor !== null
+  const allStack = useAgeStack(all ? 'all' : null)
   // 鑑賞モードと違い、取り直しの間隔は付けない（編集中の配置をサーバーの値で上書きしないため）
-  const museum = useMuseum({ roomId: roomParam })
+  const museum = useMuseum({ roomId: roomParam, allFloor })
   // 保存先のおへや（?room= を省いたときは、サーバーが選んだおへや）
   const ageRoom = museum.data?.room ?? null
   const ageRoomId = ageRoom?.id ?? roomParam
   const artworks = useArtworks({ sort: 'recent' })
-  const save = useSaveLayout(ageRoomId)
+  const save = useSaveLayout(ageRoomId, allFloor)
   const display = useDisplay()
+  const displayAll = useDisplayAll()
   const nav = useNav()
   const toast = useToast()
 
@@ -140,6 +147,8 @@ export default function HomeEdit() {
   const draftRef = useRef<Layout | null>(null)
   const ageRoomIdRef = useRef(ageRoomId)
   ageRoomIdRef.current = ageRoomId
+  const allFloorRef = useRef(allFloor)
+  allFloorRef.current = allFloor
   const dirtyRef = useRef(false)
   /** 操作のたびに 1 増やす。保存中に次の操作があったかを見分ける */
   const versionRef = useRef(0)
@@ -250,7 +259,7 @@ export default function HomeEdit() {
   // 画面を離れるときは、待たずにすぐ保存する。タブを閉じる・再読み込みするときは keepalive で送る
   useEffect(() => {
     const onHide = () => {
-      if (dirtyRef.current && draftRef.current) saveLayoutOnLeave(ageRoomIdRef.current, draftRef.current)
+      if (dirtyRef.current && draftRef.current) saveLayoutOnLeave(ageRoomIdRef.current, draftRef.current, allFloorRef.current)
     }
     window.addEventListener('pagehide', onHide)
     return () => {
@@ -371,7 +380,8 @@ export default function HomeEdit() {
       // house の無い古いサーバーには部屋を送らない）。
       // 成功すると、おうち・配置・作品の一覧を取り直す
       // 置き場所はこのおへやの中（作品の年齢のおへやだけが候補なので、違う年齢の作品は一覧に出さない）
-      await display.mutateAsync({ id: artwork.id, display: true, roomId: ageRoomId ?? undefined })
+      if (allFloor !== null) await displayAll.mutateAsync({ id: artwork.id, floor: allFloor })
+      else await display.mutateAsync({ id: artwork.id, display: true, roomId: ageRoomId ?? undefined })
     } catch (error) {
       selectAfterSync.current = null
       // 409 は「〇〇 は、家具を足す場所も無いほどいっぱいです…」（家具も足せないときだけ。ほかの部屋には置かない）
@@ -385,9 +395,13 @@ export default function HomeEdit() {
     () => new Set(draft?.objects.flatMap((o) => (o.kind === 'artwork' ? [o.artworkId] : [])) ?? []),
     [draft],
   )
-  // 足せる作品：このおへやの年齢の、飾っていない作品
+  // 「すべて」では年齢別の展示状態を使わず、すべての階と編集中の下書きから追加できる作品を決める。
+  const elsewhere = new Set(allStack.data?.rooms.filter(f => String(f.room.floor) !== allFloor)
+    .flatMap(f => f.slots.map(s => s.artwork.id)) ?? [])
   const hiddenArtworks = (artworks.data?.items ?? []).filter(
-    (a) => !a.displayed && !placedArtworkIds.has(a.id) && (!ageRoom || a.age_at_made === ageRoom.age),
+    (a) => !placedArtworkIds.has(a.id) && (all
+      ? !!allStack.data && !elsewhere.has(a.id)
+      : !a.displayed && (!ageRoom || a.age_at_made === ageRoom.age)),
   )
 
   const saveLabel =
@@ -410,14 +424,14 @@ export default function HomeEdit() {
         overlay={
           <>
             <div className="stage-top">
-              <GlassButton label="戻る" onClick={() => nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/home')}>
+              <GlassButton label="戻る" onClick={() => nav.back(all ? `/rooms/all/${allFloor}` : ageRoomId ? `/rooms/${ageRoomId}` : '/home')}>
                 <BackIcon size={20} strokeWidth={2.2} />
               </GlassButton>
               <span className="stage-title glass">模様替え</span>
               <button
                 type="button"
                 className="edit-pill glass"
-                onClick={() => nav.push(ageRoomId ? `/museum/walk?room=${ageRoomId}` : '/museum/walk')}
+                onClick={() => nav.push(all ? `/museum/walk?all_floor=${allFloor}` : ageRoomId ? `/museum/walk?room=${ageRoomId}` : '/museum/walk')}
               >
                 <WalkIcon size={17} />
                 鑑賞モードへ
@@ -526,16 +540,16 @@ export default function HomeEdit() {
                   </button>
                 ))}
               </div>
-            ) : artworks.isPending ? (
+            ) : artworks.isPending || (all && allStack.isPending) ? (
               <div className="grid-3">
                 <ThumbSkeletons />
               </div>
             ) : hiddenArtworks.length === 0 ? (
               <div className="empty">
                 <p>
-                  {ageRoom ? `${ageRoom.age}さいのときの、飾っていない作品はありません。` : '飾っていない作品はありません。'}
+                  {all ? 'すべてのおへやに、飾っていない作品はありません。' : ageRoom ? `${ageRoom.age}さいのときの、飾っていない作品はありません。` : '飾っていない作品はありません。'}
                   <br />
-                  作品を追加すると、ここから飾れます。
+                  {all ? '外した作品は、ここから飾り直せます。' : '作品を追加すると、ここから飾れます。'}
                 </p>
               </div>
             ) : (

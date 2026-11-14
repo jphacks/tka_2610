@@ -3,7 +3,7 @@
 // 少し上から（約 26°）見ても、上の階の床の下から下の階の中が見える。カメラの側の壁はおへやごとにカットする。
 // 階を押すと onRoom（その階のおへやへ入る）。3D の上には文字を出さない（どの階かのボタンは Home が建物の下に出す）。
 // 建物・家具・作品を描くのは、ほかの画面と同じ HouseShells・HomeObjects（階ごとに高さをずらしたグループに入れるだけ）。
-// 階が増えるとスマホで重くなるので、動きがあるときだけ描き（frameloop demand）、作品の数はスマホでは HomeObjects の決まり（近い 6 点）に任せる。
+// 階が増えるとスマホで重くなるので、動きがあるときだけ描き（frameloop demand）、作品は全点表示する。階の選択には外形だけを使い、作品の細かい形まで当たり判定しない。
 // 机の上の模型のように見せる仕上げ（暖かい光の影・接地の影・隅の陰・ティルトシフト・周辺減光）は DioramaEffects。
 // 引いて見ると何もない床ばかりにならないよう、ここでは部屋を横方向に縮めて描き（建物のグループを [s, 1, s]）、家具と作品を中へ寄せる
 // （home/compact.ts。重ならない範囲でいちばん小さく。全部の階で同じ s）。家具と作品の大きさと、保存されている配置はそのまま。
@@ -115,8 +115,8 @@ function Diorama({ stack, scale, version, lite }: { stack: AgeStack; scale: numb
   }, [stack, scale])
   return (
     <>
-      <DioramaLight center={center} radius={radius} floorY={-BASE_DEPTH} lite={lite} />
-      <DioramaPost lite={lite} />
+      <DioramaLight center={center} radius={radius} floorY={-BASE_DEPTH} lite={lite} version={version} />
+      <DioramaPost lite={lite} aoScale={0.5} />
     </>
   )
 }
@@ -152,6 +152,7 @@ export function StackScene({
   useEffect(() => () => void (document.body.style.cursor = ''), [])
   // 建物がそろった階（おへやの id）。全部の階がそろったら onReady
   const loaded = useRef(new Set<string>())
+  const [readyRooms, setReadyRooms] = useState(0)
   // 建物や家具が読み込まれた回数（影を付け直すきっかけ）
   const [version, setVersion] = useState(0)
   const bump = useCallback(() => setVersion((v) => v + 1), [])
@@ -173,25 +174,39 @@ export function StackScene({
       cancelAnimationFrame(firstFrame)
       cancelAnimationFrame(secondFrame)
     }
-  }, [stack, version])
+  // 作品が届くたびに待ち時間をやり直さず、建物がそろえば表示する。
+  }, [stack, readyRooms])
 
   return (
-    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows>
+    <Stage camera={{ position: [12, 9, 12], fov: FOV }} frameloop="demand" shadows dpr={[1, 1.5]} antialias={false}>
       {stack.rooms.map((floor, i) => (
         <group
           key={floor.room.id}
           position={[0, i * FLOOR_PITCH, 0]}
-          onClick={tap(floor.room.id)}
-          onPointerOver={hover(true)}
-          onPointerOut={hover(false)}
         >
+          {/* 階を選ぶだけなので、数百万の三角形を調べず、部屋の外形で当たり判定する。
+              透明な当たり判定用の箱は描画・影には参加しない。 */}
+          {onRoom && stack.house.rooms.map(room => (
+            <mesh key={room.id} visible={false}
+              position={[room.origin[0] * compact.scale, (WALL_TOP - BASE_DEPTH) / 2, room.origin[1] * compact.scale]}
+              onClick={tap(floor.room.id)} onPointerOver={hover(true)} onPointerOut={hover(false)}>
+              <boxGeometry args={[
+                (room.size[0] + stack.house.wall_thickness * 2) * compact.scale,
+                FLOOR_PITCH,
+                (room.size[1] + stack.house.wall_thickness * 2) * compact.scale,
+              ]} />
+              <meshBasicMaterial />
+            </mesh>
+          ))}
           {/* 建物は横方向だけ縮める（壁の高さはそのまま） */}
           <group scale={[compact.scale, 1, compact.scale]}>
             <HouseShells
               museum={museums[i]}
               cutaway
+              onCutawayChange={bump}
               onReady={() => {
                 loaded.current.add(floor.room.id)
+                setReadyRooms(loaded.current.size)
                 bump()
               }}
             />

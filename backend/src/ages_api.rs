@@ -179,9 +179,9 @@ pub async fn list_ages(State(state): State<AppState>) -> AppResult<Json<AgesOver
 
 /// GET /api/ages/all。全年齢の作品を下の階から詰め、入らなくなったときだけ階を足す。
 pub async fn all_stack(State(state): State<AppState>) -> AppResult<Json<AgeStack>> {
-    let displayed = museum_api::all_artwork_rows(&state.pool).await?;
-    let arts: Vec<_> = displayed.iter().map(|row| row.placement()).collect();
-    let rooms = crate::all_ages::pack(&arts).map_err(AppError::internal)?
+    let snapshot = crate::all_home_api::load(&state).await?;
+    let displayed = snapshot.artworks;
+    let rooms = snapshot.home.floors
         .into_iter().enumerate().map(|(floor, layout)| {
             let slots = museum_api::slot_views(&layout, &displayed);
             StackRoom {
