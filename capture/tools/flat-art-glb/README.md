@@ -22,10 +22,11 @@
 ```sh
 cd tools/flat-art-glb
 pip install -r requirements.txt     # numpy・opencv-python-headless・mapbox_earcut
-npm install                         # check で使う three と gltf-validator（node_modules/ は git に入らない）
+npm ci                              # check で使う three・gltf-validator・playwright（node_modules/ は git に入らない）
+npx playwright install chromium     # 描画に使う Chromium（~/Library/Caches/ms-playwright/）
 ```
 
-`check` の描画には Playwright（Node.js から `require('playwright')` で読めること）と Chromium が要ります。無いときは、このフォルダで `npm install playwright` と `npx playwright install chromium` を実行するか、手元の Chrome を `CHROME_PATH=/path/to/chrome` で指定します。描画はソフトウェアの WebGL（SwiftShader）で行うので、GPU は要りません。Playwright が無くても `build` とテストは動きます。
+`capture/` で `scripts/install-mcp.sh --tools-only` を実行すると、この準備（Python は `tools/.venv` に入る）を solid-glb の分もまとめて行います。MCP サーバーの `build_model`・`check_model` はこの環境で動きます。手元の Chrome を使うときは `CHROME_PATH=/path/to/chrome` で指定します。描画はソフトウェアの WebGL（SwiftShader）で行うので、GPU は要りません。Playwright が無くても `build` とテストは動きます。
 
 ## 使い方
 
@@ -59,7 +60,7 @@ overlay.jpg    まっすぐに直した写真に、紙片の輪郭と名前・�
 | `mode` | `layers`（既定）か `plane` |
 | `sheet.size_mm` | 台紙の 2 辺（mm）。縦か横かは写真から決める。無いときは縦横比から、四つ切 392 × 542・八つ切 271 × 392・A3・B4・A4・B5 の中で近いものを選び、`report.json` に「推測した」と書く（縦横比しか分からないので、A 判と B 判は区別できない） |
 | `sheet.thickness_mm` | 紙の厚さ（既定 0.27）。紙片も同じ厚さ |
-| `sheet.corners` | 任意。台紙の 4 隅（左上・右上・右下・左下、写真に対する割合）。自動で見つからないときに使う |
+| `sheet.corners` | 任意。台紙の 4 隅（左上・右上・右下・左下、写真に対する割合）。自動で見つからないときに使う。書いたときは 4 隅の内側をすべて台紙とみなす（線や紙片で台紙の色が途切れても、その先を消さない）。まっすぐに直してある絵（台紙が画像いっぱい）なら `[[0,0],[1,0],[1,1],[0,1]]` |
 | `colors` | 色の名前 → 見本の点の一覧。点のまわりの中央値を見本にし、その色に分けられた画素の中で k-means をして陰の幅も覆う。どの見本からも遠い画素は「不明」 |
 | `backing` | 台紙の色の名前（`colors` の 1 つ）。台紙の検出と、明るさのむらの推定に使う |
 | `stack` | `layers` のときの紙片のグループ。下から上の順。グループは色の名前のリストで、**最初の色が主な色**、残りは一緒に付いている色（塗り残しの白い縁など）。主な色が 35% 以上ある塊だけを、そのグループの紙片にする（足りない塊は、後のグループに残す） |

@@ -1,1 +1,1 @@
-{"name": "solid-glb", "private": true, "version": "0.1.0", "description": "render and validate helpers for solid-glb", "dependencies": {"three": "0.187.0", "gltf-validator": "2.0.0-dev.3.10"}}
+{"name":"solid-glb","private":true,"version":"0.1.0","description":"render and validate helpers for solid-glb","dependencies":{"gltf-validator":"2.0.0-dev.3.10","playwright":"1.65.0","three":"0.187.0"}}

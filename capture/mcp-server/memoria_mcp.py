@@ -4,12 +4,14 @@
 #     "mcp>=2.3,<3",
 # ]
 # ///
-"""Memoria Capture MCP server (stdio): lets Claude Code / Codex read received capture sessions.
+"""Memoria Capture MCP server (stdio): lets Claude Code / Codex / the Claude desktop app read received capture
+sessions and build GLB models from them with the prepared builders (tools/flat-art-glb, tools/solid-glb).
 
     uv run --script mcp-server/memoria_mcp.py
 
-The logic lives in memoria_core.py (standard library only). stdout carries only MCP protocol messages;
-logs go to stderr. See mcp-server/README.md.
+The logic lives in memoria_core.py and memoria_build.py (standard library only; the builders run as
+subprocesses in tools/.venv and Node.js). stdout carries only MCP protocol messages; logs go to stderr.
+See mcp-server/README.md.
 """
 from __future__ import annotations
 
@@ -17,8 +19,10 @@ import json
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import memoria_build as build  # noqa: E402
 import memoria_core as core  # noqa: E402
 
 from mcp.server.mcpserver import Image, MCPServer  # noqa: E402
@@ -29,10 +33,32 @@ log = logging.getLogger("memoria-mcp")
 
 INSTRUCTIONS = """\
 Memoria Capture: photo sessions of a physical object (often a child's artwork) shot with the iPhone app and
-received on this Mac. Flow: receiver_status -> list_sessions or latest_session -> get_brief (read the brief
-first) -> get_view for the overview and views -> build a 3D model -> save it under the folder from output_dir.
+received on this Mac, and prepared builders that turn them into GLB models on this Mac.
+
+Generating a model (e.g. "make a 3D model of the latest capture"): you do NOT write geometry code. Prepared
+builders make the shape; you only write a small JSON config and judge two pictures.
+1. Find the session: latest_session (or list_sessions), then get_brief and read brief.md.
+2. build_guide(session): which builder fits (flat-art-glb for flat artwork; solid-glb "slab" only for
+   flat-topped objects; none for rounded or figurine-like objects), a starter config with the photo paths
+   and known sizes filled in, the config reference, and the steps.
+   If it says no builder fits - or the photos show a rounded/organic object - tell the user plainly that it
+   cannot be built with the prepared builders, and stop. Do not improvise geometry code.
+3. Look at the photos once (get_view). Use photo_grid (optionally zoomed with region) to read positions as
+   fractions for corners, outlines or colour sample points. Replace every TODO in the starter config.
+4. build_model(session, label, builder, config): builds model.glb under captures/reconstructions/<id>/<label>/
+   and returns the numbers plus an overlay image - look at it once. Builder errors come back as tool errors
+   with the builder's message: fix the config and call again.
+5. check_model(session, label): validator summary (must be 0 errors) and compare.jpg (photo vs render) - look
+   at it once. Revise the config at most about twice; do not chase small differences.
+6. Tell the user the absolute path of model.glb, how it compares with the photos, and every assumed value
+   (size, heights). Registering it in memoria is manual for now: upload the .glb in memoria's artwork form or
+   edit screen. list_models shows earlier builds so a later conversation can continue.
+If a builder tool says the runtime is missing, call tools_status and give the user the exact command it prints.
+Other tools: receiver_status (is the iPhone receiver running), get_original_photos (full-resolution originals and
+camera data), rebuild_pack, output_dir (a folder for other outputs, only when the user asks for another method).
+
 workKind "flat" means flat artwork (a drawing or collage) shot once from above: no 3D reconstruction is needed;
-use the picture (view "artwork") on a thin panel or frame of the sheet size (measurements.sheet).
+the picture (view "artwork") goes on a thin sheet of the sheet size (measurements.sheet).
 declaredSize is what the person picked or typed in on the iPhone (flat: the paper from a list; 3D: the height);
 it is not measured and takes precedence over measured or derived sizes.
 guidance "free" (the default for new 3D sessions) means the photos were shot freely without guidance (views photo-01...,
@@ -40,8 +66,9 @@ no direction recorded: judge front/side/back/top from the pictures; no size unle
 guidance "heading" means the 3D capture was guided by the phone's heading (crosshair, no base point or cylinder):
 the object position and its approximate size were derived after capture; the brief says how reliable they are.
 Every result has absolute paths, so with file access you can also open files directly.
-The photos are the user's private data; viewing them sends them to the model provider, so only do it when the
-user asked for this work. Never modify anything under captures/sessions/ and never read captures/incoming/.
+The photos are the user's private data; viewing them (get_view, photo_grid, and the overlay/compare images of
+build_model/check_model) sends them to the model provider, so only do it when the user asked for this work.
+Never modify anything under captures/sessions/ and never read captures/incoming/.
 """
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -171,6 +198,123 @@ def receiver_status() -> str:
     the captures folder, session count and newest session, and whether memoria-pack is built.
     """
     return as_json(run(core.receiver_status))
+
+
+# ---------------------------------------------------------------------------
+# Building models with the prepared builders (memoria_build.py)
+
+
+def _text_and_image(meta: dict, image_path) -> list:
+    """The JSON result, plus the image downscaled to a long side of at most 1568 px (JPEG) when there is one."""
+    content: list = []
+    if image_path is not None:
+        try:
+            data, fmt, info = core.load_image(Path(image_path), build.IMAGE_MAX_SIDE)
+            meta = dict(meta, image={"path": str(image_path), **info})
+            content.append(Image(data=data, format=fmt))
+        except (OSError, core.MemoriaError) as e:
+            meta = dict(meta, imageError=str(e))
+    return [TextContent(type="text", text=as_json(meta))] + content
+
+
+@mcp.tool(annotations=READ_ONLY, structured_output=False)
+def build_guide(session: str) -> list[TextContent]:
+    """Decide how to build a GLB for a session with the prepared builders, and get a starter config. Call this
+    after get_brief and before build_model.
+
+    Returns (1) JSON: builder ("flat-art-glb" for flat artwork, "solid-glb" for flat-topped objects, or null when
+    neither fits), fit, decision (what to do; if no builder fits, tell the user so instead of writing geometry
+    code), starterConfig (photo paths and known sizes filled in; values starting with "TODO" must be replaced -
+    build_model refuses them), photoKeys (config keys that name photos), photos (the session's usable views:
+    name, absolute path, pixel size, elevationDeg = look-down angle, azimuthDeg), assumptions (say these to the
+    user), steps, outputRoot; and (2) the builder's config reference taken from its README (Japanese; positions are
+    fractions of the photo, x right and y down, lengths in mm). Sizes in configs are millimetres; the built model
+    is in metres, +Y up, front +Z.
+    """
+    data = run(build.build_guide, session)
+    docs = data.pop("configDocs", None)
+    blocks = [TextContent(type="text", text=as_json(data))]
+    if docs:
+        blocks.append(TextContent(type="text", text=docs))
+    return blocks
+
+
+@mcp.tool(annotations=READ_ONLY, structured_output=False)
+def photo_grid(session: str, view: str, region: list[float] | None = None) -> list:
+    """Return a photo of the session with a labelled coordinate grid, to read positions for a config.
+
+    `view` is a view name from get_brief / build_guide (e.g. "artwork", "top", "photo-03") or the absolute path of
+    an image of this session. Grid labels are fractions of the WHOLE photo (x to the right, y down, 0-1); write
+    config positions (corners, outline points, sample points, feature centres) in these fractions.
+    `region` = [x0, y0, x1, y1] (fractions) zooms into part of the photo; the labels stay whole-photo fractions.
+    The image's long side is at most 1500 px. Viewing it sends the photo to the model provider.
+    """
+    try:
+        data, fmt, meta = build.photo_grid(core.captures_dir(), session, view, region)
+    except core.MemoriaError as e:
+        raise ToolError(str(e)) from None
+    return [TextContent(type="text", text=as_json(meta)), Image(data=data, format=fmt)]
+
+
+@mcp.tool(annotations=WRITES, structured_output=False)
+def build_model(session: str, label: str, builder: str, config: dict[str, Any]) -> list:
+    """Build model.glb from a config with a prepared builder, on this Mac (about a second).
+
+    builder: "flat-art-glb" or "solid-glb" (as recommended by build_guide). config: the builder's JSON config as an
+    object (start from build_guide's starterConfig; no "TODO" values). Photo fields (flat-art-glb: photo;
+    solid-glb: top.photo and views[].photo) must be a view name of this session or an absolute image path inside
+    this session's pack or original photos - anything else is refused. label names the attempt (e.g. "v1";
+    characters outside A-Z a-z 0-9 . _ - become "-"); the same label overwrites that attempt.
+    Writes config.json, model.glb, report.json and the overlay into captures/reconstructions/<sessionId>/<label>/.
+    Returns JSON (modelPath, sizeMm x/y/z, triangles, bytes, warnings, builder details, absolute paths) and the
+    overlay image: flat-art-glb = the rectified photo with the sheet/pieces it found; solid-glb = the rectified top
+    photo with the outline (green) and round features (red). Look at it once. On a builder error the tool fails
+    with the builder's message: fix the config and call again.
+    """
+    try:
+        result, overlay = build.build_model(core.captures_dir(), session, label, builder, config)
+    except core.MemoriaError as e:
+        raise ToolError(str(e)) from None
+    return _text_and_image(result, overlay)
+
+
+@mcp.tool(annotations=WRITES, structured_output=False)
+def check_model(session: str, label: str) -> list:
+    """Validate and render a model built with build_model, and return the comparison image (several seconds).
+
+    Runs the Khronos glTF validator (validation: errors must be 0) and renders the model headlessly from the
+    builder's views, then returns JSON (validation summary and messages, comparePath, renders, absolute paths) and
+    compare.jpg downscaled to at most 1568 px: flat-art-glb = photo crop | front render | oblique render;
+    solid-glb = one cell per config view, photo left and render right. Look at it once and compare shape, size
+    proportions, colours and positions. If the renderer is not installed, returns rendererReady false with the
+    command the user must run (the model itself is still usable).
+    """
+    try:
+        result, compare = build.check_model(core.captures_dir(), session, label)
+    except core.MemoriaError as e:
+        raise ToolError(str(e)) from None
+    return _text_and_image(result, compare)
+
+
+@mcp.tool(annotations=READ_ONLY, structured_output=False)
+def list_models(session: str) -> str:
+    """List the models built for a session (newest first), so a later conversation can pick up.
+
+    Per model: label, builder, absolute paths (folder, model.glb, config.json, compare.jpg, overlay), sizeMm (x =
+    left-right, y = up, z = front-back), triangles, bytes, builtAt, warnings, validation (errors/warnings after
+    check_model) and checkedAt. Read configPath to continue from an earlier config.
+    """
+    return as_json(run(build.list_models, session))
+
+
+@mcp.tool(annotations=READ_ONLY, structured_output=False)
+def tools_status() -> str:
+    """Check whether the model builders can run on this Mac: the builders' Python environment (numpy, OpenCV,
+    mapbox_earcut), Node.js, each builder's node_modules (three, gltf-validator, playwright) and Playwright's
+    Chromium. ready.build / ready.photoGrid / ready.check say what works; when something is missing, `fix` is the
+    exact command the user must run in a terminal (once).
+    """
+    return as_json(build.tools_status())
 
 
 def main() -> None:

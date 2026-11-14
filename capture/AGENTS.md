@@ -12,8 +12,9 @@
 - 今までのセッションの一覧・確認・Mac へ送る・設定は、**開発用の画面** として残しています（memoria の設定の「撮影データ（開発用）」から開く）。
 
 - **3D の生成そのものは範囲の外です。** 生成は、Claude Code・Codex などの AI エージェントが、ここで作ったデータを読んで行います。生成のアルゴリズムや特定の生成サービスへの接続は、このフォルダに入れません。
-- 例外として、**平らな作品（貼り絵・紙に描いた絵）を写真 1 枚から GLB にするツール** `tools/flat-art-glb/` を置いています（ユーザーが決めたもの）。撮影アプリや `for_claude/` の流れとはつながっておらず、写真 1 枚と設定ファイルから単独で動きます。
-- 同じく例外として、**上が平らな単純な立体（箱・板・操作盤など）を数枚の写真から GLB にするツール** `tools/solid-glb/` を置いています（ユーザーが決めたもの）。これも撮影の流れとはつながっておらず、写真と設定ファイルから単独で動きます。形はプログラムが組み立て、AI は写真を見て設定ファイルを書きます。生成 AI は使いません。それ以外の立体の作品の生成は、引き続き範囲の外です。
+- 例外として、**平らな作品（貼り絵・紙に描いた絵）を写真 1 枚から GLB にするツール** `tools/flat-art-glb/` を置いています（ユーザーが決めたもの）。撮影アプリとは別に、写真 1 枚と設定ファイルから単独で動きます。
+- 同じく例外として、**上が平らな単純な立体（箱・板・操作盤など）を数枚の写真から GLB にするツール** `tools/solid-glb/` を置いています（ユーザーが決めたもの）。これも写真と設定ファイルから単独で動きます。形はプログラムが組み立て、AI は写真を見て設定ファイルを書きます。生成 AI は使いません。それ以外の立体の作品の生成は、引き続き範囲の外です。
+- この 2 つのツールは、**MCP サーバーから `for_claude/` のセッションに使えます**（ユーザーが決めたもの）。Claude のデスクトップアプリ（Mac）などで「最新の撮影から 3D モデルを作って」と頼むと、AI は `build_guide` でツールと設定のひな形を受け取り、設定（JSON）だけを書き、`build_model` で Mac の上で GLB を作り、`check_model` の比較の画像を 1 枚見て直します。AI に形のコードを一から書かせると 1 つの作品に 20〜40 分・4〜6 ドルかかったためです。どちらのツールにも合わない作品（丸い物・人形の形など）は、AI がそのことをユーザーに伝えて止まります。できた GLB の memoria への登録は、今は手作業（作品追加のフォームか編集の画面でアップロード）です。説明は [mcp-server/README.md](mcp-server/README.md)。
 - 今の方針（ユーザーが決めたもの）は **「AI に推論させながら作る」** です。正面・右・後ろ・左の 4 方向と、最後に真上から撮る **5 枚の撮影（`ai5`）** を、案内つきの撮り方の既定にしています（新しい立体のセッションの既定は、下の自由に撮る撮り方）。数枚のよい写真から AI が形を推論する前提なので、写真どうしの重なりは要りません。
 - 立体の作品は、**案内なしで自由に何枚でも撮る方法（`guidance: "free"`）** を新しいセッションの既定にしています（ユーザーが決めたもの）。案内も自動撮影もなく、シャッターを押すだけで、1 枚以上あれば送れます。どの写真がどの向きかは記録せず、AI が写真を見て決めます（下の「撮影から AI に渡るまでの流れ（立体：自由に撮る）」）。下の案内つきの撮り方は、設定の「立体の撮り方」で選べるように残しています。
 - 案内つきの撮り方では、**向きで案内する方法（`guidance: "heading"`）** が標準です（ユーザーの案）。作品を画面の中央の十字に合わせて正面を撮り、iPhone の向きが 90°・180°・270° 回った位置と真上で撮ります。底の中心・円柱の設定はありません。作品の位置と大きさは、撮ったあとに写真から求めます。**新しい方法で、実機ではまだ試していません**（下の「未対応・予定」）。前の方法（底の中心と円柱を決めてから撮る `baseCylinder`）は設定で選べ、48 方向（`photogrammetry`）などほかの一覧はいつも前の方法です。
@@ -28,10 +29,12 @@
 | `ios/Packages/CaptureCore/` | SwiftPM のパッケージ（Foundation・simd・CryptoKit だけ） | アプリの「純粋なロジック」：session.json の型、撮影方向の一覧（`DirectionPlan`）、角度と投影の計算、撮影の進み具合、マスクの範囲と確かめ、向きの案内と撮ったあとの中心・大きさ（`HeadingGuidance.swift`・`HeadingRecorder.swift`・`HeadingDerivation.swift`・`HeadingSize.swift`）、平面の作品の計算（`FlatCapture.swift`：四隅の並べ方・実寸・案内・自動撮影）、撮る人が選んだ・入力した大きさ（`DeclaredSize.swift`：紙の一覧 `SheetPreset`・「その他」の紙・紙の向き・cm の入力の確かめ）、自由に撮る写真の記録（`FreeCapture.swift`）、転送、同じネットワークかの判定（`LocalNetworkPolicy`）、memoria の Web との橋渡しの決まり（`WebBridge.swift`：接続先・知らせの確かめ・返事の形・`window.MemoriaNative`・代表の写真・家のリンク）。macOS の `swift test` で確かめられる。Mac のツールもこの型を使う。確認用の `capture-e2e`（合成セッションを受信サーバーへ送る）もここ |
 | `receiver/` | Python 3.9 以上（標準ライブラリだけ） | Mac の受信サーバー `memoria_receiver.py`。同じネットワークからの接続だけを受け、`captures/` に保存する。受け取るたびに `memoria-pack` を裏で動かす |
 | `tools/claude-pack/` | Swift（macOS 14 以上） | `memoria-pack`。受け取ったセッションから AI 向けの入力 `captures/for_claude/<sessionId>/` を作る（平面の作品は、まっすぐにした絵と紙の実寸だけ） |
-| `mcp-server/` | Python（MCP の SDK は uv が入れる。中身の `memoria_core.py` は標準ライブラリだけ） | Claude Code・Codex から撮影データを読む MCP サーバー（`list_sessions`・`get_brief`・`get_view` など） |
+| `mcp-server/` | Python（MCP の SDK は uv が入れる。中身の `memoria_core.py`・`memoria_build.py` は標準ライブラリだけ） | Claude Code・Codex・Claude のデスクトップアプリから撮影データを読み（`list_sessions`・`get_brief`・`get_view` など）、用意したツールで GLB を作る（`build_guide`・`photo_grid`・`build_model`・`check_model`・`list_models`・`tools_status`）MCP サーバー。ツールは `tools/.venv` の Python と Node.js の子プロセスで動かし、書くのは `captures/reconstructions/<sessionId>/<label>/` の中だけ。登録とツールの用意は `scripts/install-mcp.sh` |
+| `scripts/` | sh | `install-mcp.sh`：MCP サーバーを Claude Code・Codex・Claude のデスクトップアプリ（`claude_desktop_config.json` の `mcpServers` に 1 項目だけ足す。書く前にバックアップ）に登録し、ツールの実行環境（`tools/.venv`・`npm ci`・Playwright の Chromium）を用意する |
 | `tools/reconstruct/` | Swift（Apple シリコンの Mac、macOS 14 以上） | `memoria-reconstruct`。RealityKit の `PhotogrammetrySession` で写真から USDZ を作る実験用のツール |
-| `tools/flat-art-glb/` | Python（numpy・OpenCV・mapbox_earcut）。確かめには Node.js（three・gltf-validator）と Playwright | 平らな作品の写真 1 枚から GLB を作る関数の集まりとコマンド（`flatart_glb.py`）。撮影の流れとは別に単独で動く。説明は `tools/flat-art-glb/README.md` |
-| `tools/solid-glb/` | Python（numpy・OpenCV・mapbox_earcut）。確かめには Node.js（three・gltf-validator）と Playwright | 上が平らな単純な立体を、真上の写真と設定ファイルから GLB にするコマンド（`solidglb.py`）。輪郭をなぞった層を積み、上面に写真を貼り、丸い部品を載せる。撮影の流れとは別に単独で動く。説明は `tools/solid-glb/README.md` |
+| `tools/flat-art-glb/` | Python（numpy・OpenCV・mapbox_earcut）。確かめには Node.js（three・gltf-validator・playwright） | 平らな作品の写真 1 枚から GLB を作る関数の集まりとコマンド（`flatart_glb.py`）。単独でも、MCP サーバーの `build_model` からも動く。説明は `tools/flat-art-glb/README.md` |
+| `tools/solid-glb/` | Python（numpy・OpenCV・mapbox_earcut）。確かめには Node.js（three・gltf-validator・playwright） | 上が平らな単純な立体を、真上の写真と設定ファイルから GLB にするコマンド（`solidglb.py`）。輪郭をなぞった層を積み、上面に写真を貼り、丸い部品を載せる。単独でも、MCP サーバーの `build_model` からも動く（`photo_grid` は `solidglb.py grid`）。説明は `tools/solid-glb/README.md` |
+| `tools/.venv/` | git に入らない | 上の 2 つのツールの Python の環境（Python 3.12）。`scripts/install-mcp.sh` が作る |
 | `docs/` | 取り決め | `data-format.md`（session.json の形・座標・画像の向き・撮影方向の一覧・マスクの確かめ・local.json）、`transfer-protocol.md`（iPhone → Mac の転送の手順と、同じネットワークの中だけにする決まり）、`web-bridge.md`（memoria の Web とアプリの橋渡し。取り決め v1） |
 | `captures/` | 受け取ったデータ（git に入らない） | 受信サーバーが作る。読み方は受信サーバーが起動のたびに書き直す `captures/README.md` |
 
@@ -121,9 +124,11 @@ tools/claude-pack/.build/release/memoria-pack <sessionId の先頭> --force --cu
 (cd tools/reconstruct && swift test)
 python3 -m unittest discover -s receiver/tests
 python3 -m unittest discover -s mcp-server/tests
-python3 -m unittest discover -s tools/flat-art-glb/tests   # numpy・OpenCV・mapbox_earcut が要る
-python3 -m unittest discover -s tools/solid-glb/tests      # numpy・OpenCV・mapbox_earcut が要る
+tools/.venv/bin/python -m unittest discover -s tools/flat-art-glb/tests   # numpy・OpenCV・mapbox_earcut が要る（scripts/install-mcp.sh --tools-only で入る）
+tools/.venv/bin/python -m unittest discover -s tools/solid-glb/tests
 ```
+
+MCP サーバーのテストのうち、本物のツールで GLB を作って描画するものは、`tools/.venv`（と Node.js・Chromium）が無いと自動で飛ばします。
 
 iPhone のアプリのビルド：
 
@@ -247,4 +252,6 @@ xcrun devicectl device install app --device <UDID> ios/DerivedData/Build/Product
 - 撮影の途中で基準をやり直すと、同じセッションのまま撮り続けられます。作品や周りを動かしたかを聞いて、動かしたなら別のセッションに分ける案があります。
 - 人の体のように間違った物しか見つからない写真では、タップで作品を選び直せません（撮り直すしかない）。
 - `captures/for_ai/` は、48 方向のセッションから 5 枚を手で抜き出した実験用のフォルダです。ツールは作りません。
-- Claude Code・Codex から使う MCP サーバーは `mcp-server/` にあります。説明は `mcp-server/README.md` を見てください。
+- Claude Code・Codex・Claude のデスクトップアプリから使う MCP サーバーは `mcp-server/` にあります。説明は `mcp-server/README.md` を見てください。
+- **MCP サーバーで GLB を作る流れは、Claude のデスクトップアプリそのものでは試していません。** 確かめたのは、公式の MCP SDK のクライアントで、デスクトップアプリと同じ起動のしかた（uv の絶対パス・限られた `PATH`）で合成のセッション（平面の絵・上が平らな箱・上からの写真の無い立体）を通したことと、インストーラーを一時的な設定ファイルで動かしたことです。デスクトップアプリで確かめること：開き直したあと「設定 > 開発者」で running になるか、ツールの呼び出しが時間切れにならないか（`check_model` は約 2 秒）、画像の結果が見られるか、AI が流れのとおりに進めて合わない作品で止まるか。
+- **GLB を作れるのは、平面の作品と上が平らな立体だけです。** 丸い物・人形の形は作れません。できた GLB の memoria への登録は手作業です（作品追加のフォームか編集の画面でアップロード）。
