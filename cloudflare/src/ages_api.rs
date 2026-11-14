@@ -80,7 +80,8 @@ pub struct StackRoom {
 
 #[derive(Serialize)]
 pub struct AgeStack {
-    age: i16,
+    /// null は全年齢を詰め直した鑑賞用の建物。
+    age: Option<i16>,
     label: String,
     /// 家の形 (どのおへやも同じ建物。今はリビング hub)
     house: HouseView,
@@ -178,6 +179,25 @@ pub async fn list_ages(State(state): State<AppState>) -> AppResult<Json<AgesOver
     Ok(Json(AgesOverview { name, child_birthday: birthday, current_age, total_artworks: arts.len(), ages }))
 }
 
+/// GET /api/ages/all。全年齢の作品を下の階から詰め、入らなくなったときだけ階を足す。
+pub async fn all_stack(State(state): State<AppState>) -> AppResult<Json<AgeStack>> {
+    let displayed = museum_api::all_artwork_rows(&state.db)?;
+    let arts: Vec<_> = displayed.iter().map(|row| row.placement()).collect();
+    let rooms = crate::all_ages::pack(&arts).map_err(AppError::internal)?
+        .into_iter().enumerate().map(|(floor, layout)| {
+            let slots = museum_api::slot_views(&layout, &displayed);
+            StackRoom {
+                room: crate::all_ages::room_info(floor),
+                count: slots.len(),
+                capacity: home::capacity(&layout),
+                layout,
+                slots,
+            }
+        }).collect();
+    let house = museum_api::house_view(|room| state.room_model_urls.get(room.id).cloned());
+    Ok(Json(AgeStack { age: None, label: "すべて".into(), house, catalog: &CATALOG_VIEW, rooms }))
+}
+
 /// GET /api/ages/{age}
 pub async fn age_stack(State(state): State<AppState>, Path(age): Path<i16>) -> AppResult<Json<AgeStack>> {
     let db = &state.db;
@@ -195,7 +215,7 @@ pub async fn age_stack(State(state): State<AppState>, Path(age): Path<i16>) -> A
         });
     }
     let house = museum_api::house_view(|room| state.room_model_urls.get(room.id).cloned());
-    Ok(Json(AgeStack { age, label: age_label(age), house, catalog: &CATALOG_VIEW, rooms }))
+    Ok(Json(AgeStack { age: Some(age), label: age_label(age), house, catalog: &CATALOG_VIEW, rooms }))
 }
 
 /// POST /api/ages/{age}/rooms

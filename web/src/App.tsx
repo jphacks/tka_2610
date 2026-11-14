@@ -60,6 +60,7 @@ export default function App() {
                 <Route path="/artworks/:id/preview" element={<ArtworkPreview />} />
                 {/* おへや（push）。年齢ごとの部屋の 3D。ホームの積み上げの建物から開く */}
                 <Route path="/rooms/:roomId" element={<Room />} />
+                <Route path="/rooms/all/:floor" element={<Room />} />
                 {/* ⑤ おうちの中（push）。?room=おへやの id、?focus=作品ID でカメラを寄せる */}
                 <Route path="/museum" element={<MuseumView />} />
                 {/* ⑪ 鑑賞モード（push。?room=おへやの id）。おへやの中を一人称で歩く。PC は WASD とマウス、スマホはタッチ（仮想スティックとなぞる操作） */}

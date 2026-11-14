@@ -9,8 +9,8 @@ export function useAges() {
   return useQuery({ queryKey: keys.ages, queryFn: () => request<Ages>('/api/ages') })
 }
 
-/** その年齢のおへやを積み上げて描くための、おへやごとの配置と飾っている作品。age が null のあいだは取りに行かない */
-export function useAgeStack(age: number | null, retainPrevious = false) {
+/** 年齢別、または all（全年齢を詰め直した鑑賞用）の建物。null のあいだは取りに行かない */
+export function useAgeStack(age: number | 'all' | null, retainPrevious = false) {
   return useQuery({
     queryKey: keys.ageStack(age ?? -1),
     queryFn: () => request<AgeStack>(`/api/ages/${age}`),

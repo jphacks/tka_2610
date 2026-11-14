@@ -25,6 +25,8 @@ mod media;
 mod museum;
 
 mod ages_api;
+#[path = "../../backend/src/all_ages.rs"]
+mod all_ages;
 mod albums;
 mod artworks;
 mod db;

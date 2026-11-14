@@ -280,7 +280,8 @@ export interface StackRoom {
 
 /** GET /api/ages/{age}。Rust: ages_api.rs の AgeStack */
 export interface AgeStack {
-  age: number
+  /** null は全年齢の自動配置 */
+  age: number | null
   label: string
   house: House
   catalog: HomeCatalog

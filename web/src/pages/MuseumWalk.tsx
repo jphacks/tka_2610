@@ -112,7 +112,8 @@ function useWalkVoice(openedId: string | null) {
 
 export default function MuseumWalk() {
   const [params] = useSearchParams()
-  const museum = useMuseum({ roomId: params.get('room'), refetchInterval: REFRESH_MS })
+  const allFloor = params.get('all_floor')
+  const museum = useMuseum({ roomId: params.get('room'), allFloor, refetchInterval: REFRESH_MS })
   const ageRoomId = museum.data?.room.id ?? params.get('room')
   const nav = useNav()
   const [status, setStatus] = useState<WalkStatus>({ phase: 'loading', walking: false, aimedArtworkId: null })
@@ -143,7 +144,7 @@ export default function MuseumWalk() {
       onClick={() => {
         // 次に開いたときは、はじめの位置から歩き始める
         clearWalkPose()
-        nav.back(ageRoomId ? `/rooms/${ageRoomId}` : '/home')
+        nav.back(allFloor !== null ? `/rooms/all/${allFloor}` : ageRoomId ? `/rooms/${ageRoomId}` : '/home')
       }}
     >
       <BackIcon size={20} strokeWidth={2.2} />
