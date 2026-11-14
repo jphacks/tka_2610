@@ -98,5 +98,5 @@
 .app:has(.recall-screen.is-viewing-theater) .tab-rainbow { visibility: hidden; }
 .recall-screen.is-viewing-theater .recall-page > :not(.theater-embed-slot) { visibility: hidden; }
 
-.recall-hero-images { pointer-events: none; }
+.recall-hero-images > * { pointer-events: none; }
 .recall-hero-caption .recall-voice { position: relative; z-index: 2; }
