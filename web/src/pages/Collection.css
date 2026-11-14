@@ -1,37 +1,56 @@
 /* ⑧ 作品一覧。2列の作品集・3列の一覧と、年・月の絞り込み。 */
 
-.collection-page { padding-top: 10px; }
+.collection-page { padding-top: 0; }
 
 .collection-filter-panel {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .collection-filter-panel > summary {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  transition: background 0.15s;
+  user-select: none;
   list-style: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .collection-filter-panel > summary::-webkit-details-marker { display: none; }
 
-.collection-filter-current {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--ink-2);
+.collection-filter-label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.collection-filter-arrow { flex: none; transform: rotate(-90deg); }
+@media (hover: hover) {
+  .collection-filter-panel > summary:hover { background: var(--fill); }
+}
+
+.collection-filter-panel > summary:active {
+  background: var(--fill);
+}
+
+.collection-filter-arrow {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  transform: rotate(-90deg);
+}
 .collection-filter-panel[open] .collection-filter-arrow { transform: rotate(90deg); }
 .collection-filter-options { padding: 4px 0 8px; }
 .collection-filter-options .collection-years { margin-top: 12px; }
@@ -42,7 +61,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 12px 0;
+  margin: 6px 0;
 }
 
 /* 並び順のボタンと、列の数の切り替え。行が狭いときは、こちらではなく範囲の名前の側が詰まる */
@@ -131,7 +150,7 @@
 }
 
 .collection-body {
-  margin-top: 10px;
+  margin-top: 6px;
   transition: opacity 0.2s;
 }
 
@@ -281,7 +300,7 @@
 /* アルバムの棚：いちばん上に横並び。画面の端までスクロールでき、1 枚ずつ止まる */
 .album-shelf {
   position: relative;
-  margin: 0 0 18px;
+  margin: 0 0 6px;
 }
 
 /* 作品を持ち上げている間：棚をナビゲーションバーのすぐ下に貼りつけ、下のほうの作品からでも届くようにする */
@@ -340,6 +359,10 @@
   justify-content: space-between;
   gap: 2px 10px;
   margin: 0 0 10px;
+}
+
+.album-shelf.is-folded .album-shelf-head {
+  margin-bottom: 0;
 }
 
 .album-shelf-title {
