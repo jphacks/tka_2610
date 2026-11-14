@@ -5,7 +5,7 @@
 // どちらもこのおへやを ?room= で渡す。
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useAges, useMuseum } from '../api'
+import { useAgeStack, useAges, useMuseum } from '../api'
 import { GlassButton, Screen, Sheet } from '../components'
 import { BackIcon, ChevronRight, SofaIcon, WalkIcon } from '../icons'
 import { useNav } from '../nav'
@@ -13,8 +13,11 @@ import { HomeScene, StageShell, furnitureUrlsOf, hasHouseModel, shellUrlsOf, war
 import './Room.css'
 
 export default function Room() {
-  const { roomId = '' } = useParams()
-  const museum = useMuseum({ roomId })
+  const { roomId = '', floor } = useParams()
+  const all = floor !== undefined
+  const viewId = all ? `all-${floor}` : roomId
+  const museum = useMuseum({ roomId, allFloor: floor })
+  const allStack = useAgeStack(all ? 'all' : null)
   const nav = useNav()
   const [readyRoomId, setReadyRoomId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -61,13 +64,13 @@ export default function Room() {
 
   const data = museum.data
   const room = data?.room
-  const back = room ? `/home?age=${room.age}` : '/home'
+  const back = all ? '/home?age=all' : room ? `/home?age=${room.age}` : '/home'
 
   return (
     <Screen className="room-screen">
       <StageShell
         className="room-stage"
-        ready={readyRoomId === roomId || (!!data && !hasHouseModel(data)) || museum.isError}
+        ready={readyRoomId === viewId || (!!data && !hasHouseModel(data)) || museum.isError}
         overlay={
           <>
             <div className="stage-top room-top">
@@ -89,12 +92,12 @@ export default function Room() {
                 </p>
               )}
               <div className="room-actions">
-                <GlassButton label="歩く" className="room-action" onClick={() => nav.push(`/museum/walk?room=${roomId}`)}>
+                <GlassButton label="歩く" className="room-action" onClick={() => nav.push(all ? `/museum/walk?all_floor=${floor}` : `/museum/walk?room=${roomId}`)}>
                   <WalkIcon size={21} />
                 </GlassButton>
-                <GlassButton label="模様替え" className="room-action" onClick={() => nav.push(`/home/edit?room=${roomId}`)}>
+                {!all && <GlassButton label="模様替え" className="room-action" onClick={() => nav.push(`/home/edit?room=${roomId}`)}>
                   <SofaIcon size={21} />
-                </GlassButton>
+                </GlassButton>}
               </div>
             </div>
           </>
@@ -102,7 +105,7 @@ export default function Room() {
       >
         {data && (
           <Suspense fallback={null}>
-            <HomeScene key={roomId} museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReadyRoomId(roomId)} />
+            <HomeScene key={viewId} museum={data} onSelect={(id) => nav.push(`/artworks/${id}`)} onReady={() => setReadyRoomId(viewId)} />
           </Suspense>
         )}
         {data && !hasHouseModel(data) && <div className="stage-fallback">家の 3D モデル (GLB) が見つかりません</div>}
@@ -110,7 +113,19 @@ export default function Room() {
       </StageShell>
       <Sheet open={pickerOpen} onClose={closePicker} title="おへやをえらぶ">
         <div className="room-picker-list">
-          {ages.isPending ? <p role="status">Loading…</p> : ages.isError ? (
+          {all ? (
+            allStack.isError ? <div role="alert"><p>おへやを読み込めませんでした</p><button type="button" className="btn btn-outline" onClick={() => allStack.refetch()}>もう一度読み込む</button></div> :
+            allStack.isPending ? <p role="status">Loading…</p> :
+            <div className="room-picker-floors">
+              {allStack.data.rooms.map(({ room: target }) => (
+                <button key={target.id} type="button" className="room-picker-floor"
+                  aria-current={target.floor === Number(floor) ? 'location' : undefined}
+                  onClick={() => { closePicker(); if (target.floor !== Number(floor)) nav.replace(`/rooms/all/${target.floor}`, 'fade') }}>
+                  {target.floor + 1}かい
+                </button>
+              ))}
+            </div>
+          ) : ages.isPending ? <p role="status">Loading…</p> : ages.isError ? (
             <div role="alert"><p>おへやを読み込めませんでした</p>
               <button type="button" className="btn btn-outline" onClick={() => ages.refetch()}>もう一度読み込む</button>
             </div>

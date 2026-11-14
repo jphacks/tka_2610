@@ -56,7 +56,7 @@ export const keys = {
   /** 年齢ごとのおへやの一覧（GET /api/ages）と、年齢ごとの積み上げ（GET /api/ages/{age}） */
   recollections: ['recollections'] as const,
   ages: ['ages'] as const,
-  ageStack: (age: number) => ['ages', age] as const,
+  ageStack: (age: number | 'all') => ['ages', age] as const,
   settings: ['settings'] as const,
   artworks: (params: ListParams) => ['artworks', params] as const,
   /** アルバムの共通の先頭（取り直すときはこれで全部） */

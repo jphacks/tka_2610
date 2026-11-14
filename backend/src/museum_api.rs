@@ -53,6 +53,26 @@ pub(crate) async fn displayed_rows(pool: &sqlx::PgPool, room: Uuid) -> AppResult
     .await?)
 }
 
+impl DisplayedRow {
+    pub(crate) fn placement(&self) -> (Uuid, Option<home::ArtSize>) {
+        (self.id, home::ArtSize::from_model(self.model_width, self.model_height, self.model_depth, &self.model_kind))
+    }
+}
+
+/// 全年齢の作品。未展示の作品も含み、登録順で毎回同じ配置にする。
+pub(crate) async fn all_artwork_rows(pool: &sqlx::PgPool) -> AppResult<Vec<DisplayedRow>> {
+    Ok(sqlx::query_as::<_, DisplayedRow>(
+        "SELECT id, title, thumb_file, model_file, model_kind, tint, \
+            model_width, model_height, model_depth, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'photo') AS memory_photo, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'video') AS memory_video, \
+            (SELECT COUNT(*) FROM artwork_memories m WHERE m.artwork_id = artworks.id AND m.kind = 'audio') AS memory_audio \
+         FROM artworks ORDER BY created_at, id",
+    )
+    .fetch_all(pool)
+    .await?)
+}
+
 // =============================
 // 設定 (⑩)
 // =============================
@@ -465,6 +485,39 @@ pub(crate) fn slot_views(layout: &Layout, rows: &[DisplayedRow]) -> Vec<SlotView
             })
         })
         .collect()
+}
+
+/// 「すべて」の鑑賞用のおへや。自動配置を返すだけで、保存された配置には触れない。
+pub async fn all_room(
+    State(state): State<AppState>,
+    axum::extract::Path(floor): axum::extract::Path<usize>,
+) -> AppResult<Json<MuseumOverview>> {
+    let displayed = all_artwork_rows(&state.pool).await?;
+    let arts: Vec<_> = displayed.iter().map(DisplayedRow::placement).collect();
+    let layout = crate::all_ages::pack(&arts).map_err(AppError::internal)?
+        .into_iter().nth(floor).ok_or_else(|| AppError::not_found("そのおへやはありません"))?;
+    let settings = load_settings(&state).await?;
+    let slots = slot_views(&layout, &displayed);
+    let capacity = home::capacity(&layout);
+    let rooms = room_views(&slots, &displayed, &home::capacity_by_room(&layout));
+    Ok(Json(MuseumOverview {
+        room: crate::all_ages::room_info(floor),
+        today_label: today_label(Local::now().date_naive()),
+        name: settings.museum_name,
+        owner_name: settings.owner_name,
+        model_url: state.museum_model_url.clone(),
+        walk_model_url: state.walk_model_url.clone(),
+        total_artworks: displayed.len() as i64,
+        displayed_count: slots.len(),
+        capacity,
+        house: house_view(|room| state.room_model_urls.get(room.id).cloned()),
+        floors: vec![FloorView { id: home::FLOOR_ID, label: home::FLOOR_ID, hide_prefixes: Vec::new() }],
+        rooms,
+        slots,
+        hidden_node_prefixes: Vec::new(),
+        layout,
+        catalog: &CATALOG_VIEW,
+    }))
 }
 
 pub async fn museum_overview(

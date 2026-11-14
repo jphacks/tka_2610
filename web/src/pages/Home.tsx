@@ -1,4 +1,5 @@
 // ② ホーム（/home）。タブ。
+// 「すべて」は全年齢の作品を1階から詰め直す鑑賞用の建物（保存済み配置は変えない）。
 // 年齢（3さい・4さい・5さい…）のチップを選ぶと、その年齢のときに作った作品を飾る「おへや」が、1 階から積み重なった建物の 3D で出る（StackScene）。
 // 建物の階か、その下の「1かい」「2かい」のボタンを押すと、そのおへや（/rooms/:id）へ入る。「おへやを足す」でいちばん上に階が増える。
 // 「…」→「おへやを削除」で対象を選ぶ。作品のある階や途中の階は削除できない。
@@ -30,23 +31,25 @@ export default function Home() {
   const data = ages.data
   // 選んでいる年齢：?age= があればそれ、無ければ今の年齢、それも無ければ作品のあるいちばん大きい年齢
   const ageParam = params.get('age')
+  const all = ageParam === 'all'
   const fromUrl = ageParam !== null && ageParam.trim() !== '' ? Number(ageParam) : null
   const list = data?.ages ?? []
-  const selected =
+  const selected = all ? null :
     list.find((a) => a.age === fromUrl) ??
     list.find((a) => a.age === data?.current_age && a.artwork_count > 0) ??
     [...list].reverse().find((a) => a.artwork_count > 0) ??
     list[list.length - 1] ??
     null
-  const stack = useAgeStack(selected?.age ?? null, true)
+  const requestedAge = all ? null : selected?.age
+  const stack = useAgeStack(all ? 'all' : selected?.age ?? null, true)
   // 次のおへやは別レイヤーで準備し、準備完了までは前のCanvasを残す。
-  const candidate = !stack.isPlaceholderData && stack.data?.age === selected?.age ? stack.data : undefined
+  const candidate = !stack.isPlaceholderData && stack.data?.age === requestedAge ? stack.data : undefined
   const layers = displayedStack && displayedStack.age !== candidate?.age
     ? [displayedStack, ...(candidate ? [candidate] : [])]
     : candidate ? [candidate] : displayedStack ? [displayedStack] : []
-  const rooms = selected?.rooms ?? []
-  const loading = ages.isPending || (!!selected && rooms.length > 0 &&
-    (stack.isPlaceholderData || !stack.data || displayedStack?.age !== selected.age))
+  const rooms = all ? (candidate?.rooms.map(floor => ({ ...floor.room, count: floor.count })) ?? []) : selected?.rooms ?? []
+  const loading = ages.isPending || ((all || !!selected) &&
+    (stack.isPending || stack.isPlaceholderData || (rooms.length > 0 && displayedStack?.age !== requestedAge)))
   // 消せるのは、作品を飾っていないいちばん上の階だけ
   const top = rooms[rooms.length - 1]
   const deletableRooms = top && top.count === 0 ? [top] : []
@@ -64,10 +67,15 @@ export default function Home() {
     if (!loading || stack.isError) return
     const timer = window.setTimeout(() => setShowLoading(true), 250)
     return () => window.clearTimeout(timer)
-  }, [loading, selected?.age, stack.isError])
+  }, [loading, requestedAge, stack.isError])
 
-  const choose = (age: number) => setParams({ age: String(age) }, { replace: true })
-  const enter = (roomId: string) => nav.push(`/rooms/${roomId}`)
+  const choose = (age: number | 'all') => setParams({ age: String(age) }, { replace: true })
+  const enter = (roomId: string) => {
+    if (all) {
+      const room = rooms.find(room => room.id === roomId)
+      if (room) nav.push(`/rooms/all/${room.floor}`)
+    } else nav.push(`/rooms/${roomId}`)
+  }
   const add = () => {
     if (!selected) return
     addRoom.mutate(selected.age, {
@@ -91,7 +99,7 @@ export default function Home() {
     <Screen tabbar className="home-screen">
       <NavBar
         title={data?.name ?? 'はるのミュージアム'}
-        left={rooms.length > 0 && (
+        left={!all && rooms.length > 0 && (
           <button type="button" className="icon-btn" aria-label="おへやのメニュー" aria-haspopup="menu"
             aria-expanded={menuOpen} disabled={loading || stack.isError} onClick={() => setMenuOpen(true)}>
             <MoreIcon size={22} />
@@ -111,6 +119,10 @@ export default function Home() {
       )}
 
       <div className="age-chips" role="tablist" aria-label="年齢">
+        <button type="button" role="tab" aria-selected={all}
+          className={`age-chip${all ? ' selected' : ''}`} onClick={() => choose('all')}>
+          すべて
+        </button>
         {list.map((a) => (
           <button
             key={a.age}
@@ -140,19 +152,19 @@ export default function Home() {
                 <p>おへやを読み込めませんでした</p>
                 <button type="button" className="btn btn-outline" onClick={() => { void ages.refetch(); void stack.refetch() }}>もう一度読み込む</button>
               </div>
-            ) : rooms.length === 0 && selected && (
-              <div className="home-empty">{selected.label}のおへやは、まだありません</div>
+            ) : !loading && rooms.length === 0 && (all || selected) && (
+              <div className="home-empty">{all ? '作品を追加すると、すべてのおへやに飾られます' : `${selected?.label}のおへやは、まだありません`}</div>
             )}
           </>
         }
       >
-        {rooms.length > 0 && layers.map(layer => (
-          <div key={layer.age} className="home-stack-layer"
+        {(rooms.length > 0 || loading) && layers.map(layer => (
+          <div key={layer.age ?? 'all'} className="home-stack-layer"
             style={{ visibility: layer.age === displayedStack?.age ? 'visible' : 'hidden' }}
             aria-hidden={layer.age !== displayedStack?.age}>
             <Suspense fallback={null}>
               <StackScene stack={layer}
-                onRoom={!loading && !stack.isError && layer.age === selected?.age ? enter : undefined}
+                onRoom={!loading && !stack.isError && layer.age === requestedAge ? enter : undefined}
                 onReady={() => setDisplayedStack(layer)} />
             </Suspense>
           </div>
@@ -160,12 +172,12 @@ export default function Home() {
       </StageShell>
 
       <div className="home-actions">
-        {rooms.length > 1 && (
+        {(rooms.length > 1 || (all && rooms.length === 1)) && (
           <>
             <div className="home-floors">
               {[...rooms].reverse().map((room) => (
                 <button key={room.id} type="button" className="home-floor" disabled={loading || stack.isError} onClick={() => enter(room.id)}>
-                  {room.floor + 1}かい
+                  {all && rooms.length === 1 ? 'はいる' : `${room.floor + 1}かい`}
                   <small className="num">{room.count}</small>
                 </button>
               ))}

@@ -11,11 +11,11 @@ export const museumUrl = (roomId?: string | null) => (roomId ? `/api/museum?room
  * おへや roomId のおうちの全体像（省くと今の年齢のおへや）。refetchInterval（ミリ秒）を渡すと、その間隔で取り直す
  * （鑑賞モードで、ほかの端末で飾った・外した作品をすぐ反映するため）
  */
-export function useMuseum({ roomId, refetchInterval }: { roomId?: string | null; refetchInterval?: number } = {}) {
+export function useMuseum({ roomId, allFloor, refetchInterval }: { roomId?: string | null; allFloor?: string | null; refetchInterval?: number } = {}) {
   return useQuery({
-    queryKey: keys.museumOf(roomId),
+    queryKey: allFloor != null ? [...keys.museum, 'all', allFloor] : keys.museumOf(roomId),
     refetchInterval,
-    queryFn: () => request<Museum>(museumUrl(roomId)),
+    queryFn: () => request<Museum>(allFloor != null ? `/api/ages/all/${encodeURIComponent(allFloor)}` : museumUrl(roomId)),
   })
 }
 

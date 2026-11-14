@@ -1,5 +1,6 @@
 mod age;
 mod ages_api;
+mod all_ages;
 mod albums;
 mod artworks;
 mod error;
@@ -217,6 +218,8 @@ async fn main() {
         // 期間をえらんで振り返るシアター (場面ごとの時間割)
         .route("/recollections/theater", get(theater::theater))
         .route("/ages", get(ages_api::list_ages))
+        .route("/ages/all", get(ages_api::all_stack))
+        .route("/ages/all/{floor}", get(museum_api::all_room))
         .route("/ages/{age}", get(ages_api::age_stack))
         .route("/ages/{age}/rooms", post(ages_api::add_room))
         .route("/rooms/{id}", delete(ages_api::delete_room))
