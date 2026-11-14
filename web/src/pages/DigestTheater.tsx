@@ -48,11 +48,11 @@ const MEMO_LEAD_MS = 2000
 /**
  * 作品を押して詳細へ行くときに覚える、戻ってきたときの続きの位置（このタブの sessionStorage。1 回読んだら消す）。
  * at はふつうの速さ（1×）での時刻なので、詳細にいる間に速さを変えても同じ場面から続く。
+ * 戻ってきたら、止めていたときも、その位置から再生する
  */
 interface TheaterResume {
   revision: string
   at: number
-  playing: boolean
 }
 const RESUME_KEY = 'theater-resume'
 /** 戻ってきたとき、これより前に覚えた位置は使わない（ずっと後に開き直したときは最初から） */
@@ -109,7 +109,7 @@ function takeResume(revision: string, cameBack: boolean): TheaterResume | null {
     const value = JSON.parse(raw) as Partial<TheaterResume & { savedAt: number }>
     if (value.revision !== revision || typeof value.at !== 'number' || !(value.at >= 0)) return null
     if (typeof value.savedAt !== 'number' || Date.now() - value.savedAt > RESUME_TTL_MS) return null
-    return { revision, at: value.at, playing: value.playing === true }
+    return { revision, at: value.at }
   } catch {
     return null
   }
@@ -533,7 +533,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
   const root = useRef<HTMLDivElement>(null)
 
   // 期間が変わったら、はじめの作品が着いたところを見せて止める。
-  // 作品を押して詳細へ行き、戻ってきたときは、押したところから続ける（takeResume）
+  // 作品を押して詳細へ行き、戻ってきたときは、押したところから再生を続ける（takeResume。止めていたときも再生する）
   const revision = shown ? `${shown.from}-${shown.to}-${drawingsOnly}-${shown.digest ?? ''}-${shown.artwork_count}` : ''
   // 戻る操作でこの画面に来たか（メニューから開き直したときや、期間を変えたときは続きから始めない）
   const navigationType = useNavigationType()
@@ -551,7 +551,7 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
       setStarted(true)
       if (embedded) setExpanded(true)
       setSetupOpen(false)
-      setPlaying(resume.playing)
+      setPlaying(true)
       return
     }
     // 期間を変えたら、はじめの作品が着いたところでポスターに戻る（シートで変えたときは、シートは開いたまま）
@@ -648,8 +648,8 @@ export default function DigestTheater({ embedded = false, onExpandedChange, susp
   const openArtwork = (id: string) => {
     if (leaving.current) return
     leaving.current = true
-    // 戻ってきたら続きから見られるよう、いまの位置（ふつうの速さでの時刻）と再生中だったかを覚えておく
-    if (started) saveResume({ revision, at: (clock.current ?? 0) * settings.speed, playing })
+    // 戻ってきたら押したところから再生を続けられるよう、いまの位置（ふつうの速さでの時刻）を覚えておく
+    if (started) saveResume({ revision, at: (clock.current ?? 0) * settings.speed })
     setPlaying(false)
     const point = tapPoint.current ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
     // 止めたコマを撮ってから移る（1 コマ分だけ待つ。撮れなくても移る）
