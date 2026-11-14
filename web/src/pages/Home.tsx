@@ -120,7 +120,7 @@ export default function Home() {
         </TLink>
       )}
 
-      <div className="age-chips" role="tablist" aria-label="年齢">
+      <div className="age-chips" data-drag-scroll role="tablist" aria-label="年齢">
         <button type="button" role="tab" aria-selected={all}
           className={`age-chip${all ? ' selected' : ''}`} onClick={() => choose('all')}>
           すべて
@@ -176,7 +176,7 @@ export default function Home() {
       <div className="home-actions">
         {(rooms.length > 1 || (all && rooms.length === 1)) && (
           <>
-            <div className="home-floors">
+            <div className="home-floors" data-drag-scroll>
               {[...rooms].reverse().map((room) => (
                 <button key={room.id} type="button" className="home-floor" disabled={loading || stack.isError} onClick={() => enter(room.id)}>
                   {all && rooms.length === 1 ? 'はいる' : `${room.floor + 1}かい`}

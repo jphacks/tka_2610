@@ -324,7 +324,7 @@ export function MemorySection({
       )}
 
       {visuals.length > 0 && (
-        <div className="memory-grid">
+        <div className="memory-grid" data-drag-scroll>
           {visuals.map((m, i) => (
             <button key={m.id} type="button" className="memory-tile" onClick={() => setViewing(i)} aria-label={m.caption || (m.kind === 'photo' ? '写真' : '動画')}>
               {m.kind === 'photo' ? (

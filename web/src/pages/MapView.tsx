@@ -152,18 +152,18 @@ export default function MapView() {
                   </div>
                 </article>
                 <p className="recall-selection-note">{data.moment_note}</p>
-                {data.moments.length > 0 && <div className="recall-strip" aria-label="同じころの作品">{data.moments.map(card => <RecallTile key={card.artwork.id} card={card} onPlay={onPlay} />)}</div>}
+                {data.moments.length > 0 && <div className="recall-strip" data-drag-scroll aria-label="同じころの作品">{data.moments.map(card => <RecallTile key={card.artwork.id} card={card} onPlay={onPlay} />)}</div>}
               </section>
             )}
             <DigestTheater embedded onExpandedChange={setTheaterExpanded} suspended={todayOpen} onStart={() => playing.current?.pause()} />
             <FoldSection id="recall-voices" storageKey="memoria.voices-folded" icon={<MicIcon size={18} />} title="音声が残ってる作品" count={data.voices.length} onFold={pauseInside}>
               {data.voices.length > 0 ? (
-                <div className="recall-strip recall-voice-strip">{data.voices.map(card => <RecallTile key={card.artwork.id} card={card} voice onPlay={onPlay} />)}</div>
+                <div className="recall-strip recall-voice-strip" data-drag-scroll>{data.voices.map(card => <RecallTile key={card.artwork.id} card={card} voice onPlay={onPlay} />)}</div>
               ) : <div className="recall-voice-empty"><p>声の記録はまだありません</p><span>作品の詳細の「おもいで」から、声を録音して残せます。</span></div>}
             </FoldSection>
             <FoldSection id="recall-videos" storageKey="memoria.videos-folded" icon={<VideoIcon size={18} />} title="作品にまつわる動画" count={videos.length} onFold={pauseInside}>
               {videos.length > 0 ? (
-                <div className="recall-strip recall-video-strip">
+                <div className="recall-strip recall-video-strip" data-drag-scroll>
                   {videos.map(({ artwork, video }) => (
                     <article className="recall-tile" key={video.id}>
                       <TLink to={`/artworks/${artwork.id}`} className="recall-video-link" aria-label={`「${artwork.title}」の作品を見る`} onClick={() => playing.current?.pause()}>
